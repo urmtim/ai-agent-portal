@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
+import { useFormAction } from "@/components/ui/useFormAction";
 import { createUser, deleteUser, resendInvite, updateUser, type FormState } from "../actions";
 
 export type UserRowData = {
@@ -32,7 +33,7 @@ function useOnOk(state: FormState, onOk: (s: NonNullable<FormState>) => void) {
 
 function InviteForm({ onDone }: { onDone: () => void }) {
   const toast = useToast();
-  const [state, action, pending] = useActionState(createUser, undefined);
+  const [state, onSubmit, pending] = useFormAction(createUser, undefined);
   useOnOk(state, (s) => { toast(s.ok!); if (!s.link) onDone(); });
 
   if (state?.ok && state.link) {
@@ -44,7 +45,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
     );
   }
   return (
-    <form action={action}>
+    <form onSubmit={onSubmit}>
       <div className="field">
         <label htmlFor="inv-email">E-mail <span className="req">*</span></label>
         <input id="inv-email" name="email" type="email" placeholder="masha@mail.ru" required />
@@ -85,11 +86,11 @@ export function InviteButton() {
 
 function EditForm({ user, onDone }: { user: UserRowData; onDone: () => void }) {
   const toast = useToast();
-  const [state, action, pending] = useActionState(updateUser, undefined);
+  const [state, onSubmit, pending] = useFormAction(updateUser, undefined);
   useOnOk(state, (s) => { toast(s.ok!); onDone(); });
 
   return (
-    <form action={action}>
+    <form onSubmit={onSubmit}>
       <input type="hidden" name="userId" value={user.id} />
       <div className="field">
         <label htmlFor="ed-name">Имя</label>

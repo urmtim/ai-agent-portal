@@ -50,6 +50,7 @@ export async function runReceiptsAgent(
   ownerId: string,
   agentId: string,
   config: ReceiptsConfig,
+  modelId: string | null = null,
 ): Promise<{ processed: number; created: number; log: string[] }> {
   const log: string[] = [];
   const emails = await fetchRecentEmails({
@@ -72,6 +73,7 @@ export async function runReceiptsAgent(
     let data: Extracted;
     try {
       data = await llmJson<Extracted>({
+        modelId,
         system: SYSTEM,
         user: [
           `От: ${email.from}`,

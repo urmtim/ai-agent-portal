@@ -17,7 +17,7 @@ export async function runAgent(agentId: string): Promise<string> {
 
     switch (agent.type) {
       case "RECEIPTS":
-        result = await runReceiptsAgent(agent.ownerId, agent.id, config as ReceiptsConfig);
+        result = await runReceiptsAgent(agent.ownerId, agent.id, config as ReceiptsConfig, agent.modelId);
         break;
       default:
         throw new Error(`Неизвестный тип агента: ${agent.type}`);

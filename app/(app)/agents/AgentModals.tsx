@@ -1,21 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { ICONS, IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
+import { useFormAction } from "@/components/ui/useFormAction";
 import { createAgent, deleteAgentById, runAgentById } from "./actions";
 
 const TYPES = [{ value: "RECEIPTS", label: "Чеки из почты", desc: "Читает письма → пишет в «Траты»" }];
 
 function NewAgentForm({ onDone }: { onDone: () => void }) {
   const toast = useToast();
-  const [state, action, pending] = useActionState(createAgent, undefined);
+  const [state, onSubmit, pending] = useFormAction(createAgent, undefined);
   useEffect(() => { if (state?.ok) { toast(state.ok); onDone(); } }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <form action={action}>
+    <form onSubmit={onSubmit}>
       <div className="field">
         <label htmlFor="ag-type">Тип агента</label>
         <select id="ag-type" name="type" defaultValue="RECEIPTS">

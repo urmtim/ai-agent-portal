@@ -24,6 +24,8 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
     include: { runs: { orderBy: { startedAt: "desc" }, take: 20 } },
   });
   if (!agent || agent.ownerId !== user.id) notFound();
+  const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
+  const defaultName = (models.find((m) => m.isDefault) ?? models[0])?.name;
 
   const config = JSON.parse(agent.config || "{}") as {
     sinceDays?: number; fromFilter?: string; max?: number;
@@ -49,9 +51,18 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         <form action={saveAgentConfig}>
           <input type="hidden" name="agentId" value={agent.id} />
 
-          <div className="field">
-            <label htmlFor="name">Название</label>
-            <input id="name" name="name" defaultValue={agent.name} />
+          <div className="grid cols2" style={{ gap: 14, marginBottom: 16 }}>
+            <div>
+              <label htmlFor="name">Название</label>
+              <input id="name" name="name" defaultValue={agent.name} />
+            </div>
+            <div>
+              <label htmlFor="modelId">Модель</label>
+              <select id="modelId" name="modelId" defaultValue={agent.modelId ?? ""}>
+                <option value="">По умолчанию{defaultName ? ` (${defaultName})` : ""}</option>
+                {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="grid cols3" style={{ gap: 14 }}>

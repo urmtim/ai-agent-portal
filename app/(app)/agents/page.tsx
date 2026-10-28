@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { imapConfigured } from "@/lib/mailbox";
-import { llmConfigured } from "@/lib/llm";
+import { envModelName, llmAvailable } from "@/lib/llm";
 import { AGENT_TYPES } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
 import { ListTable, type ListRow } from "@/components/ui/ListTable";
@@ -25,12 +25,13 @@ export default async function AgentsPage() {
   const agents = await prisma.agent.findMany({
     where: { ownerId: user.id },
     orderBy: { createdAt: "asc" },
-    include: { runs: { orderBy: { startedAt: "desc" }, take: 1 } },
+    include: { runs: { orderBy: { startedAt: "desc" }, take: 1 }, model: { select: { name: true } } },
   });
 
   const mailOk = imapConfigured();
-  const llmOk = llmConfigured();
-  const model = process.env.LLM_MODEL || "не задана";
+  const llmOk = await llmAvailable();
+  const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { name: true, isDefault: true } });
+  const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
 
   const base: ListRow = {
     key: "base",
@@ -65,7 +66,7 @@ export default async function AgentsPage() {
           <Link href={`/agents/${a.id}`} className="b link">{a.name}</Link>
           <div className="sub">{t.desc}</div>
         </div>,
-        <span key="mo" style={{ whiteSpace: "nowrap" }}>{model}</span>,
+        <span key="mo" style={{ whiteSpace: "nowrap" }}>{a.model?.name ?? model}</span>,
         t.mcp.join(", "),
         <span key="st" className={`st ${a.enabled ? "ok" : "mut"}`}>{status}</span>,
         last ? (
@@ -97,11 +98,11 @@ export default async function AgentsPage() {
         <div className="callout warn" style={{ margin: "0 0 18px" }}>
           <span className="ic">⚠️</span>
           <div style={{ fontSize: 13.5 }}>
-            Чтобы агенты работали, задайте в <code>.env</code>:{" "}
-            {!mailOk && <b>IMAP_HOST / IMAP_USER / IMAP_PASSWORD</b>}
+            Чтобы агенты работали,{" "}
+            {!mailOk && <>задайте в <code>.env</code> <b>IMAP_HOST / IMAP_USER / IMAP_PASSWORD</b></>}
             {!mailOk && !llmOk && " и "}
-            {!llmOk && <b>LLM_BASE_URL / LLM_MODEL</b>}. Запустить можно и сейчас — прогон просто
-            завершится с ошибкой и покажет, чего не хватает.
+            {!llmOk && <>добавьте модель в разделе <Link href="/models" className="b link">«Модели»</Link></>}. Запустить можно и сейчас — прогон
+            просто завершится с ошибкой и покажет, чего не хватает.
           </div>
         </div>
       )}

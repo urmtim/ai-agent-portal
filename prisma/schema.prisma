@@ -101,6 +101,24 @@ enum AgentRunStatus {
   ERROR
 }
 
+// ---------- LLM models ----------
+
+// An OpenAI-compatible LLM endpoint. Exactly one is the default (kept by code).
+model LlmModel {
+  id        String    @id @default(cuid())
+  name      String
+  baseUrl   String // up to /v1
+  model     String // model id sent to the endpoint
+  tokenEnc  String? // AES-GCM encrypted API token (lib/secret.ts); never sent to the browser
+  isDefault Boolean   @default(false)
+  checkedAt DateTime?
+  checkOk   Boolean?
+  checkMsg  String    @default("")
+  createdAt DateTime  @default(now())
+
+  agents Agent[]
+}
+
 // A configured automation owned by a family member.
 model Agent {
   id        String    @id @default(cuid())
@@ -110,6 +128,8 @@ model Agent {
   name      String
   enabled   Boolean   @default(true)
   config    String    @default("{}") // JSON: filters, lookback days, etc.
+  modelId   String? // null → the default model
+  model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   createdAt DateTime  @default(now())
 
   runs AgentRun[]

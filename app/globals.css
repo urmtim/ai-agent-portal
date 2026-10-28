@@ -348,3 +348,13 @@ tr.off td { opacity: .55; }
   box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transition: .25s; z-index: 50; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+
+/* ---------- secret input, connection status ---------- */
+.pwd { position: relative; } .pwd input { padding-right: 44px; }
+.pwd button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; font-size: 15px; padding: 6px; }
+.status { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 9px; padding: 8px 12px; border-radius: 9px; margin-top: 14px; word-break: break-word; }
+.status.ok { background: var(--okbg); color: var(--ok); } .status.err { background: var(--errbg); color: var(--err); }
+.status.checking { background: var(--infobg); color: var(--info); }
+.spin { width: 14px; height: 14px; flex: 0 0 auto; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp .7s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

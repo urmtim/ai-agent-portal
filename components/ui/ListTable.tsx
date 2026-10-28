@@ -24,12 +24,15 @@ export function ListTable({
   filters = [],
   searchPlaceholder = "Поиск по названию…",
   minWidth,
+  emptyText = "Пока пусто",
 }: {
   columns: Col[];
   rows: ListRow[];
   filters?: ListFilter[];
   searchPlaceholder?: string;
   minWidth?: number;
+  /** Shown when there are no rows at all (as opposed to nothing matching). */
+  emptyText?: string;
 }) {
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<Record<string, string[]>>({});
@@ -113,7 +116,7 @@ export function ListTable({
               </tr>
             ))}
             {shown.length === 0 && (
-              <tr><td colSpan={columns.length} className="muted" style={{ textAlign: "center", padding: 28 }}>Ничего не найдено</td></tr>
+              <tr><td colSpan={columns.length} className="muted" style={{ textAlign: "center", padding: 28 }}>{rows.length ? "Ничего не найдено" : emptyText}</td></tr>
             )}
           </tbody>
         </table>

@@ -82,9 +82,13 @@ export async function saveAgentConfig(formData: FormData): Promise<void> {
     max: Number(formData.get("max")) || 40,
   };
 
+  const modelId = String(formData.get("modelId") ?? "") || null;
+  if (modelId && !(await prisma.llmModel.findUnique({ where: { id: modelId } }))) throw new Error("Модель не найдена");
+
   await prisma.agent.update({
     where: { id: agentId },
     data: {
+      modelId,
       name: String(formData.get("name") ?? "Чеки из почты").trim() || "Чеки из почты",
       enabled: formData.get("enabled") === "on",
       config: JSON.stringify(config),
