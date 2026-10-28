@@ -1,0 +1,35 @@
+{
+  "title": "English",
+  "description": "Базовый деловой английский: грамматика для повседневной работы и словарь для встреч и переписки.",
+  "emoji": "🇬🇧",
+  "passThreshold": 70,
+  "pages": [
+    { "slug": "present-simple", "title": "Present Simple", "file": "01-present-simple.md" },
+    { "slug": "business-basics", "title": "Business vocabulary", "file": "02-business-basics.md", "quizId": "english-grammar-quiz" }
+  ],
+  "quizzes": {
+    "english-grammar-quiz": {
+      "passThreshold": 70,
+      "questions": [
+        {
+          "id": "q1",
+          "text": "Choose the correct form: «She ___ to work by metro.»",
+          "options": ["go", "goes", "going", "gone"],
+          "correct": 1
+        },
+        {
+          "id": "q2",
+          "text": "Make it negative: «They work on weekends.»",
+          "options": ["They not work on weekends.", "They doesn't work on weekends.", "They don't work on weekends.", "They aren't work on weekends."],
+          "correct": 2
+        },
+        {
+          "id": "q3",
+          "text": "Which word means «сделка / договорённость»?",
+          "options": ["deadline", "deal", "invoice", "stakeholder"],
+          "correct": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,881 @@
+<title>Семейный портал — экраны</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* Прототип всех экранов семейного портала. Палитра индиго + IBM Plex Sans,
+     ровно как в globals.css приложения. Один шелл, клиентский роутер по экранам. */
+  :root {
+    --primary: #4f46e5; --primary-dark: #4338ca; --primary-soft: #eef0fe;
+    --bg: #f5f6fb; --card: #ffffff; --ink: #15172b; --muted: #6b7085;
+    --line: #e7e8f1; --soft: #f1f2f9;
+    --ok: #15935e; --okbg: #e6f6ef; --err: #dc2626; --errbg: #fcebeb;
+    --warn: #b7791f; --warnbg: #faf1d9; --info: #2563eb; --infobg: #e7eefe;
+    --read: #5b6472; --readbg: #eef0f4;
+    --shadow: 0 8px 24px rgba(30,24,80,.06); --shadow-pop: 0 16px 40px rgba(20,16,60,.16);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --primary: #8b85f5; --primary-dark: #a7a2f8; --primary-soft: #23213a;
+      --bg: #0f1018; --card: #181a26; --ink: #eceef6; --muted: #9aa0b4;
+      --line: #272a3a; --soft: #20222f;
+      --ok: #34d399; --okbg: #10291f; --err: #f87171; --errbg: #2d1515;
+      --warn: #fbbf24; --warnbg: #2d2512; --info: #60a5fa; --infobg: #122033;
+      --read: #9aa0b4; --readbg: #222534;
+      --shadow: 0 8px 24px rgba(0,0,0,.4); --shadow-pop: 0 16px 40px rgba(0,0,0,.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --primary: #8b85f5; --primary-dark: #a7a2f8; --primary-soft: #23213a;
+    --bg: #0f1018; --card: #181a26; --ink: #eceef6; --muted: #9aa0b4;
+    --line: #272a3a; --soft: #20222f;
+    --ok: #34d399; --okbg: #10291f; --err: #f87171; --errbg: #2d1515;
+    --warn: #fbbf24; --warnbg: #2d2512; --info: #60a5fa; --infobg: #122033;
+    --read: #9aa0b4; --readbg: #222534;
+    --shadow: 0 8px 24px rgba(0,0,0,.4); --shadow-pop: 0 16px 40px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: 'IBM Plex Sans', system-ui, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: inherit; text-decoration: none; }
+  code { background: var(--soft); padding: 1px 5px; border-radius: 5px; font-size: .9em; }
+
+  /* ---- mock toolbar ---- */
+  .mockbar { background: #140a2e; color: #fff; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 8px max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); }
+  .mockbar b { font-size: 12.5px; font-weight: 700; color: #cfc8f5; }
+  .mockbar .hint { font-size: 11.5px; color: #8f84bd; margin-left: auto; }
+  .mockbar select { font-family: inherit; font-size: 13px; font-weight: 600; color: #fff; background: #2a1b52;
+    border: 1px solid #3c2d6b; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+
+  /* ---- header ---- */
+  .hd { background: var(--card); border-bottom: 1px solid var(--line); }
+  .hdin { max-width: 1060px; margin: 0 auto; height: 60px; display: grid; grid-template-columns: 1fr minmax(0, max-content) 1fr; align-items: center; gap: 24px;
+    padding-left: max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); }
+  .brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15px; flex: 0 0 auto; }
+  nav.menu { display: flex; gap: 18px; align-items: center; overflow-x: auto; }
+  nav.menu a { font-size: 14px; font-weight: 500; color: var(--ink); opacity: .72; white-space: nowrap; cursor: pointer; padding: 4px 0; border-bottom: 2px solid transparent; }
+  nav.menu a.on { opacity: 1; color: var(--primary-dark); font-weight: 600; border-bottom-color: var(--primary); }
+  .right { justify-self: end; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+  .av { width: 32px; height: 32px; border-radius: 50%; background: var(--primary-soft); color: var(--primary-dark); display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+  .avname { font-size: 12.5px; font-weight: 600; line-height: 1.1; } .avrole { font-size: 11px; color: var(--muted); }
+  @media (max-width: 680px) { .right .who { display: none; } .hdin { grid-template-columns: 0 minmax(0, 1fr) auto; gap: 10px; } .hmid { gap: 8px; } nav.menu { min-width: 0; } }
+
+  /* ---- layout ---- */
+  .main { max-width: 1060px; margin: 0 auto; padding-block: 26px 70px;
+    padding-left: max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); }
+  .narrow { max-width: 760px; margin: 0 auto; }
+  .pagehead { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+  h1.title { font-size: 23px; font-weight: 700; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  h2.title { font-size: 17px; font-weight: 700; margin: 0 0 12px; }
+  .lead { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+  .spacer { margin-left: auto; }
+  .back { font-size: 13px; color: var(--primary-dark); font-weight: 600; margin-bottom: 14px; display: inline-flex; gap: 6px; cursor: pointer; }
+
+  /* ---- buttons ---- */
+  .btn { font-family: inherit; font-size: 13.5px; font-weight: 600; border-radius: 9px; padding: 9px 15px; border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: .12s; white-space: nowrap; }
+  .btn.primary { background: var(--primary); color: #fff; } .btn.primary:hover { background: var(--primary-dark); }
+  .btn.ghost { background: var(--card); border-color: var(--line); color: var(--ink); } .btn.ghost:hover { border-color: var(--primary); color: var(--primary-dark); }
+  .btn.danger { background: var(--card); border-color: color-mix(in srgb, var(--err) 40%, transparent); color: var(--err); }
+  .btn.sm { padding: 6px 11px; font-size: 12.5px; } .btn.block { width: 100%; justify-content: center; }
+
+  /* ---- cards ---- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  .card.pad { padding: 20px; }
+  .grid { display: grid; gap: 16px; } .grid.c2 { grid-template-columns: 1fr 1fr; } .grid.c3 { grid-template-columns: repeat(3,1fr); }
+  @media (max-width: 760px) { .grid.c2, .grid.c3 { grid-template-columns: 1fr; } }
+
+  /* ---- course card ---- */
+  .course { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 12px; cursor: pointer; transition: .14s; }
+  .course:hover { transform: translateY(-2px); box-shadow: var(--shadow-pop); border-color: color-mix(in srgb, var(--primary) 35%, var(--line)); }
+  .emoji { width: 44px; height: 44px; border-radius: 12px; background: var(--primary-soft); display: grid; place-items: center; font-size: 22px; }
+  .course h3 { font-size: 15.5px; font-weight: 700; margin: 0; } .course .desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; flex: 1; margin: 0; }
+
+  /* ---- progress ---- */
+  .pbar { height: 8px; border-radius: 99px; background: var(--soft); overflow: hidden; }
+  .pbar > span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--primary), #7c74f0); }
+  .pbar.done > span { background: linear-gradient(90deg, var(--ok), #3ec98a); }
+  .pmeta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+  /* ---- pills ---- */
+  .st { font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 20px; display: inline-block; white-space: nowrap; }
+  .st.ok { background: var(--okbg); color: var(--ok); } .st.wait { background: var(--warnbg); color: var(--warn); }
+  .st.info { background: var(--infobg); color: var(--info); } .st.err { background: var(--errbg); color: var(--err); } .st.mut { background: var(--readbg); color: var(--read); }
+
+  /* ---- tables ---- */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 14px 15px; white-space: nowrap; background: transparent; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 15px; font-size: 13.5px; border-bottom: 1px solid var(--line); } tr:last-child td { border-bottom: 0; }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 2px; } .b { font-weight: 600; }
+  .tcard { overflow-x: auto; } .tcard table { min-width: 460px; }
+  .tbar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .search { position: relative; flex: 0 1 290px; margin: 0; } .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .search input { padding: 10px 13px 10px 36px; } .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .btn.dashed { background: var(--card); border: 1px dashed var(--line); color: var(--primary-dark); } .btn.dashed:hover { border-color: var(--primary); }
+  td.acts { text-align: right; white-space: nowrap; width: 1%; }
+  .ibtn { width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent; color: var(--ink); display: inline-grid; place-items: center; cursor: pointer; }
+  .ibtn:hover { background: var(--soft); } .ibtn.del { color: var(--err); } .ibtn:disabled { opacity: .3; cursor: default; background: transparent; }
+  .link { cursor: pointer; } .link:hover { color: var(--primary-dark); text-decoration: underline; }
+  tr.off td { opacity: .55; }
+
+  /* ---- stat tiles ---- */
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); }
+  .stat .n { font-size: 25px; font-weight: 800; letter-spacing: -.02em; } .stat .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* ---- timeline ---- */
+  .timeline { list-style: none; padding: 0; margin: 0; }
+  .timeline li { position: relative; padding: 0 0 16px 22px; border-left: 2px solid var(--line); }
+  .timeline li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .timeline li .dot { position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 2px solid var(--card); box-shadow: 0 0 0 2px var(--primary-soft); }
+  .timeline li.ok .dot { background: var(--ok); box-shadow: 0 0 0 2px var(--okbg); }
+  .timeline .tt { font-size: 13px; font-weight: 600; } .timeline .ts { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  /* ---- forms ---- */
+  label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
+  .req { color: var(--err); }
+  input, select.f { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--card); }
+  input:focus, select.f:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+  .field { margin-bottom: 14px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; } .hint a { color: var(--primary-dark); font-weight: 600; }
+  .pwd { position: relative; } .pwd input { padding-right: 44px; }
+  .pwd button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; font-size: 15px; padding: 6px; }
+  .formerr { color: var(--err); font-size: 13px; background: var(--errbg); border-radius: 9px; padding: 10px 13px; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; } .toggle input { width: auto; }
+
+  /* ---- callout + prose ---- */
+  .prose { font-size: 15px; line-height: 1.7; } .prose h3 { font-size: 17px; margin: 0 0 12px; }
+  .prose p { margin: 12px 0; } .prose ul { margin: 12px 0; padding-left: 20px; } .prose li { margin: 5px 0; }
+  .callout { border: 1px solid var(--line); background: var(--soft); border-radius: 12px; padding: 13px 15px; margin: 16px 0; display: flex; gap: 11px; font-size: 13.5px; }
+  .callout.tip { background: var(--okbg); border-color: color-mix(in srgb, var(--ok) 25%, transparent); }
+  .callout.info { background: var(--infobg); border-color: color-mix(in srgb, var(--info) 25%, transparent); }
+
+  /* ---- quiz ---- */
+  .quiz { border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 18px; margin: 20px 0; box-shadow: var(--shadow); }
+  .quiz .qh { font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--primary-dark); font-weight: 700; }
+  .quiz .q { font-weight: 600; margin: 14px 0 8px; font-size: 14px; }
+  .opt { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 7px 0; font-size: 13.5px; }
+  .opt.correct { border-color: var(--ok); background: var(--okbg); } .opt.wrong { border-color: var(--err); background: var(--errbg); }
+  .opt .mk { margin-left: auto; font-weight: 700; } .opt.correct .mk { color: var(--ok); } .opt.wrong .mk { color: var(--err); }
+
+  /* ---- bars (stats) ---- */
+  .months { display: flex; align-items: flex-end; gap: 12px; height: 130px; }
+  .months .col { flex: 1; text-align: center; } .months .bar { height: 94px; display: flex; align-items: flex-end; }
+  .months .bar > div { width: 100%; border-radius: 8px 8px 0 0; background: linear-gradient(180deg, var(--primary), #7c74f0); }
+
+  /* ---- status (connection test) ---- */
+  .status { font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 9px; padding: 8px 12px; border-radius: 9px; }
+  .status.ok { background: var(--okbg); color: var(--ok); } .status.err { background: var(--errbg); color: var(--err); } .status.checking { background: var(--infobg); color: var(--info); }
+  .spin { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp .7s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+  .seg { display: inline-flex; background: var(--soft); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
+  .seg button { font-family: inherit; font-size: 12.5px; font-weight: 600; color: var(--muted); background: transparent; border: 0; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+  .seg button.on { background: var(--card); color: var(--primary-dark); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .chead { display: flex; align-items: center; gap: 12px; } .chead .ic { width: 42px; height: 42px; border-radius: 11px; background: var(--primary-soft); display: grid; place-items: center; font-size: 20px; flex: 0 0 auto; }
+  .chead h2 { font-size: 16px; font-weight: 700; margin: 0; } .chead .sub2 { font-size: 12px; color: var(--muted); }
+
+  /* ---- auth ---- */
+  .authwrap { min-height: 72vh; display: grid; place-items: center; padding: 30px 16px; }
+  .authcard { width: 100%; max-width: 400px; } .authhead { text-align: center; margin-bottom: 20px; }
+
+  .wrapgap { display: flex; flex-wrap: wrap; gap: 9px; }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .muted { color: var(--muted); }
+  pre.log { white-space: pre-wrap; font-size: 12px; background: var(--soft); padding: 12px; border-radius: 8px; line-height: 1.55; margin: 8px 0 0; }
+
+  /* constructor */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button { font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 13px; cursor: pointer; }
+  .tabs button.on { color: var(--primary-dark); border-bottom-color: var(--primary); }
+  .canvas { background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 22px; overflow-x: auto; }
+  .nodes { display: flex; gap: 40px; align-items: flex-start; min-width: 660px; }
+  .node { width: 300px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 14px; flex: 0 0 auto; }
+  .node .nhead { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .node .nhead .tag { font-size: 10.5px; font-weight: 700; color: #fff; background: var(--primary); border-radius: 6px; padding: 2px 7px; }
+  .node .nhead .tag.fin { background: var(--readbg); color: var(--read); }
+  .node .nhead .nm { font-weight: 700; font-size: 14px; }
+  .nlabel { font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 12px 0 5px; }
+  .npill { display: inline-block; font-size: 11.5px; font-weight: 600; border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; margin: 0 5px 5px 0; color: var(--ink); background: var(--soft); }
+  .npill.off { color: var(--muted); text-decoration: line-through; }
+  .npill.mcp { color: var(--primary-dark); background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
+  .ntext { font-size: 12.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 9px; background: var(--card); line-height: 1.5; }
+  .arrow { align-self: center; color: var(--muted); font-size: 22px; flex: 0 0 auto; }
+
+  /* chat thread */
+  .thread { display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
+  .msg.u { align-self: flex-end; background: var(--primary-soft); color: var(--primary-dark); border-bottom-right-radius: 4px; }
+  .msg.b { align-self: flex-start; background: var(--card); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .msg.b.warn { background: var(--warnbg); border-color: color-mix(in srgb, var(--warn) 30%, transparent); }
+  .route { align-self: center; font-size: 12px; color: var(--muted); background: var(--soft); border: 1px solid var(--line); border-radius: 20px; padding: 4px 12px; }
+  .route b { color: var(--primary-dark); }
+  .hitl { align-self: flex-start; max-width: 88%; border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--line)); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); padding: 14px; }
+  .hitl .ht { font-weight: 700; font-size: 13.5px; margin-bottom: 4px; }
+  .hitl .hd { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
+
+  /* expanding section tray (9 dots next to the logo) */
+  .lbtn { width: 34px; height: 34px; border-radius: 9px; border: 1px solid transparent; background: transparent; cursor: pointer; display: grid; place-items: center; color: var(--muted); flex: 0 0 auto; }
+  .lbtn:hover, .lbtn.on { background: var(--soft); border-color: var(--line); color: var(--primary-dark); }
+  .lbtn:focus-visible, .titem:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .hmid { grid-column: 2; display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .hdin > .right { grid-column: 3; }
+  nav.menu { min-width: 120px; min-height: 36px; }
+  nav.menu.drop { outline: 2px dashed var(--primary); outline-offset: 4px; border-radius: 8px; }
+  nav.menu a[draggable="true"] { cursor: grab; }
+  nav.menu { padding: 0 10px; } nav.menu a { position: relative; } nav.menu a.dragging { opacity: .35; }
+  nav.menu a.ins-l::before, nav.menu a.ins-r::after { content: ''; position: absolute; top: 2px; bottom: 2px; width: 2px; border-radius: 2px; background: var(--primary); }
+  nav.menu a.ins-l::before { left: -10px; } nav.menu a.ins-r::after { right: -10px; }
+  .tray { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .28s ease; }
+  .tray.open { grid-template-rows: 1fr; border-top: 1px solid var(--line); }
+  .trayclip { overflow: hidden; min-height: 0; }
+  .trayin { max-width: 1060px; margin: 0 auto; padding-block: 16px 14px; padding-left: max(16px, env(safe-area-inset-left,0px)); padding-right: max(16px, env(safe-area-inset-right,0px)); border-radius: 12px; transition: background .15s; }
+  .trayin.drop { background: var(--soft); }
+  .tgroups { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 56px; }
+  .tg { display: flex; flex-direction: column; align-items: flex-start; min-width: 120px; }
+  .lgroup { align-self: stretch; font-size: 12.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--ink); font-weight: 700; padding: 4px 10px 8px; margin-bottom: 6px; border-bottom: 2px solid var(--primary-soft); }
+  .lgroup .note { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
+  .titem { font-size: 14px; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: grab; user-select: none; white-space: nowrap; }
+  .titem:hover { background: var(--soft); color: var(--primary-dark); }
+  .titem.dim { color: var(--muted); }
+  .titem.cur { background: var(--soft); color: var(--primary-dark); font-weight: 600; }
+  nav.menu a.temp { display: inline-flex; align-items: center; gap: 4px; }
+  nav.menu a .pin { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; color: var(--muted); cursor: pointer; }
+  nav.menu a .pin:hover { background: var(--soft); color: var(--primary-dark); }
+  nav.menu a .pin { opacity: 0; transition: opacity .12s; }
+  nav.menu a.temp:hover .pin, nav.menu a.temp:focus-within .pin { opacity: 1; }
+  @media (hover: none) { nav.menu a .pin { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .tray { transition: none; } }
+
+  /* toast */
+  .toast { position: fixed; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom,0px)); transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow-pop); opacity: 0; pointer-events: none; transition: .25s; z-index: 50; }
+  /* chat: history | thread */
+  .cpage { max-width: 1060px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-right,0px)) 0 max(16px, env(safe-area-inset-left,0px)); }
+  .cwrap { display: grid; grid-template-columns: 250px minmax(0, 1fr); height: 600px; position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+  .cwrap.nohist { grid-template-columns: minmax(0, 1fr); } .cwrap.nohist .hist { display: none; }
+  .hist { background: var(--bg); border-right: 1px solid var(--line); padding: 14px 10px; overflow-y: auto; }
+  .hgroup { margin-top: 12px; }
+  .hhead { display: flex; align-items: center; gap: 6px; width: 100%; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--ink); background: none; border: 0; padding: 4px 10px; cursor: pointer; }
+  .hhead .chev { font-size: 10px; color: var(--muted); transition: transform .15s; } .hhead[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+  .hhead[aria-expanded="false"] + .hitems { display: none; }
+  .hitem { display: block; width: 100%; text-align: left; font-family: inherit; font-size: 13.5px; color: var(--ink); background: none; border: 0; border-radius: 8px; padding: 7px 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hitem:hover { background: var(--card); } .hitem.on { background: var(--card); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+  .cmain { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .ctop { display: flex; align-items: center; gap: 8px; padding: 12px 20px 0; } .ctitle { font-size: 13.5px; font-weight: 600; color: var(--muted); } .histbtn { color: var(--muted); }
+  .cscroll { flex: 1; overflow-y: auto; padding: 16px 20px 10px; }
+  .cthread { max-width: 740px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .ca { font-size: 14.5px; line-height: 1.65; color: var(--ink); } .cacts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .cu { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; max-width: 78%; }
+  .cub { background: var(--soft); border-radius: 18px; padding: 10px 16px; font-size: 14.5px; line-height: 1.5; }
+  .cfile { width: 140px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12.5px; } .cft { display: inline-block; margin-top: 8px; font-size: 10.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .cstep { font-size: 13px; color: var(--muted); } .cstep summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; } .cstep summary::-webkit-details-marker { display: none; }
+  .cstep summary:hover { color: var(--ink); } .cstep summary b { color: var(--ink); font-weight: 600; }
+  .cstep .chev { font-size: 10px; transition: transform .15s; } .cstep[open] .chev { transform: rotate(90deg); } .cfail { color: var(--err); font-weight: 600; }
+  .cstep pre { margin: 8px 0 0; padding: 10px 12px; background: var(--soft); border-radius: 8px; font-size: 12px; line-height: 1.55; white-space: pre-wrap; color: var(--ink); font-family: ui-monospace, Consolas, monospace; }
+  .cempty { max-width: 600px; margin: 12vh auto 0; text-align: center; } .cempty h2 { font-size: 26px; margin: 0 0 6px; } .cempty p { margin: 0 0 18px; }
+  .cbox { padding: 8px 20px 16px; }
+  .ccomp { max-width: 740px; margin: 0 auto; display: flex; align-items: flex-end; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 8px; box-shadow: var(--shadow); }
+  .ccomp:focus-within { border-color: var(--primary); }
+  .ccomp textarea { flex: 1; border: 0; outline: none; resize: none; background: transparent; font-family: inherit; font-size: 14.5px; color: var(--ink); padding: 7px 4px; max-height: 160px; }
+  .csend { width: 32px; height: 32px; flex: 0 0 auto; border-radius: 50%; border: 0; background: var(--primary); color: #fff; display: grid; place-items: center; cursor: pointer; } .csend:hover { background: var(--primary-dark); }
+  .chint { max-width: 740px; margin: 6px auto 0; text-align: center; font-size: 11.5px; color: var(--muted); }
+  @media (max-width: 760px) {
+    .cwrap { grid-template-columns: 1fr; }
+    .hist { display: none; position: absolute; top: 0; bottom: 0; left: 0; width: min(300px, 86vw); z-index: 5; box-shadow: var(--shadow-pop); } .hist.open { display: block; }
+  }
+  .mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 16px; }
+  .mbg[hidden] { display: none; }
+  .modal { position: relative; width: min(520px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
+  .mtitle { font-size: 18px; font-weight: 700; margin: 0 0 6px; padding-right: 36px; } .msub { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0 0 18px; }
+  .mclose { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+  .mclose:hover { background: var(--soft); color: var(--ink); }
+  .mfoot { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+
+<div class="mockbar">
+  <b>МАКЕТ</b>
+  <label style="display:inline-flex;align-items:center;gap:8px;color:#cfc8f5;font-size:12.5px;font-weight:600">
+    Экран:
+    <select id="screenSel">
+      <optgroup label="Вход">
+        <option value="login">Вход</option>
+        <option value="invite">Активация по приглашению</option>
+      </optgroup>
+      <optgroup label="Приложение">
+        <option value="chat" selected>Чат с агентом</option>
+        <option value="agents">Агенты — список</option>
+        <option value="constructor">Конструктор агента (граф)</option>
+        <option value="agent">Агент — история</option>
+        <option value="mcp">MCP</option>
+        <option value="settings">Модели</option>
+      </optgroup>
+      <optgroup label="Скрыто (не в меню)">
+        <option value="learn">Обучение (мои курсы)</option>
+        <option value="course">Курс — обзор</option>
+        <option value="lesson">Урок с тестом</option>
+        <option value="stats">Траты (дашборд)</option>
+        <option value="me">Прогресс (дневник)</option>
+      </optgroup>
+      <optgroup label="Админ">
+        <option value="users">Пользователи</option>
+        <option value="access">Доступы</option>
+      </optgroup>
+    </select>
+  </label>
+  <span class="hint">нажимай меню портала, карточки и кнопки — они переключают экраны</span>
+</div>
+
+<header class="hd" id="appheader">
+  <div class="hdin">
+    <div class="hmid">
+    <button type="button" class="lbtn" id="lbtn" title="Все разделы" aria-label="Все разделы" aria-expanded="false" aria-controls="tray"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.7"/><circle cx="9" cy="3" r="1.7"/><circle cx="15" cy="3" r="1.7"/><circle cx="3" cy="9" r="1.7"/><circle cx="9" cy="9" r="1.7"/><circle cx="15" cy="9" r="1.7"/><circle cx="3" cy="15" r="1.7"/><circle cx="9" cy="15" r="1.7"/><circle cx="15" cy="15" r="1.7"/></svg></button>
+    <nav class="menu" id="nav" aria-label="Разделы"></nav>
+    </div>
+    <div class="right">
+      <div class="who" style="text-align:right"><div class="avname">Администратор</div><div class="avrole">родитель · админ</div></div>
+      <span class="av">АД</span>
+    </div>
+  </div>
+  <div class="tray" id="tray">
+    <div class="trayclip">
+      <div class="trayin" id="trayin">
+        <div class="tgroups">
+          <div class="tg"><div class="lgroup">Основное</div>
+            <div class="titem" draggable="true" tabindex="0" data-key="chat" data-go="chat">Чат</div>
+          </div>
+          <div class="tg"><div class="lgroup">AI</div>
+            <div class="titem" draggable="true" tabindex="0" data-key="agents" data-go="agents">Агенты</div>
+            <div class="titem" draggable="true" tabindex="0" data-key="mcp" data-go="mcp">MCP</div>
+            <div class="titem" draggable="true" tabindex="0" data-key="settings" data-go="settings">Модели</div>
+          </div>
+          <div class="tg"><div class="lgroup">Семья <span class="note">(скрыто)</span></div>
+            <div class="titem dim" draggable="true" tabindex="0" data-key="learn" data-go="learn">Обучение</div>
+            <div class="titem dim" draggable="true" tabindex="0" data-key="stats" data-go="stats">Траты</div>
+            <div class="titem dim" draggable="true" tabindex="0" data-key="me" data-go="me">Прогресс</div>
+          </div>
+          <div class="tg"><div class="lgroup">Админ</div>
+            <div class="titem" draggable="true" tabindex="0" data-key="users" data-go="users">Пользователи</div>
+            <div class="titem" draggable="true" tabindex="0" data-key="access" data-go="access">Доступы</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div id="view"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const money = (n) => new Intl.NumberFormat('ru-RU',{style:'currency',currency:'RUB',maximumFractionDigits:0}).format(n);
+
+  const SCREENS = {
+    login: () => `
+      <div class="authwrap"><div class="authcard">
+        <div class="authhead">
+          <p class="lead" style="margin-top:10px">Войдите, чтобы продолжить</p>
+        </div>
+        <div class="card pad">
+          <div class="field"><label>Email</label><input placeholder="you@mail.ru"></div>
+          <div class="field"><label>Пароль</label><input type="password" placeholder="••••••••"></div>
+          <button class="btn primary block" data-go="learn">Войти</button>
+        </div>
+      </div></div>`,
+
+    invite: () => `
+      <div class="authwrap"><div class="authcard">
+        <div class="authhead">
+          <h1 class="title" style="font-size:19px;margin-top:12px">Активация аккаунта</h1>
+        </div>
+        <div class="card pad">
+          <p class="lead" style="margin:0 0 16px">Маша, задайте пароль для входа как <b>masha@mail.ru</b>.</p>
+          <div class="field"><label>Новый пароль</label><input type="password" placeholder="Минимум 8 символов"></div>
+          <div class="field"><label>Повторите пароль</label><input type="password" placeholder="••••••••"></div>
+          <button class="btn primary block" data-go="login">Активировать аккаунт</button>
+        </div>
+      </div></div>`,
+
+    learn: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Мои курсы</h1><p class="lead">Курсы, к которым открыт доступ</p></div></div>
+      <div class="grid c3">
+        ${courseCard('🧭','SAFe Agilist','Подготовка к сертификации SA 6.0: фреймворк, роли, PI Planning.',7,13,54)}
+        ${courseCard('🇬🇧','English','Деловой английский: грамматика и словарь для работы.',1,2,50)}
+        ${courseCard('💰','Финграмотность','Бюджет, подушка, инвестиции — простыми словами.',0,6,0)}
+      </div>`),
+
+    course: () => appShell(`
+      <div class="narrow">
+        <div class="back" data-go="learn">← Мои курсы</div>
+        <div class="card pad" style="margin-bottom:18px">
+          <div class="row" style="gap:14px"><span class="emoji" style="font-size:26px">🧭</span>
+            <div><h1 class="title">SAFe Agilist</h1><p class="lead">Полный курс подготовки к сертификации SA 6.0. 13 уроков с тестами.</p></div></div>
+          <div style="margin-top:16px"><div class="pbar"><span style="width:54%"></span></div>
+            <div class="pmeta"><span>7 из 13 уроков</span><span>54%</span></div></div>
+          <div style="margin-top:16px"><button class="btn primary" data-go="lesson">Продолжить</button></div>
+        </div>
+        <h2 class="title">Программа</h2>
+        <div class="card tcard"><table><tbody>
+          ${lessonRow('✓','1. Как устроен SAFe',true)}
+          ${lessonRow('✓','2. Lean-Agile Mindset и Core Values',true)}
+          ${lessonRow('✓','3. 10 принципов SAFe',true)}
+          ${lessonRow('4','4. Lean-Agile Leadership',false)}
+          ${lessonRow('5','5. Agile Release Train (ART) и роли',false)}
+          ${lessonRow('6','6. Value Streams — потоки ценности',false)}
+        </tbody></table></div>
+      </div>`),
+
+    lesson: () => appShell(`
+      <div class="narrow">
+        <div class="back" data-go="course">← SAFe Agilist</div>
+        <div class="muted" style="font-size:12.5px;margin-bottom:8px">Урок 5 из 13 <span class="st ok" style="margin-left:8px">пройден</span></div>
+        <article class="card pad prose">
+          <h3>Agile Release Train (ART) и роли</h3>
+          <p>ART — «команда команд» (обычно 50–125 человек), которая вместе планирует и поставляет ценность каждые 8–12 недель.</p>
+          <ul><li><b>RTE</b> — дирижёр поезда, ведёт PI Planning.</li><li><b>Product Management</b> — владеет бэклогом программы.</li><li><b>System Architect</b> — техническое видение.</li></ul>
+          <div class="callout tip"><span>✅</span><div>PO смотрит «внутрь команды», RTE и Product Management — «между командами».</div></div>
+          <div class="quiz">
+            <div class="qh">Проверь себя · 3 вопроса</div>
+            <div class="q">1. Кто ведёт PI Planning на уровне поезда?</div>
+            <div class="opt wrong">Product Owner <span class="mk">✕ ваш ответ</span></div>
+            <div class="opt correct">Release Train Engineer <span class="mk">✓ верно</span></div>
+            <div class="opt">System Architect</div>
+            <div class="callout info" style="margin:10px 0 0"><span>💡</span><div style="font-size:13px">RTE — «главный Scrum Master» всего ART, он и дирижирует PI Planning.</div></div>
+          </div>
+        </article>
+        <div class="row" style="justify-content:space-between;margin-top:20px;flex-wrap:wrap;gap:10px">
+          <button class="btn ghost" data-go="course">← Lean-Agile Leadership</button>
+          <button class="btn primary" data-go="course">Пройдено, дальше →</button>
+        </div>
+      </div>`),
+
+    stats: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Траты</h1><p class="lead">Собрано из чеков на почте</p></div></div>
+      <div class="grid c3" style="margin-bottom:22px">
+        <div class="stat"><div class="n">${money(15810)}</div><div class="l">в этом месяце · 11 чеков</div></div>
+        <div class="stat"><div class="n">${money(24200)}</div><div class="l">всего · 15 чеков</div></div>
+        <div class="stat"><div class="n">${money(1613)}</div><div class="l">средний чек</div></div>
+      </div>
+      <div class="grid c2" style="margin-bottom:22px">
+        <div class="card pad"><h2 class="title">По категориям</h2>
+          ${bar('продукты',10260,10260)}${bar('одежда',4120,10260)}${bar('дом и быт',3480,10260)}${bar('транспорт',3020,10260)}${bar('развлечения',1100,10260)}</div>
+        <div class="card pad"><h2 class="title">Топ магазинов</h2>
+          ${bar('Магнит',4170,4170,true)}${bar('Wildberries',4120,4170,true)}${bar('Пятёрочка',3660,4170,true)}${bar('OZON',3480,4170,true)}${bar('АЗС Лукойл',2600,4170,true)}</div>
+      </div>
+      <div class="card pad" style="margin-bottom:22px"><h2 class="title">По месяцам</h2>
+        <div class="months">
+          ${monthCol('май',0)}${monthCol('июнь',0)}${monthCol('июль',0)}${monthCol('авг',0)}${monthCol('сент',8390)}${monthCol('окт',15810)}
+        </div></div>
+      <h2 class="title">Последние чеки</h2>
+      <div class="card tcard"><table><thead><tr><th>Дата</th><th>Магазин</th><th>Категория</th><th style="text-align:right">Сумма</th></tr></thead><tbody>
+        ${recRow('22 окт','Яндекс Такси','транспорт',420)}
+        ${recRow('21 окт','Пятёрочка','продукты',1240)}
+        ${recRow('20 окт','Яндекс Еда','кафе и рестораны',980)}
+        ${recRow('18 окт','Магнит','продукты',2130)}
+        ${recRow('16 окт','Самокат','продукты',760)}
+      </tbody></table></div>`),
+
+    agents: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Агенты</h1><p class="lead">ИИ-помощники, которые делают рутину за вас</p></div>
+        <button class="btn primary spacer">+ Новый агент</button></div>
+      ${aiTabs('agents')}
+      ${tbar()}
+      <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>MCP</th><th>Статус</th><th>Последний прогон</th><th></th></tr></thead><tbody>
+        <tr class="off"><td>—</td><td><div class="b">Базовый ассистент</div><div class="sub">Отвечает, когда не подошёл спец-агент · встроенный, не настраивается</div></td><td>GLM-4</td><td class="muted">—</td><td><span class="st mut">встроенный</span></td><td class="muted">—</td><td class="acts"></td></tr>
+        ${agentRow(1,'Чеки из почты','Читает письма → пишет в «Траты»','GLM-4',['Почта'],'включён','ok','23 окт · +4 чека')}
+        ${agentRow(2,'Разбор писем','Разбирает входящие и готовит ответы','GLM-4',['Почта','Документы'],'включён','ok','22 окт')}
+        ${agentRow(3,'Документы по политике','Проверяет документ по регламенту','GLM-4',['Документы'],'черновик','mut','—')}
+        ${agentRow(4,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['1С'],'не настроен','wait','—')}
+      </tbody></table></div>`),
+
+    agent: () => appShell(`
+      <div class="narrow">
+        <div class="back" data-go="agents">← Агенты</div>
+        <div class="pagehead"><div><h1 class="title">Чеки из почты</h1><p class="lead">Собирает чеки из почты и пишет их в «Траты»</p></div>
+          <button class="btn primary spacer">▶ Запустить сейчас</button></div>
+        <div class="card pad" style="margin-bottom:22px"><h2 class="title">Настройки</h2>
+          <div class="field"><label>Название</label><input value="Чеки из почты"></div>
+          <div class="grid c3">
+            <div><label>За сколько дней смотреть</label><input value="30"></div>
+            <div><label>Макс. писем за прогон</label><input value="40"></div>
+            <div><label>Фильтр по отправителю</label><input placeholder="например, pyaterochka"></div>
+          </div>
+          <label class="toggle" style="margin:14px 0 18px"><input type="checkbox" checked> <span>Агент включён</span></label>
+          <div><button class="btn primary">Сохранить</button></div>
+        </div>
+        <h2 class="title">История прогонов</h2>
+        <div class="grid" style="gap:12px">
+          <div class="card pad"><div class="row"><span class="st ok">успех</span><span class="muted" style="font-size:13px">23 окт, 15:40</span><span class="spacer"></span><span style="font-size:13.5px">Обработано писем: 12, новых чеков: 4</span></div>
+            <pre class="log">Получено писем: 12
+✓ чек: Пятёрочка — 1240 RUB (продукты)
+✓ чек: Яндекс Еда — 980 RUB (кафе и рестораны)
+• не чек: Рассылка «Скидки недели»</pre></div>
+          <div class="card pad"><div class="row"><span class="st err">ошибка</span><span class="muted" style="font-size:13px">23 окт, 12:10</span><span class="spacer"></span><span style="font-size:13.5px">Почта не настроена</span></div></div>
+        </div>
+      </div>`),
+
+    settings: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Модели</h1><p class="lead">LLM, к которым ходят агенты. Моделей может быть много: базовый ассистент работает на одной, другой агент — на другой.</p></div>
+        <button class="btn primary spacer" id="addModelBtn">+ Добавить модель</button></div>
+      ${aiTabs('settings')}
+      ${tbar()}
+      <div class="card tcard"><table style="min-width:700px"><thead><tr><th>ID</th><th>Название</th><th>Адрес API</th><th>Агенты</th><th>Статус</th><th></th></tr></thead><tbody>
+        ${modelRow(1,'GLM-4','open.bigmodel.cn/api/paas/v4',4,true)}
+        ${modelRow(2,'Llama 3.1 (локально)','localhost:11434/v1',2,false)}
+      </tbody></table></div>
+
+      <div class="mbg" id="addModel" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addModelTitle">
+          <button type="button" class="mclose" id="addModelCancel" aria-label="Закрыть">×</button>
+          <h2 class="mtitle" id="addModelTitle" style="margin-bottom:18px">Новая модель</h2>
+          <div class="field"><label>Название</label><input placeholder="например, GLM-4"></div>
+          <div class="field"><label>Адрес API <span class="req">*</span></label><input id="mUrl" placeholder="http://localhost:11434/v1"><div class="hint">Адрес до <code>/v1</code> — Ollama, GLM или другой OpenAI-совместимый.</div></div>
+          <div class="grid c2">
+            <div><label>Модель <span class="req">*</span></label><input placeholder="glm-4"></div>
+            <div><label>Токен</label><div class="pwd"><input type="password" id="p2" placeholder="sk-…"><button type="button" data-tg="p2">👁</button></div></div>
+          </div>
+          <label class="toggle" style="margin-top:16px"><input type="checkbox"> <span>Сделать моделью по умолчанию</span></label>
+          <div class="status" id="st-llm" hidden style="margin-top:14px"></div>
+          <div class="mfoot"><button class="btn ghost" data-test="llm">Проверить</button><span class="spacer"></span><button class="btn primary" id="saveBtn">Сохранить</button></div>
+        </div>
+      </div>
+      <section class="card pad" style="margin-bottom:18px" hidden>
+        <div class="chead"><span class="ic">📧</span><div><h2>Почта (Mail.ru)</h2><div class="sub2">Откуда агент «Чеки» читает письма</div></div></div>
+        <div class="grid c2" style="margin-top:18px">
+          <div><label>Сервер IMAP</label><input value="imap.mail.ru"></div>
+          <div><label>Порт</label><input value="993"></div>
+          <div><label>Почтовый адрес <span class="req">*</span></label><input placeholder="you@mail.ru"></div>
+          <div><label>Пароль приложения <span class="req">*</span></label>
+            <div class="pwd"><input type="password" id="p1" placeholder="••••••••••"><button type="button" data-tg="p1">👁</button></div>
+            <div class="hint">Нужен <a>пароль для внешних приложений</a> Mail.ru, не обычный пароль.</div></div>
+        </div>
+        <div class="row" style="margin-top:18px;gap:14px;flex-wrap:wrap"><button class="btn ghost" data-test="mail">Проверить подключение</button><span class="status" id="st-mail" hidden></span></div>
+      </section>
+`),
+
+    me: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Мой прогресс</h1><p class="lead">Личный дневник обучения</p></div></div>
+      <div class="grid c3" style="margin-bottom:22px">
+        <div class="stat"><div class="n">3</div><div class="l">курса в доступе</div></div>
+        <div class="stat"><div class="n">8</div><div class="l">уроков пройдено</div></div>
+        <div class="stat"><div class="n">5</div><div class="l">тестов сдано</div></div>
+      </div>
+      <div class="grid c2" style="align-items:start">
+        <div><h2 class="title">Курсы</h2><div class="grid" style="gap:12px">
+          ${mini('🧭','SAFe Agilist',54,'7 / 13 уроков')}
+          ${mini('🇬🇧','English',50,'1 / 2 уроков')}
+          ${mini('💰','Финграмотность',0,'0 / 6 уроков')}
+        </div></div>
+        <div><h2 class="title">Активность</h2><div class="card pad"><ul class="timeline">
+          <li class="ok"><span class="dot"></span><div class="tt">Урок пройден: Роли и команды</div><div class="ts">SAFe Agilist · 23 окт, 15:40</div></li>
+          <li class="ok"><span class="dot"></span><div class="tt">Тест — 3/3 (зачёт)</div><div class="ts">SAFe Agilist · 23 окт, 15:38</div></li>
+          <li class="ok"><span class="dot"></span><div class="tt">Урок пройден: Present Simple</div><div class="ts">English · 22 окт, 20:10</div></li>
+          <li><span class="dot"></span><div class="tt">Тест — 2/3 (не сдано)</div><div class="ts">English · 22 окт, 20:05</div></li>
+        </ul></div></div>
+      </div>`),
+
+    users: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Пользователи</h1><p class="lead">Заводите аккаунты и отправляйте приглашения по почте</p></div>
+        <button class="btn primary spacer" data-open="inviteModal">+ Добавить пользователя</button></div>
+      ${tbar('Поиск по имени или e-mail…')}
+      <div class="card tcard"><table style="min-width:680px"><thead><tr><th>ID</th><th>Пользователь</th><th>Роль</th><th>Статус</th><th>Создан</th><th></th></tr></thead><tbody>
+        ${userRow(3,'Маша','masha@mail.ru','Пользователь','приглашён','wait','сегодня',true)}
+        ${userRow(2,'Папа','papa@mail.ru','Пользователь','активен','ok','20 окт',false)}
+        ${userRow(1,'Администратор','admin@mail.ru','Администратор','активен','ok','1 окт',false)}
+      </tbody></table></div>
+
+      <div class="mbg" id="inviteModal" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="inviteTitle">
+          <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
+          <h2 class="mtitle" id="inviteTitle">Новый пользователь</h2>
+          <p class="msub">Ссылка для установки пароля будет отправлена пользователю на почту.</p>
+          <div class="field"><label>E-mail <span class="req">*</span></label><input type="email" placeholder="masha@mail.ru"></div>
+          <div class="grid c2">
+            <div><label>Имя</label><input placeholder="Маша"></div>
+            <div><label>Фамилия</label><input></div>
+          </div>
+          <div class="field" style="margin-top:14px"><label>Роль</label><select class="f"><option>Пользователь</option><option>Администратор</option></select></div>
+          <div class="mfoot"><span class="spacer"></span><button class="btn primary" data-close data-toast="Приглашение отправлено">Сохранить</button></div>
+        </div>
+      </div>`),
+
+    access: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Доступы к курсам</h1><p class="lead">Отметьте, какие курсы открыты каждому</p></div></div>
+      <div class="card tcard"><table><thead><tr><th>Человек</th><th style="text-align:center">🧭 SAFe</th><th style="text-align:center">🇬🇧 English</th><th style="text-align:center">💰 Финансы</th></tr></thead><tbody>
+        ${accessRow('Маша','masha@mail.ru',[0,1,1])}
+        ${accessRow('Папа','papa@mail.ru',[1,1,0])}
+        ${accessRow('Администратор','admin@mail.ru',[1,1,1])}
+      </tbody></table></div>`),
+
+    chat: () => `
+      <div class="cpage"><div class="cwrap" id="cwrap">
+        <aside class="hist" id="hist">
+          <button type="button" class="btn ghost block" data-newchat>+ Новый чат</button>
+          <label class="search" style="margin:10px 0 6px;flex:none"><span class="sr">Поиск по чатам</span>${IC.search}<input type="search" data-histsearch placeholder="Поиск по чатам…"></label>
+          ${histGroup('Сегодня', [['Чеки за октябрь', true], ['Сводка Пете по тратам']])}
+          ${histGroup('Вчера', [['Акт сверки в 1С'], ['Как работает диспетчер']])}
+          ${histGroup('26 окт', [['Регламент ЗАК-03'], ['План покупок на неделю']])}
+          ${histGroup('Ранее', [['Сколько будет 2 + 2'], ['Рецепт сырников']])}
+        </aside>
+        <section class="cmain">
+          <div class="ctop"><button type="button" class="ibtn histbtn" data-histtoggle title="Скрыть историю" aria-label="Скрыть историю">${IC.list}</button><span class="ctitle" id="ctitle">Чеки за октябрь</span></div>
+          <div class="cscroll" id="cscroll"><div class="cthread" id="cthread">
+            ${cu('Собери чеки за октябрь')}
+            ${cstep('Диспетчер подобрал агента <b>«Чеки из почты»</b>', '', 'Из 4 агентов подошёл по описанию «Читает письма → пишет в Траты». Модель GLM-4, MCP: Почта.')}
+            ${cstep('Почта · прочитано 12 писем, найдено 11 чеков', '', '✓ чек: Пятёрочка — 1 240 ₽ (продукты)\n✓ чек: Яндекс Еда — 980 ₽ (кафе и рестораны)\n✓ чек: Магнит — 2 130 ₽ (продукты)\n• не чек: рассылка «Скидки недели»')}
+            ${ca('Готово — добавил <b>11 чеков</b> на <b>15 810 ₽</b>. Больше всего ушло на продукты (Пятёрочка, Магнит) — 9 240 ₽.<div class="cacts"><button class="btn ghost sm" data-go="stats">Открыть «Траты»</button></div>')}
+            ${cu('Отправь Пете сводку по тратам на почту')}
+            ${cstep('Диспетчер подобрал агента <b>«Разбор писем»</b>', '', 'Подошёл по описанию «Разбирает входящие и готовит ответы». Отправка письма наружу — только с подтверждением.')}
+            ${hitl('Отправить письмо','кому: pete@mail.ru · тема: «Траты за октябрь» · вложение: отчёт.xlsx')}
+            ${cu('Проведи этот документ в 1С', 'акт_сверки.pdf')}
+            ${cstep('Диспетчер: подходящего агента нет', 'Нет агента', 'Ни один из 4 агентов не работает с 1С. Ничего не изменено.')}
+            ${ca('Для 1С пока нет агента, поэтому документ я не проводил. Могу создать агента для 1С — для него нужен MCP «1С (ЗУП / ERP)», сейчас он не настроен.<div class="cacts"><button class="btn ghost sm" data-go="constructor">Создать агента</button><button class="btn ghost sm" data-go="mcp">Открыть MCP</button></div>')}
+          </div>
+          <div class="cempty" id="cempty" hidden><h2>Чем помочь?</h2><p class="muted">Опишите задачу — подберу агента. Или спросите что угодно.</p>
+            <div class="row" style="flex-wrap:wrap;gap:8px;justify-content:center">${chip('Собрать чеки')}${chip('Разобрать почту')}${chip('Провести в 1С')}</div></div></div>
+          <div class="cbox">
+            <div class="ccomp"><button type="button" class="ibtn" title="Прикрепить файл" aria-label="Прикрепить файл">${IC.plus}</button>
+              <textarea rows="1" placeholder="Напишите сообщение…" aria-label="Сообщение"></textarea>
+              <button type="button" class="ibtn" title="Голосом" aria-label="Голосом">${IC.mic}</button><button type="button" class="csend" title="Отправить" aria-label="Отправить">${IC.up}</button></div>
+            <div class="chint">Агента ассистент подбирает сам. Действия наружу — только с вашим подтверждением.</div>
+          </div>
+        </section>
+      </div></div>`,
+
+    mcp: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">MCP</h1><p class="lead">Инструменты, которые подключаются к агентам. Предметка живёт здесь — ядро не меняем.</p></div><button class="btn primary spacer">+ Добавить сервер</button></div>
+      ${aiTabs('mcp')}
+      ${tbar()}
+      <div class="card tcard"><table style="min-width:760px"><thead><tr><th>ID</th><th>Название</th><th>Инструменты</th><th>Агенты</th><th>Статус</th><th></th></tr></thead><tbody>
+        ${mcpRow(1,'Почта (Mail.ru)','Чтение писем и вложений',['читать письма','скачать вложение'],2,'подключён','ok')}
+        ${mcpRow(2,'Браузер','Действия на сайтах (Playwright)',['открыть url','клик','заполнить форму','скриншот','скачать'],0,'подключён','ok')}
+        ${mcpRow(3,'Таблицы','Excel: расчёты и выгрузки',['прочитать лист','записать ячейки','формула','выгрузить'],0,'подключён','ok')}
+        ${mcpRow(4,'Документы','Word: правка и рецензирование',['вставить правки','рецензия','сравнить версии'],2,'выключен','mut')}
+        ${mcpRow(5,'Python-песочница','Код без доступа в сеть',['выполнить код'],0,'подключён','ok')}
+        ${mcpRow(6,'1С (ЗУП / ERP)','Проведение и выгрузки в 1С',['провести документ','выгрузка OData'],1,'не настроен','wait')}
+      </tbody></table></div>`),
+
+    constructor: () => appShell(`
+      <div class="back" data-go="agents">← Агенты</div>
+      <div class="pagehead"><div><h1 class="title">Конструктор · Разбор писем</h1><p class="lead">Граф агента: узлы, инструменты, гардрейлы, переходы</p></div><div class="wrapgap spacer"><button class="btn ghost">+ Добавить узел</button><button class="btn primary">▶ Тест-запуск</button></div></div>
+      <div class="tabs"><button class="on">Редактор</button><button>YAML</button><button>Настройки</button></div>
+      <div class="canvas"><div class="nodes">
+        ${node('Точка входа','ep','llm_1','всегда','GLM-4',['aiserver'],['Лимиты · снят','Маскирование ПДн · снят'],['ответ пользователю','→ answer'],'Распознай документ через MCP aiserver (проект nlp-ocr). В чат верни только краткую сводку.')}
+        <div class="arrow">→</div>
+        ${node('финиш','fin','answer','авто','Llama 3.1',['zup'],['Лимиты · снят','Маскирование ПДн · снят'],['ответ пользователю','финиш'],'Ты кадровый специалист: заводишь удержания по исполнительным листам в 1С:ЗУП из переданного текста.')}
+      </div></div>`),
+  };
+
+  function appShell(inner) { return `<div class="main">${inner}</div>`; }
+  function courseCard(e,t,d,done,total,pct) {
+    return `<div class="course" data-go="course"><span class="emoji">${e}</span><h3>${t}</h3><p class="desc">${d}</p>
+      <div><div class="pbar ${pct===100?'done':''}"><span style="width:${pct}%"></span></div><div class="pmeta"><span>${done} / ${total} уроков</span><span>${pct}%</span></div></div></div>`;
+  }
+  function lessonRow(n,t,done){ return `<tr style="cursor:pointer" data-go="lesson"><td style="width:44px;text-align:center">${done?'<span style="color:var(--ok);font-size:16px">✓</span>':'<span class="muted">'+n.slice(0,1)+'</span>'}</td><td class="b">${t}</td><td style="text-align:right">${done?'<span class="st ok">пройден</span>':''}</td></tr>`; }
+  function bar(name,val,max,green){ return `<div style="margin-bottom:11px"><div class="pmeta" style="margin:0 0 4px"><span style="color:var(--ink)">${name}</span><span class="b">${money(val)}</span></div><div class="pbar ${green?'done':''}"><span style="width:${Math.round(val/max*100)}%"></span></div></div>`; }
+  function monthCol(label,val){ const max=15810; const h=Math.round(val/max*100); return `<div class="col"><div class="bar"><div style="height:${h}%;min-height:${val>0?4:0}px"></div></div><div class="muted" style="font-size:11px;margin-top:6px">${label}</div><div style="font-size:11px;font-weight:600">${val>0?money(val):'—'}</div></div>`; }
+  function recRow(d,m,c,v){ return `<tr><td class="muted">${d}</td><td class="b">${m}</td><td><span class="st mut">${c}</span></td><td style="text-align:right" class="b">${money(v)}</td></tr>`; }
+  function mini(e,t,pct,sub){ return `<div class="card pad" data-go="course" style="cursor:pointer"><div class="row" style="gap:12px;margin-bottom:12px"><span class="emoji" style="width:36px;height:36px;font-size:18px">${e}</span><div class="b">${t}</div><span class="spacer"></span><span class="muted" style="font-size:13px">${pct}%</span></div><div class="pbar ${pct===100?'done':''}"><span style="width:${pct}%"></span></div><div class="pmeta"><span>${sub}</span></div></div>`; }
+  function userRow(id,n,e,role,stt,cls,date,inv){ return `<tr><td>#${id}</td><td><div class="b">${n}</div><div class="sub">${e}</div></td><td>${role}</td><td><span class="st ${cls}">${stt}</span></td><td class="muted">${date}</td><td class="acts">${inv ? ibtn('send','Выслать приглашение снова','data-toast="Приглашение отправлено повторно"') : ''}${ibtn('edit','Изменить')}${ibtn('del','Удалить')}</td></tr>`; }
+  function accessRow(n,e,on){ const cell=(v)=>`<td style="text-align:center"><button class="btn sm" style="min-width:44px;${v?'background:var(--primary);color:#fff;border-color:transparent':'background:var(--card);border:1px solid var(--line);color:var(--muted)'}">${v?'✓':'+'}</button></td>`; return `<tr><td><div class="b">${n}</div><div class="sub">${e}</div></td>${cell(on[0])}${cell(on[1])}${cell(on[2])}</tr>`; }
+
+  function chip(t){ return `<button class="btn ghost sm" style="border-radius:20px">${t}</button>`; }
+  function aiTabs(active){ const t=[['agents','Агенты'],['mcp','MCP'],['settings','Модели']]; return `<div class="tabs" style="margin:-4px 0 18px">${t.map(([k,l])=>`<button class="${active===k?'on':''}" data-go="${k}">${l}</button>`).join('')}</div>`; }
+  const IC = {
+    edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    del: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+    run: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>',
+    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+    send: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></svg>',
+    list: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>',
+    plus: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    mic: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+    up: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+    search: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  };
+  function ibtn(icon, title, extra) { return `<button type="button" class="ibtn ${icon === 'del' ? 'del' : ''}" title="${title}" aria-label="${title}" ${extra || ''}>${IC[icon]}</button>`; }
+  function tbar(ph) { return `<div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" data-search placeholder="${ph || 'Поиск по названию…'}"></label><button type="button" class="btn dashed">+ Фильтр</button></div>`; }
+  function agentRow(id,name,desc,model,mcp,status,cls,run){ return `<tr><td>#${id}</td><td><div class="b link" data-go="agent">${name}</div><div class="sub">${desc}</div></td><td style="white-space:nowrap">${model}</td><td>${mcp.join(', ')}</td><td><span class="st ${cls}">${status}</span></td><td class="muted">${run}</td><td class="acts">${ibtn('run','Запустить')}${ibtn('edit','Конструктор','data-go="constructor"')}${ibtn('del','Удалить')}</td></tr>`; }
+  function modelRow(id,name,url,agents,def){ return `<tr><td>#${id}</td><td><span class="b">${name}</span>${def ? '<span class="st info" style="margin-left:8px">по умолчанию</span>' : ''}</td><td class="muted">${url}</td><td>${agents}</td><td class="stcell"><span class="st ok">подключена</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Изменить')}${ibtn('del','Удалить', def ? 'disabled' : '')}</td></tr>`; }
+  function mcpRow(id,name,desc,tools,agents,status,cls){ return `<tr><td>#${id}</td><td><div class="b">${name}</div><div class="sub">${desc}</div></td><td><span title="${tools.join(', ')}">${tools.length}</span></td><td>${agents}</td><td class="stcell"><span class="st ${cls}">${status}</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Настроить')}${ibtn('del','Удалить')}</td></tr>`; }
+  function histGroup(title, items) { return `<div class="hgroup"><button type="button" class="hhead" data-hgroup aria-expanded="true">${title}<span class="chev">▾</span></button><div class="hitems">${items.map(([t, on]) => `<button type="button" class="hitem ${on ? 'on' : ''}" data-hitem>${t}</button>`).join('')}</div></div>`; }
+  function cu(t, file) { return `<div class="cu">${file ? `<div class="cfile"><div class="b">${file}</div><span class="cft">PDF</span></div>` : ''}<div class="cub">${t}</div></div>`; }
+  function ca(t) { return `<div class="ca">${t}</div>`; }
+  function cstep(t, fail, details) { return `<details class="cstep"><summary>${t}${fail ? ` <span class="cfail">${fail}</span>` : ''} <span class="chev">▸</span></summary><pre>${details}</pre></details>`; }
+  function umsg(t){ return `<div class="msg u">${t}</div>`; }
+  function bmsg(t,k){ return `<div class="msg b ${k||''}">${t}</div>`; }
+  function route(a){ return `<div class="route">диспетчер → подобран агент: <b>${a}</b></div>`; }
+  function hitl(title,detail){ return `<div class="hitl"><div class="ht">⏸ Нужно подтверждение · ${title}</div><div class="hd">${detail}</div><div class="wrapgap"><button class="btn primary sm">Отправить</button><button class="btn ghost sm">Отмена</button></div></div>`; }
+  function node(tag,tagCls,name,hitl,model,mcp,guards,trans,sys){ const pills=(arr,cls)=>arr.map(x=>`<span class="npill ${cls||''} ${/снят/.test(x)?'off':''}">${x.replace(' · снят','')}</span>`).join(''); return `<div class="node"><div class="nhead"><span class="tag ${tagCls==='fin'?'fin':''}">⚑ ${tag}</span><span class="nm">${name}</span><span class="spacer"></span><span class="muted">🗑</span></div><div class="nlabel">HITL</div><span class="npill">${hitl}</span><div class="nlabel">Модель</div><span class="npill">🧠 ${model}</span><div class="nlabel">MCP-инструменты</div>${pills(mcp,'mcp')}<div class="nlabel">Базы знаний</div><span class="npill off">нет</span><div class="nlabel">Гардрейлы</div>${pills(guards)}<div class="nlabel">Переход</div>${pills(trans)}<div class="nlabel">Системная инструкция</div><div class="ntext">${sys}</div><div class="muted" style="font-size:12px;margin-top:10px">⌄ Развернуть</div></div>`; }
+
+  // ---- router ----
+  const view = document.getElementById('view');
+  const header = document.getElementById('appheader');
+  const sel = document.getElementById('screenSel');
+  // ---- pinned menu + expanding tray ----
+  const NAV = {
+    chat: { go: 'chat', label: 'Чат', sec: 'chat' },
+    agents: { go: 'agents', label: 'Агенты', sec: 'agents' }, mcp: { go: 'mcp', label: 'MCP' }, settings: { go: 'settings', label: 'Модели' },
+    learn: { go: 'learn', label: 'Обучение' }, stats: { go: 'stats', label: 'Траты' }, me: { go: 'me', label: 'Прогресс' },
+    users: { go: 'users', label: 'Пользователи', sec: 'users' }, access: { go: 'access', label: 'Доступы', sec: 'access' },
+  };
+  const DEFAULT_PINS = ['chat', 'agents', 'mcp', 'settings'];
+  let pins = DEFAULT_PINS.slice();
+  try { const s = JSON.parse(localStorage.getItem('pinnedNav3') || 'null'); if (Array.isArray(s) && s.length && s.every(k => NAV[k])) pins = s; } catch (e) {}
+  const nav = document.getElementById('nav');
+  const tray = document.getElementById('tray'), trayin = document.getElementById('trayin'), lbtn = document.getElementById('lbtn');
+  let current = 'chat';
+  function savePins() { try { localStorage.setItem('pinnedNav3', JSON.stringify(pins)); } catch (e) {} }
+  function highlight() {
+    const sec = navSection[current];
+    nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.go === current || a.dataset.key === navKeyFor(current) || (!!a.dataset.sec && a.dataset.sec === sec)));
+  }
+  // screens without their own menu item belong to their parent's item
+  const SCREEN_KEY = { agent: 'agents', constructor: 'agents', course: 'learn', lesson: 'learn' };
+  const PIN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4v2H6v-2l4-4z"/></svg>';
+  function navKeyFor(screen) { return Object.keys(NAV).find(k => NAV[k].go === screen) || SCREEN_KEY[screen]; }
+  function renderNav() {
+    const cur = navKeyFor(current);
+    const link = (k, temp) => { const n = NAV[k];
+      return `<a data-key="${k}" data-go="${n.go}" data-sec="${n.sec || ''}" draggable="true"${temp ? ' class="temp" title="Раздел не закреплён в меню"' : ''}>${n.label}${temp ? `<span class="pin" role="button" tabindex="0" data-pin="${k}" title="Закрепить в меню" aria-label="Закрепить в меню">${PIN}</span>` : ''}</a>`; };
+    nav.innerHTML = pins.map(k => link(k)).join('') + (cur && !pins.includes(cur) ? link(cur, true) : '');
+    document.querySelectorAll('.titem').forEach(t => t.classList.toggle('cur', t.dataset.key === cur));
+    highlight();
+  }
+  nav.addEventListener('click', (e) => {
+    const p = e.target.closest('[data-pin]'); if (!p) return;
+    e.preventDefault(); e.stopPropagation();
+    pins.push(p.dataset.pin); savePins(); renderNav();
+  });
+  nav.addEventListener('keydown', (e) => { const p = e.target.closest('[data-pin]'); if (p && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); p.click(); } });
+  function setTray(open) { tray.classList.toggle('open', open); lbtn.classList.toggle('on', open); lbtn.setAttribute('aria-expanded', String(open)); }
+  lbtn.addEventListener('click', () => setTray(!tray.classList.contains('open')));
+  tray.addEventListener('click', (e) => { if (e.target.closest('.titem')) setTray(false); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { setTray(false); document.querySelectorAll('.mbg').forEach(m => { m.hidden = true; }); }
+    const t = e.target.closest && e.target.closest('.titem');
+    if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setTray(false); go(t.dataset.go); }
+  });
+
+  // drag & drop: tray → menu pins, inside the menu reorders, menu → tray unpins
+  let dragKey = null, dragFrom = null;
+  document.addEventListener('dragstart', (e) => {
+    const t = e.target.closest && e.target.closest('.titem, #nav a'); if (!t) return;
+    dragKey = t.dataset.key; dragFrom = t.closest('#nav') ? 'nav' : 'tray'; t.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragKey);
+  });
+  document.addEventListener('dragend', () => { dragKey = dragFrom = null; nav.classList.remove('drop'); trayin.classList.remove('drop'); clearIns(); document.querySelectorAll('.dragging').forEach(x => x.classList.remove('dragging')); });
+  // where a drop at clientX lands among the pinned items (the dragged one excluded)
+  function dropSlot(x) {
+    const list = [...nav.querySelectorAll('a')].filter(a => a.dataset.key !== dragKey && pins.includes(a.dataset.key));
+    const idx = list.filter(a => { const r = a.getBoundingClientRect(); return r.left + r.width / 2 < x; }).length;
+    return { list, idx };
+  }
+  function clearIns() { nav.querySelectorAll('.ins-l, .ins-r').forEach(a => a.classList.remove('ins-l', 'ins-r')); }
+  nav.addEventListener('dragover', (e) => {
+    if (!dragKey) return;
+    e.preventDefault(); nav.classList.add('drop'); clearIns();
+    const { list, idx } = dropSlot(e.clientX);
+    if (idx < list.length) list[idx].classList.add('ins-l'); else if (list.length) list[list.length - 1].classList.add('ins-r');
+  });
+  nav.addEventListener('dragleave', (e) => { if (!nav.contains(e.relatedTarget)) { nav.classList.remove('drop'); clearIns(); } });
+  nav.addEventListener('drop', (e) => {
+    e.preventDefault(); nav.classList.remove('drop'); if (!dragKey) return;
+    const { list, idx } = dropSlot(e.clientX); clearIns();
+    pins = list.map(a => a.dataset.key); pins.splice(idx, 0, dragKey);
+    savePins(); renderNav();
+  });
+  trayin.addEventListener('dragover', (e) => { if (dragFrom === 'nav') { e.preventDefault(); trayin.classList.add('drop'); } });
+  trayin.addEventListener('dragleave', (e) => { if (!trayin.contains(e.relatedTarget)) trayin.classList.remove('drop'); });
+  trayin.addEventListener('drop', (e) => {
+    e.preventDefault(); trayin.classList.remove('drop');
+    if (dragFrom !== 'nav' || !dragKey || pins.length <= 1) return;
+    pins = pins.filter(k => k !== dragKey); savePins(); renderNav();
+  });
+  const navSection = { chat:'chat', agents:'agents', agent:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
+
+  function render(name) {
+    if (!SCREENS[name]) name = 'chat';
+    const isAuth = name === 'login' || name === 'invite';
+    header.hidden = isAuth;
+    if (isAuth) setTray(false);
+    view.innerHTML = SCREENS[name]();
+    sel.value = name;
+    current = name; renderNav();
+    window.scrollTo(0, 0);
+    wireTables();
+    if (name === 'settings') wireSettings();
+    if (name === 'chat') wireChat();
+  }
+  function go(name) { location.hash = name; }
+
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-go]');
+    if (t) { e.preventDefault(); go(t.dataset.go); }
+  });
+  sel.addEventListener('change', () => go(sel.value));
+  window.addEventListener('hashchange', () => render(location.hash.slice(1)));
+
+  // ---- settings interactions (bound after render) ----
+  function wireSettings() {
+    document.querySelectorAll('[data-tg]').forEach(btn => btn.addEventListener('click', () => { const i = document.getElementById(btn.dataset.tg); i.type = i.type === 'password' ? 'text' : 'password'; btn.textContent = i.type === 'password' ? '👁' : '🙈'; }));
+    const MSG = { mail: { ok: '✓ Подключено — INBOX, 1240 писем за 30 дней', err: '✕ Не удалось войти — проверьте адрес и пароль приложения' }, llm: { ok: '✓ Модель ответила — glm-4, 420 мс', err: '✕ Не удалось подключиться — укажите адрес API и проверьте токен' } };
+    document.querySelectorAll('[data-test]').forEach(btn => btn.addEventListener('click', () => {
+      const k = btn.dataset.test, st = document.getElementById('st-' + k);
+      const mock = k === 'llm' && !document.getElementById('mUrl').value.trim() ? 'err' : 'ok';
+      st.hidden = false; st.className = 'status checking'; st.innerHTML = '<span class="spin"></span> Проверяем подключение…'; btn.disabled = true;
+      setTimeout(() => { st.className = 'status ' + mock; st.textContent = MSG[k][mock]; btn.disabled = false; }, 1200);
+    }));
+    const form = document.getElementById('addModel');
+    document.getElementById('addModelBtn').addEventListener('click', () => { form.hidden = false; document.getElementById('st-llm').hidden = true; form.querySelector('input').focus(); });
+    document.getElementById('addModelCancel').addEventListener('click', () => { form.hidden = true; });
+    form.addEventListener('click', (e) => { if (e.target === form) form.hidden = true; });
+    document.getElementById('saveBtn').addEventListener('click', () => { form.hidden = true; showSaved('Модель добавлена'); });
+  }
+  function fitChat() { const w = document.getElementById('cwrap'); if (w) w.style.height = Math.max(420, window.innerHeight - w.getBoundingClientRect().top - 20) + 'px'; }
+  window.addEventListener('resize', fitChat);
+  function wireChat() {
+    fitChat();
+    const hist = document.getElementById('hist'), thread = document.getElementById('cthread'), empty = document.getElementById('cempty'), title = document.getElementById('ctitle'), sc = document.getElementById('cscroll');
+    sc.scrollTop = sc.scrollHeight;
+    const show = (t, isNew) => { title.textContent = t; thread.hidden = isNew; empty.hidden = !isNew; hist.classList.remove('open'); sc.scrollTop = isNew ? 0 : sc.scrollHeight; };
+    hist.querySelectorAll('[data-hgroup]').forEach((b) => b.addEventListener('click', () => b.setAttribute('aria-expanded', String(b.getAttribute('aria-expanded') !== 'true'))));
+    hist.querySelectorAll('[data-hitem]').forEach((b) => b.addEventListener('click', () => { hist.querySelectorAll('.hitem').forEach((x) => x.classList.toggle('on', x === b)); show(b.textContent, false); }));
+    view.querySelector('[data-newchat]').addEventListener('click', () => { hist.querySelectorAll('.hitem').forEach((x) => x.classList.remove('on')); show('Новый чат', true); });
+    view.querySelector('[data-histtoggle]').addEventListener('click', (e) => {
+      if (matchMedia('(max-width: 760px)').matches) { hist.classList.toggle('open'); return; }
+      const hidden = document.getElementById('cwrap').classList.toggle('nohist'), t = hidden ? 'Показать историю' : 'Скрыть историю';
+      e.currentTarget.title = t; e.currentTarget.setAttribute('aria-label', t);
+    });
+    view.querySelector('[data-histsearch]').addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      hist.querySelectorAll('.hgroup').forEach((g) => { let any = false; g.querySelectorAll('.hitem').forEach((x) => { const ok = !q || x.textContent.toLowerCase().includes(q); x.hidden = !ok; any = any || ok; }); g.hidden = !any; });
+    });
+    const ta = view.querySelector('.ccomp textarea');
+    ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
+  }
+  function wireTables() {
+    view.querySelectorAll('[data-open]').forEach((btn) => btn.addEventListener('click', () => {
+      const m = document.getElementById(btn.dataset.open); m.hidden = false; const i = m.querySelector('input'); if (i) i.focus();
+    }));
+    view.querySelectorAll('.mbg').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; }));
+    view.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { b.closest('.mbg').hidden = true; }));
+    view.querySelectorAll('[data-toast]').forEach((b) => b.addEventListener('click', () => showSaved(b.dataset.toast)));
+    view.querySelectorAll('[data-search]').forEach((inp) => inp.addEventListener('input', () => {
+      const q = inp.value.trim().toLowerCase();
+      inp.closest('.tbar').nextElementSibling.querySelectorAll('tbody tr').forEach((tr) => { tr.hidden = !!q && !tr.textContent.toLowerCase().includes(q); });
+    }));
+    view.querySelectorAll('[data-rowtest]').forEach((btn) => btn.addEventListener('click', () => {
+      const cell = btn.closest('tr').querySelector('.stcell'), was = cell.innerHTML;
+      cell.innerHTML = '<span class="status checking"><span class="spin"></span> Проверяем…</span>'; btn.disabled = true;
+      setTimeout(() => { cell.innerHTML = '<span class="st ok">✓ доступен</span>'; btn.disabled = false; setTimeout(() => { cell.innerHTML = was; }, 1600); }, 900);
+    }));
+  }
+  const toast = document.getElementById('toast');
+  function showSaved(msg) { toast.textContent = msg || 'Настройки сохранены'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); }
+
+  renderNav();
+  render(location.hash.slice(1) || 'chat');
+</script>

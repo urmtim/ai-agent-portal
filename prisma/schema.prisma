@@ -1,0 +1,152 @@
+// Learning Portal — data model
+// Courses live as MDX files in content/courses/<slug>/ (content-as-code).
+// The DB stores only dynamic data: users, roles, access grants, progress, quiz results.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  INVITED // created by admin, invite sent, password not set yet
+  ACTIVE // invite accepted, can log in
+  DISABLED // access revoked
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String? // null until the invite is accepted
+  role         Role       @default(USER)
+  status       UserStatus @default(INVITED)
+  createdAt    DateTime   @default(now())
+
+  access      CourseAccess[]
+  progress    Progress[]
+  quizResults QuizResult[]
+  invites     InviteToken[]
+  agents      Agent[]
+  receipts    Receipt[]
+}
+
+// One-time invite / password-set link sent by email.
+model InviteToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique // sha256 of the raw token (raw token only lives in the emailed link)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+// Which user has access to which course (admin grants).
+model CourseAccess {
+  userId     String
+  courseSlug String
+  grantedAt  DateTime @default(now())
+  grantedBy  String?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, courseSlug])
+}
+
+// A completed page/lesson within a course.
+model Progress {
+  userId      String
+  courseSlug  String
+  pageSlug    String
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, courseSlug, pageSlug])
+}
+
+// A submitted quiz attempt (graded server-side).
+model QuizResult {
+  id          String   @id @default(cuid())
+  userId      String
+  courseSlug  String
+  pageSlug    String
+  quizId      String
+  score       Int
+  total       Int
+  passed      Boolean
+  answers     String // JSON string (SQLite has no native JSON)
+  submittedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, courseSlug])
+}
+
+// ---------- Family agents ----------
+
+enum AgentType {
+  RECEIPTS // collects receipts from email into expense stats
+}
+
+enum AgentRunStatus {
+  RUNNING
+  OK
+  ERROR
+}
+
+// A configured automation owned by a family member.
+model Agent {
+  id        String    @id @default(cuid())
+  ownerId   String
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  type      AgentType
+  name      String
+  enabled   Boolean   @default(true)
+  config    String    @default("{}") // JSON: filters, lookback days, etc.
+  createdAt DateTime  @default(now())
+
+  runs AgentRun[]
+
+  @@index([ownerId])
+}
+
+// One execution of an agent (manual "Run now" or scheduled later).
+model AgentRun {
+  id         String         @id @default(cuid())
+  agentId    String
+  agent      Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  status     AgentRunStatus @default(RUNNING)
+  startedAt  DateTime       @default(now())
+  finishedAt DateTime?
+  processed  Int            @default(0) // items looked at
+  created    Int            @default(0) // new records produced
+  summary    String         @default("")
+  log        String         @default("") // plain-text run log
+
+  @@index([agentId, startedAt])
+}
+
+// A parsed receipt -> expense statistics.
+model Receipt {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  merchant    String
+  total       Float
+  currency    String   @default("RUB")
+  purchasedAt DateTime
+  category    String   @default("прочее")
+  items       String   @default("[]") // JSON [{name, qty, price}]
+  sourceId    String?  @unique // email Message-ID / hash, for dedupe
+  sourceAgent String? // agent id that produced it
+  createdAt   DateTime @default(now())
+
+  @@index([ownerId, purchasedAt])
+}

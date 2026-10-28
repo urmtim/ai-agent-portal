@@ -1,0 +1,36 @@
+schema: spec-driven
+
+context: |
+  Language: ru
+  All artifacts must be written in ru.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  Project: личный пет-проект «семейный портал» (обучение + AI-агенты, позже — прикладные задачи вроде 1С).
+  Stack: Next.js 16 (App Router, proxy.ts вместо middleware, см. AGENTS.md), React 19, TypeScript,
+  Auth.js v5 (Credentials + JWT), Prisma 6 + SQLite, zod 4. LLM — только OpenAI-совместимый endpoint
+  (Ollama/GLM; адрес и токен из настроек), не Claude API.
+  UI source of truth: mockups/portal-all-screens.html (все экраны). Стиль: всё по центру,
+  max-width 1060px, списки — таблицы (поиск + «+ Фильтр», ID, иконки действий), создание — модалки.
+  Секреты (пароли почты, токены LLM) пользователь кладёт в .env сам; в чат и код не попадают.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
