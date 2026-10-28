@@ -31,7 +31,7 @@ export function UserMenu({
         className="row"
         style={{ background: "none", border: 0, cursor: "pointer", padding: 0, gap: 10 }}
       >
-        <div style={{ textAlign: "right" }}>
+        <div className="who" style={{ textAlign: "right" }}>
           <div className="avname">{name}</div>
           <div className="avrole">{role === "ADMIN" ? "администратор" : "пользователь"}</div>
         </div>
