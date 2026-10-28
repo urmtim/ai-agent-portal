@@ -2,39 +2,39 @@
 
 ## 1. Общие UI-примитивы
 
-- [ ] 1.1 Создать `components/ui/icons.tsx` (edit, del, run, check, send, search) и `IconButton` с `title`/`aria-label`. Проверка: `npx tsc --noEmit`.
-- [ ] 1.2 Создать `components/ui/Modal.tsx`:
+- [x] 1.1 Создать `components/ui/icons.tsx` (edit, del, run, check, send, search) и `IconButton` с `title`/`aria-label`. Проверка: `npx tsc --noEmit`.
+- [x] 1.2 Создать `components/ui/Modal.tsx`:
   - Esc, клик по фону, крестик;
   - фокус в первое поле;
   - заголовок, подзаголовок, подвал.
 
   Проверка: `npx tsc --noEmit`.
-- [ ] 1.3 Создать `components/ui/Toast.tsx` (провайдер и `useToast`, 2 секунды) и подключить провайдер в `app/(app)/layout.tsx`. Проверка: `npx tsc --noEmit`.
-- [ ] 1.4 Создать `components/ui/ListTable.tsx`:
+- [x] 1.3 Создать `components/ui/Toast.tsx` (провайдер и `useToast`, 2 секунды) и подключить провайдер в `app/(app)/layout.tsx`. Проверка: `npx tsc --noEmit`.
+- [x] 1.4 Создать `components/ui/ListTable.tsx`:
   - поиск;
   - «+ Фильтр» с выпадающим списком отметок, счётчик «Фильтр · N»;
   - строка «Ничего не найдено»;
   - строки, которые не участвуют в фильтре.
 
   Проверка: `npx tsc --noEmit`.
-- [ ] 1.5 Перенести стили из макета в `app/globals.css`: `.tbar`, `.search`, `.btn.dashed`, `.ibtn`, `td.acts`, `.tcard`, `tr.off`, `.mbg`/`.modal`, `.tabs`, тост, выпадающий фильтр. Проверка: `npm run lint`.
-- [ ] 1.6 Создать `components/AiTabs.tsx` (Агенты · MCP · Модели) и вывести на `/agents`, `/mcp`, `/models`. Проверка: `npm run build`.
+- [x] 1.5 Перенести стили из макета в `app/globals.css`: `.tbar`, `.search`, `.btn.dashed`, `.ibtn`, `td.acts`, `.tcard`, `tr.off`, `.mbg`/`.modal`, `.tabs`, тост, выпадающий фильтр. Проверка: `npm run lint`.
+- [x] 1.6 Создать `components/AiTabs.tsx` (Агенты · MCP · Модели) и вывести на `/agents`, `/mcp`, `/models`. Проверка: `npm run build`.
 
 ## 2. Пользователи
 
-- [ ] 2.1 Создать `lib/user-guard.ts` (`checkUserChange`) и `lib/user-guard.test.ts`:
+- [x] 2.1 Создать `lib/user-guard.ts` (`checkUserChange`) и `lib/user-guard.test.ts`:
   - удалить себя, отключить себя;
   - снять роль у последнего админа, удалить последнего админа;
   - обычная правка.
 
   Проверка: `npm test` зелёный.
-- [ ] 2.2 Переделать `app/(app)/admin/actions.ts`:
+- [x] 2.2 Переделать `app/(app)/admin/actions.ts`:
   - `createUser`: e-mail, имя, фамилия, роль; ссылка только при `MAIL_TRANSPORT=console`;
   - `resendInvite` возвращает результат;
   - новые `updateUser` и `deleteUser` через `checkUserChange`.
 
   Проверка: `npx tsc --noEmit`.
-- [ ] 2.3 Переписать `app/(app)/admin/users/page.tsx` на `ListTable`:
+- [x] 2.3 Переписать `app/(app)/admin/users/page.tsx` на `ListTable`:
   - колонки ID, Пользователь, Роль, Статус, Создан;
   - фильтр по роли и статусу.
 
@@ -46,13 +46,13 @@
 
 ## 3. Агенты
 
-- [ ] 3.1 Доработать `app/(app)/agents/actions.ts`:
+- [x] 3.1 Доработать `app/(app)/agents/actions.ts`:
   - `createAgent(type, name)` вместо `createReceiptsAgent`;
   - `runAgentNow` возвращает итог;
   - `deleteAgent` возвращает результат.
 
   Проверка: `npx tsc --noEmit`.
-- [ ] 3.2 Переписать `app/(app)/agents/page.tsx` на `ListTable`:
+- [x] 3.2 Переписать `app/(app)/agents/page.tsx` на `ListTable`:
   - строка «Базовый ассистент»;
   - колонки ID, Название, Модель, MCP, Статус, Последний прогон;
   - фильтр по статусу;
@@ -66,7 +66,7 @@
 
 ## 4. Проверка в браузере
 
-- [ ] 4.1 Headless-проверка сценариев спек от имени администратора:
+- [x] 4.1 Headless-проверка сценариев спек от имени администратора:
   - поиск и фильтр, «Ничего не найдено»;
   - приглашение (новый, занятый e-mail), выслать снова;
   - изменить и отключить (вход отключённого не проходит), удаление и отмена удаления;

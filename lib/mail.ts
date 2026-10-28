@@ -3,6 +3,11 @@ import nodemailer from "nodemailer";
 
 type Mail = { to: string; subject: string; html: string; text: string };
 
+/** True when mail is only printed to the server log (dev), i.e. not really delivered. */
+export function mailIsConsole(): boolean {
+  return (process.env.MAIL_TRANSPORT ?? "console") !== "smtp";
+}
+
 /**
  * Sends an email. Two transports:
  *  - console (dev default): prints the message (and any link) to the server log.

@@ -1,9 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
+import { AGENT_TYPES } from "@/lib/agents/types";
+
+export type FormState = { error?: string; ok?: string } | undefined;
 
 async function ownAgentOrThrow(agentId: string, userId: string) {
   const agent = await prisma.agent.findUnique({ where: { id: agentId } });
@@ -11,28 +16,59 @@ async function ownAgentOrThrow(agentId: string, userId: string) {
   return agent;
 }
 
-/** Create the receipts agent for the current user (one-click). */
-export async function createReceiptsAgent(): Promise<void> {
+function revalidateAgent(agentId: string) {
+  revalidatePath("/agents");
+  revalidatePath(`/agents/${agentId}`);
+}
+
+const createSchema = z.object({
+  type: z.enum(["RECEIPTS"]),
+  name: z.string().trim().max(80),
+});
+
+/** Create an agent of the chosen type with its default settings. */
+export async function createAgent(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
+  const parsed = createSchema.safeParse({ type: formData.get("type"), name: formData.get("name") ?? "" });
+  if (!parsed.success) return { error: "Выберите тип агента" };
+
+  const t = AGENT_TYPES[parsed.data.type];
   await prisma.agent.create({
     data: {
       ownerId: user.id,
-      type: "RECEIPTS",
-      name: "Чеки из почты",
-      config: JSON.stringify({ sinceDays: 30, fromFilter: "", max: 40 }),
+      type: parsed.data.type,
+      name: parsed.data.name || t.label,
+      config: JSON.stringify(t.defaultConfig),
     },
   });
   revalidatePath("/agents");
+  return { ok: "Агент создан" };
 }
 
-export async function runAgentNow(formData: FormData): Promise<void> {
+/** Run an agent now; returns the run summary for a toast. */
+export async function runAgentById(agentId: string): Promise<FormState> {
   const user = await requireUser();
-  const agentId = String(formData.get("agentId"));
   await ownAgentOrThrow(agentId, user.id);
-  await runAgent(agentId);
-  revalidatePath("/agents");
-  revalidatePath(`/agents/${agentId}`);
+  const runId = await runAgent(agentId);
+  const run = await prisma.agentRun.findUnique({ where: { id: runId } });
+  revalidateAgent(agentId);
   revalidatePath("/stats");
+  return run?.status === "OK" ? { ok: run.summary } : { error: `Ошибка прогона: ${run?.summary ?? "неизвестно"}` };
+}
+
+/** Delete an agent with its run history (collected receipts stay). */
+export async function deleteAgentById(agentId: string): Promise<FormState> {
+  const user = await requireUser();
+  await ownAgentOrThrow(agentId, user.id);
+  await prisma.agent.delete({ where: { id: agentId } });
+  revalidatePath("/agents");
+  return { ok: "Агент удалён" };
+}
+
+// ---- form actions used by the agent page (/agents/[id]) ----
+
+export async function runAgentNow(formData: FormData): Promise<void> {
+  await runAgentById(String(formData.get("agentId")));
 }
 
 export async function saveAgentConfig(formData: FormData): Promise<void> {
@@ -54,14 +90,10 @@ export async function saveAgentConfig(formData: FormData): Promise<void> {
       config: JSON.stringify(config),
     },
   });
-  revalidatePath(`/agents/${agentId}`);
-  revalidatePath("/agents");
+  revalidateAgent(agentId);
 }
 
 export async function deleteAgent(formData: FormData): Promise<void> {
-  const user = await requireUser();
-  const agentId = String(formData.get("agentId"));
-  await ownAgentOrThrow(agentId, user.id);
-  await prisma.agent.delete({ where: { id: agentId } });
-  revalidatePath("/agents");
+  await deleteAgentById(String(formData.get("agentId")));
+  redirect("/agents");
 }
