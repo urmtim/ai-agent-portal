@@ -1,0 +1,19 @@
+# Local "production" copy of the portal: http://localhost:3080
+# Runs next to `npm run dev` (port 3000) with its own database in the portal-data volume.
+services:
+  app:
+    build: .
+    image: ai-agent-portal
+    restart: unless-stopped
+    ports:
+      - "3080:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/data/portal.db
+      APP_URL: http://localhost:3080
+      AUTH_TRUST_HOST: "true"
+    volumes:
+      - portal-data:/data
+
+volumes:
+  portal-data:
