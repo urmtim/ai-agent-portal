@@ -29,9 +29,8 @@ export default async function ModelsPage() {
       <div key="n">
         <span className="b">{m.name}</span>
         {m.id === defaultId && <span className="st info" style={{ marginLeft: 8 }}>по умолчанию</span>}
-        {m.name !== m.model && <div className="sub">{m.model}</div>}
       </div>,
-      <span key="u" className="muted" style={{ wordBreak: "break-all" }}>{m.baseUrl.replace(/^https?:\/\//, "")}</span>,
+      <code key="m" className="muted" style={{ wordBreak: "break-all" }}>{m.model}</code>,
       m._count.agents + (m.id === defaultId ? unassigned : 0),
       status(m),
       isAdmin ? (
@@ -60,7 +59,7 @@ export default async function ModelsPage() {
         </div>
       )}
 
-      <ListTable columns={["ID", "Название", "Адрес API", "Агенты", "Статус", ""]} rows={rows} minWidth={700}
+      <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} minWidth={700}
         emptyText={isAdmin ? "Моделей пока нет — добавьте первую" : "Моделей пока нет"} />
     </div>
   );

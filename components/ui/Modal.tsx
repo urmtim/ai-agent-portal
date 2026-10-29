@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
-/** Centered dialog over a blurred backdrop. Closes only by × or its own buttons — a stray click or Esc must not lose what was typed. */
+/** Centered dialog over a blurred backdrop. Closes by ×, Esc or its own buttons — never by a stray click on the backdrop. */
 export function Modal({
   open,
   onClose,
@@ -24,6 +24,13 @@ export function Modal({
     if (!open) return;
     ref.current?.querySelector<HTMLElement>("input:not([type=hidden]), select, textarea")?.focus();
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   if (!open) return null;
   // portal: opened from a table row, it must not inherit the cell's layout (td.acts is right-aligned)
