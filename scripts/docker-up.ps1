@@ -4,7 +4,8 @@
 # Those files can't be deleted either, but their folders can be moved aside.
 $ErrorActionPreference = "Stop"
 
-function DockerUp { docker info --format "{{.ServerVersion}}" 2>$null | Out-Null; return $LASTEXITCODE -eq 0 }
+# via cmd: in Windows PowerShell 5.1 a native command's stderr becomes a terminating error under "Stop"
+function DockerUp { cmd /c "docker info >nul 2>&1"; return $LASTEXITCODE -eq 0 }
 
 if (DockerUp) { exit 0 }
 
