@@ -56,7 +56,7 @@ export default async function ModelsPage() {
         </div>
       )}
 
-      <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} action={<AddModelButton />} minWidth={700}
+      <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} action={<AddModelButton first={models.length === 0} />} minWidth={700}
         emptyText="Моделей пока нет — добавьте первую" />
     </div>
   );

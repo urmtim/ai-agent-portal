@@ -11,13 +11,14 @@ import { checkSavedModel, deleteModel, saveModel, testModel, type FormState, typ
 /** What the browser knows about a model — never the token itself. */
 export type ModelRowData = { id: string; name: string; baseUrl: string; model: string; isDefault: boolean; hasToken: boolean; contextTokens: number };
 
-function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
+/** `first` — no models yet: this one becomes the default whatever the switch says, so the switch shows it. */
+function ModelForm({ m, first, onDone }: { m?: ModelRowData; first?: boolean; onDone: () => void }) {
   const toast = useToast();
   const form = useRef<HTMLFormElement>(null);
   const [state, onSubmit, pending] = useFormAction(saveModel, undefined);
   const [test, setTest] = useState<TestState | "checking">();
   const [showToken, setShowToken] = useState(false);
-  const [makeDefault, setMakeDefault] = useState(m?.isDefault ?? false);
+  const [makeDefault, setMakeDefault] = useState(m?.isDefault ?? !!first);
   const [testing, startTest] = useTransition();
   // a save error is hidden once the fields change; the next save shows a fresh one
   const [errFor, setErrFor] = useState<FormState>();
@@ -64,8 +65,11 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
         <div className="hint">Сколько модель держит в памяти. Длинный чат пересказывается, когда история подходит к 70 %.</div>
       </div>
       <div className="wrap-gap" style={{ marginTop: 16, gap: 18 }}>
-        <Switch name="isDefault" checked={makeDefault} disabled={m?.isDefault} onChange={setMakeDefault} label="Сделать моделью по умолчанию" />
+        <Switch name="isDefault" checked={makeDefault || !!first} disabled={m?.isDefault || first} onChange={setMakeDefault} label="Сделать моделью по умолчанию" />
       </div>
+      {(first || m?.isDefault) && (
+        <div className="hint">{first ? "Это первая модель — она всегда становится моделью по умолчанию." : "Это модель по умолчанию. Чтобы сменить, включите переключатель у другой модели."}</div>
+      )}
       {test && (
         <div className={`status ${test === "checking" ? "checking" : test.ok ? "ok" : "err"}`} role="status">
           {test === "checking" ? <><span className="spin" /> Проверяем подключение…</> : test.message}
@@ -81,13 +85,14 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   );
 }
 
-export function AddModelButton() {
+/** `first` — the user has no models yet. */
+export function AddModelButton({ first }: { first: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Добавить модель</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Новая модель">
-        {open && <ModelForm onDone={() => setOpen(false)} />}
+        {open && <ModelForm first={first} onDone={() => setOpen(false)} />}
       </Modal>
     </>
   );
