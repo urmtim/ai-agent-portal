@@ -21,6 +21,7 @@ import { summarizeChat } from "@/lib/chat/summarize";
 import { effectiveGuardrails, guardDocIds } from "@/lib/agents/policy";
 import { guardrailInstructions } from "@/lib/agents/guardrails";
 import { docsInstructions } from "@/lib/guardrail-docs";
+import { chatInstructions } from "@/lib/chat/instructions";
 
 // One chat turn: the browser sends the whole history (useChat), we check it,
 // save it, stream the model's answer with tools and save again with the answer.
@@ -33,22 +34,6 @@ const Body = z.object({
 /** Signs approval requests so a forged "approved" from the browser can't run an agent. */
 function approvalSecret(): Uint8Array {
   return createHash("sha256").update(`chat-tool-approval:${process.env.AUTH_SECRET ?? ""}`).digest();
-}
-
-function instructions(userName: string, agents: { id: string; name: string }[], mailbox: string | null): string {
-  const today = new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "long" }).format(new Date());
-  return [
-    "Ты — ассистент портала AI Portal. Отвечай по-русски, коротко и по делу; можно Markdown.",
-    `Сегодня ${today}. Пользователь: ${userName}.`,
-    "Данных о тратах и других данных портала у тебя нет — цифр не выдумывай.",
-    mailbox
-      ? `У тебя есть доступ к почте пользователя (ящик «${mailbox}»): ищи письма инструментом mail_search, открывай нужные mail_read. Письма не выдумывай, отвечай по найденному; отправлять письма ты не умеешь.`
-      : "Доступа к почте пользователя у тебя нет.",
-    agents.length
-      ? `Тебе разрешено запускать агентов инструментом run_agent (некоторых — после подтверждения пользователя): ${agents.map((a) => `«${a.name}»`).join(", ")}. Агенту с инструкцией передавай задачу в task.`
-      : "Запускать агентов тебе не разрешено.",
-    "Если задача требует агента, MCP или данных, которые тебе не разрешены, прямо скажи, что их можно разрешить в «Агенты → Ассистент», и ничего не делай вместо них.",
-  ].join("\n");
 }
 
 const plain = (text: string, status: number) => new Response(text, { status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
@@ -101,12 +86,12 @@ export async function POST(req: Request) {
     }
   }
 
-  // the assistant's own settings: its instruction and guardrails (masking happens in the mail tools, lib/chat/tools.ts)
+  // the built-in instruction (shown read-only in the «Ассистент» window) + the assistant's guardrails
+  // (masking happens in the mail tools, lib/chat/tools.ts)
   const g = effectiveGuardrails(assistant.guardrails);
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id, enabled: true, id: { in: guardDocIds(assistant.guardrails) } }, select: { name: true, text: true } });
   const base = [
-    instructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null),
-    assistant.instruction.trim() && `Указания пользователя для ассистента:\n${assistant.instruction.trim()}`,
+    chatInstructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null),
     guardrailInstructions(g),
     docsInstructions(docs),
   ].filter(Boolean).join("\n\n");

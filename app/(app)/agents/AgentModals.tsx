@@ -108,9 +108,9 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
     const s = r.spec;
     const mcp = idsByName(s.mcp.map((m) => m.name), connections);
     setF((p) => ({
-      // a built-in agent keeps its name and stays on
+      // a built-in agent keeps its name, its instruction and stays on
       name: builtin ? p.name : s.name, enabled: builtin ? true : s.enabled,
-      modelId: models.find((m) => m.name === s.model)?.id ?? defaultModelId, instruction: s.instruction,
+      modelId: models.find((m) => m.name === s.model)?.id ?? defaultModelId, instruction: builtin ? p.instruction : s.instruction,
       hitl: s.hitl, guardrails: s.guardrails,
       agents: idsByName(s.agents, others), mcp,
       mcpAccess: Object.fromEntries(mcp.map((id) => [id, s.mcp.find((m) => m.name === connections.find((c) => c.id === id)?.name)?.access ?? "read"])),
@@ -158,15 +158,17 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
           <label htmlFor="ag-model">Модель</label>
           <select id="ag-model" name="modelId" value={f.modelId} onChange={(e) => upd({ modelId: e.target.value })} disabled={models.length === 0}>
             {models.length === 0 && <option value="">Моделей нет — добавьте в разделе «Модели»</option>}
-            {models.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === defaultModelId ? " · по умолчанию" : ""}</option>)}
+            {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           <div className="hint">Только ваши подключённые модели (раздел «Модели»). {builtin ? "На этой модели работает чат." : "У нового агента сразу стоит модель по умолчанию."}</div>
         </div>
         <div className="field">
           <label htmlFor="ag-instr">Системная инструкция</label>
-          <textarea id="ag-instr" name="instruction" rows={5} maxLength={8000} value={f.instruction} onChange={(e) => upd({ instruction: e.target.value })}
-            placeholder={builtin ? "Что добавить к встроенной инструкции чата. Например: отвечай коротко, на «ты»." : "Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа."} />
-          <div className="hint">{builtin ? "Дополняет встроенную инструкцию ассистента." : "Первая строка — описание агента в списке."}</div>
+          <textarea id="ag-instr" name="instruction" rows={5} maxLength={8000} value={f.instruction} disabled={builtin} onChange={(e) => upd({ instruction: e.target.value })}
+            placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа." />
+          <div className="hint">{builtin
+            ? "Встроенная инструкция чата — модель получает ровно её (дата, имя, почта и агенты — как сейчас). К ней добавляются гардрейлы с вкладки «Политики»."
+            : "Первая строка — описание агента в списке."}</div>
         </div>
       </div>
 

@@ -25,7 +25,8 @@ export type NavGroup = {
 };
 
 export const NAV: Record<NavKey, NavItem> = {
-  chat: { key: "chat", label: "Чат", href: "/chat" },
+  // «Чат» opens the latest chat (a new one when there is none); any /chat/… page belongs to it
+  chat: { key: "chat", label: "Чат", href: "/chat/latest", match: ["/chat"] },
   models: { key: "models", label: "Модели", href: "/models" },
   agents: { key: "agents", label: "Агенты", href: "/agents" },
   mcp: { key: "mcp", label: "MCP", href: "/mcp" },

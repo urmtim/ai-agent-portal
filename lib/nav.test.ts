@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_PINS, NAV_GROUPS, movePin, navKeyForPath, parsePins, unpin, visiblePins } from "./nav";
+import { DEFAULT_PINS, NAV, NAV_GROUPS, movePin, navKeyForPath, parsePins, unpin, visiblePins } from "./nav";
 
 test("parsePins: nothing saved → default menu", () => {
   assert.deepEqual(parsePins(null), DEFAULT_PINS);
@@ -61,6 +61,12 @@ test("parsePins: an untouched old default menu becomes the new default, a custom
   assert.deepEqual(parsePins('["chat","models","agents","mcp","api"]'), ["chat", "agents", "models", "mcp", "api"]);
   assert.deepEqual(parsePins('["chat","stats","agents"]'), ["chat", "stats", "agents"]);
   assert.deepEqual(parsePins('["agents","chat","mcp","models"]'), ["agents", "chat", "mcp", "models"]);
+});
+
+test("«Чат» opens the latest chat and stays lit on any chat page", () => {
+  assert.equal(NAV.chat.href, "/chat/latest");
+  assert.equal(navKeyForPath("/chat"), "chat");
+  assert.equal(navKeyForPath("/chat/abc123"), "chat");
 });
 
 test("AI group order, API and guardrails sections", () => {

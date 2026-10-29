@@ -9,12 +9,12 @@ import { saveAssistant } from "./actions";
 
 /**
  * ✎ in the «Ассистент» row (and the row click): the built-in agent opens the same window as any agent,
- * with «Агент включён», «Название» and «Тест-запуск» locked.
+ * with «Агент включён», «Название», «Системная инструкция» (the real built-in one) and «Тест-запуск» locked.
  */
-export function AssistantActions({ cfg, ...choices }: { cfg: AssistantConfig } & AgentChoices) {
+export function AssistantActions({ cfg, instruction, ...choices }: { cfg: AssistantConfig; instruction: string } & AgentChoices) {
   const [open, setOpen] = useState(false);
   const a = {
-    id: "assistant", name: "Ассистент", enabled: true, modelId: cfg.modelId, instruction: cfg.instruction,
+    id: "assistant", name: "Ассистент", enabled: true, modelId: cfg.modelId, instruction,
     hitl: cfg.hitl, guardrails: cfg.guardrails, agentIds: cfg.agentIds, mcpIds: cfg.mcpIds, mcpAccess: cfg.mcpAccess, apis: cfg.apis as string[],
   };
   return (

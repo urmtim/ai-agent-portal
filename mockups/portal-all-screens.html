@@ -145,8 +145,8 @@
   /* switch: a knob sliding along an oval; the checkbox stays for keyboard and screen readers, visually hidden */
   .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; font-weight: 600; margin: 0; position: relative; }
   .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; }
-  .switch .track { flex: 0 0 auto; width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; }
-  .switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(20,16,40,.3); transition: transform .2s; }
+  .switch .track { flex: 0 0 auto; width: 44px; height: 26px; border-radius: 13px; background: color-mix(in srgb, var(--muted) 55%, var(--line)); position: relative; transition: background .2s; }
+  .switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(20,16,40,.25), 0 2px 6px rgba(20,16,40,.18); transition: transform .2s; }
   .switch input:checked + .track { background: var(--primary); }
   .switch input:checked + .track::after { transform: translateX(18px); }
   .switch input:focus-visible + .track { outline: 2px solid var(--primary); outline-offset: 2px; }
@@ -775,7 +775,7 @@
               ${sw('Агент включён', true).replace('role="switch"', `role="switch" ${lock}`)}
               <div class="hint" style="margin:6px 0 14px">${builtin ? 'Встроенный агент — это чат, выключить его нельзя.' : 'Выключенный агент не запускается: ни из чата, ни другими агентами, ни вручную.'}</div>
               <div class="field"><label>Название</label><input value="${name}" placeholder="например, Сводка почты" ${lock}></div>
-              <div class="field"><label>Модель</label><select class="f"><option selected>GLM-4 · по умолчанию</option><option>Llama 3.1 (локально)</option></select>
+              <div class="field"><label>Модель</label><select class="f"><option selected>GLM-4</option><option>Llama 3.1 (локально)</option></select>
                 <div class="hint">Только ваши подключённые модели (раздел «Модели»). У нового агента сразу стоит модель по умолчанию.</div></div>
               <div class="field" style="margin-bottom:0"><label>Системная инструкция</label>
                 <textarea rows="5" placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа.">${instr}</textarea>

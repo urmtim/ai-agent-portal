@@ -31,7 +31,6 @@ export async function saveAssistant(_prev: FormState, formData: FormData): Promi
   const data = {
     modelId, agentIds: JSON.stringify(agents.map((a) => a.id)), mcpIds: JSON.stringify(mcp.map((c) => c.id)), apis: JSON.stringify(apis),
     mcpAccess: JSON.stringify(Object.fromEntries(mcp.map((c) => [c.id, access[c.id] ?? "read"]))),
-    instruction: String(formData.get("instruction") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 8000), // forms send \r\n
     hitl: parseHitl(String(formData.get("hitl") ?? "")),
     guardrails: JSON.stringify({ rules: guardrails }),
   };
