@@ -116,7 +116,7 @@ nav.menu { display: flex; align-items: center; gap: 18px; overflow-x: auto; min-
 nav.menu.drop { outline: 2px dashed var(--primary); outline-offset: 4px; border-radius: 8px; }
 nav.menu a { position: relative; font-size: 14px; font-weight: 500; color: var(--ink); opacity: .72; white-space: nowrap;
   padding: 4px 0; border-bottom: 2px solid transparent; }
-nav.menu a[draggable="true"] { cursor: grab; }
+nav.menu a[draggable="true"] { cursor: default; }
 nav.menu a:hover { opacity: 1; color: var(--primary-dark); }
 nav.menu a.on, nav.menu .temp.on a { opacity: 1; color: var(--primary-dark); font-weight: 600; border-bottom-color: var(--primary); }
 nav.menu a.dragging { opacity: .35; }
@@ -146,7 +146,7 @@ nav.menu .temp:hover .pin, nav.menu .temp:focus-within .pin { opacity: 1; }
 .lgroup { align-self: stretch; font-size: 12.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--ink); font-weight: 700;
   padding: 4px 10px 8px; margin-bottom: 6px; border-bottom: 2px solid var(--primary-soft); }
 .lgroup .note { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
-.titem { font-size: 14px; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: grab; user-select: none; white-space: nowrap; }
+.titem { font-size: 14px; color: var(--ink); padding: 6px 10px; border-radius: 8px; cursor: default; user-select: none; white-space: nowrap; }
 .titem:hover { background: var(--soft); color: var(--primary-dark); }
 .titem.dim { color: var(--muted); }
 .titem.cur { background: var(--soft); color: var(--primary-dark); font-weight: 600; }
