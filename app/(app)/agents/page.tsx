@@ -31,7 +31,8 @@ export default async function AgentsPage() {
     include: { runs: { orderBy: { startedAt: "desc" }, take: 1 }, model: { select: { name: true } } },
   });
 
-  const mailOk = imapConfigured();
+  // the mail warning only matters to someone who has an agent that reads mail
+  const mailOk = imapConfigured() || !agents.some((a) => AGENT_TYPES[a.type].mcp.includes("Почта"));
   const llmOk = await llmAvailable();
   const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
