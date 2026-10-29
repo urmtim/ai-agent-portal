@@ -13,6 +13,7 @@ import type { AgentInfo, ChatScreenData, ModelOption } from "./data";
 /** Empty-chat suggestions: only what the base assistant is allowed to do. */
 function suggestions(a: ChatScreenData["assistant"]): string[] {
   const out = [
+    ...(a.mail ? ["Что важного пришло за сегодня?", "Есть непрочитанные письма?"] : []),
     ...a.agentNames.slice(0, 2).map((n) => `Запусти агента «${n}»`),
   ];
   return out.length ? out : ["Что ты умеешь?", "Помоги составить план на неделю"];
@@ -108,9 +109,9 @@ export function ChatThread({ chatId, title, initialMessages, models, envModel, a
             <h2>Чем помочь?</h2>
             <p className="muted">
               Спросите что угодно.{" "}
-              {assistant.agentNames.length
-                ? "Агента запущу с вашего подтверждения."
-                : <>Агентов можно разрешить в <Link href="/agents" className="link">«Агенты» → «Ассистент»</Link>.</>}
+              {assistant.agentNames.length || assistant.mail
+                ? <>{assistant.mail && "Разберу почту по вашей просьбе. "}{assistant.agentNames.length > 0 && "Агента запущу с вашего подтверждения."}</>
+                : <>Агентов можно разрешить в <Link href="/agents" className="link">«Агенты» → «Ассистент»</Link>, почту — подключить в разделе MCP.</>}
             </p>
             <div className="row" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
               {suggestions(assistant).map((s) => (

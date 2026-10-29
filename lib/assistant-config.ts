@@ -37,8 +37,9 @@ export function parseAssistant(
 }
 
 /** Chat tools the assistant may call with this config (run_agent needs at least one allowed, enabled agent). */
-export function allowedTools(cfg: AssistantConfig, enabledAgentIds: string[]): string[] {
+export function allowedTools(cfg: AssistantConfig, enabledAgentIds: string[], mailConnectionIds: string[] = []): string[] {
   const tools: string[] = cfg.apis.map((a) => ASSISTANT_APIS[a].tool);
   if (cfg.agentIds.some((id) => enabledAgentIds.includes(id))) tools.push("run_agent");
+  if (cfg.mcpIds.some((id) => mailConnectionIds.includes(id))) tools.push("mail_search", "mail_read");
   return tools;
 }

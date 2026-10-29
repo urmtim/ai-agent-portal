@@ -40,6 +40,7 @@ model User {
   chats       Chat[]
   auditLogs   AuditLog[]
   assistant   Assistant?
+  connections McpConnection[]
 }
 
 // One-time invite / password-set link sent by email.
@@ -224,4 +225,22 @@ model Assistant {
   mcpIds    String    @default("[]") // JSON: MCP servers it may use (none exist yet)
   apis      String    @default("[]") // JSON: portal APIs it may call, keys of ASSISTANT_APIS
   updatedAt DateTime  @updatedAt
+}
+
+// ─── MCP: the user's connections to outside services (catalog in lib/connectors.ts) ───
+
+model McpConnection {
+  id        String    @id @default(cuid())
+  ownerId   String
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  kind      String // connector key, e.g. "mail"
+  name      String
+  config    String    @default("{}") // JSON settings without secrets (host, port, user…)
+  secretEnc String? // password / token, AES-GCM (lib/secret.ts); never sent to the browser
+  checkedAt DateTime?
+  checkOk   Boolean?
+  checkMsg  String    @default("")
+  createdAt DateTime  @default(now())
+
+  @@index([ownerId])
 }

@@ -2,7 +2,7 @@ import "server-only";
 import crypto from "crypto";
 import { prisma } from "@/lib/db";
 import { llmJson } from "@/lib/llm";
-import { fetchRecentEmails, type FetchedEmail } from "@/lib/mailbox";
+import { fetchRecentEmails, type FetchedEmail, type MailAccess } from "@/lib/mailbox";
 
 export type ReceiptsConfig = {
   sinceDays?: number;
@@ -50,10 +50,11 @@ export async function runReceiptsAgent(
   ownerId: string,
   agentId: string,
   config: ReceiptsConfig,
-  modelId: string | null = null,
+  modelId: string | null,
+  mail: MailAccess, // the agent's «Почта» connection (MCP tab)
 ): Promise<{ processed: number; created: number; log: string[] }> {
   const log: string[] = [];
-  const emails = await fetchRecentEmails({
+  const emails = await fetchRecentEmails(mail, {
     sinceDays: config.sinceDays ?? 30,
     fromFilter: config.fromFilter || undefined,
     max: config.max ?? 40,

@@ -21,11 +21,14 @@ export async function saveAssistant(_prev: FormState, formData: FormData): Promi
   const agents = own.filter((a) => picked.includes(a.id));
   const apis = formData.getAll("api").map(String).filter((k): k is AssistantApi => Object.prototype.hasOwnProperty.call(ASSISTANT_APIS, k));
 
-  const data = { modelId, agentIds: JSON.stringify(agents.map((a) => a.id)), mcpIds: "[]", apis: JSON.stringify(apis) };
+  const conns = await prisma.mcpConnection.findMany({ where: { ownerId: user.id }, select: { id: true, name: true } });
+  const pickedMcp = formData.getAll("mcp").map(String);
+  const mcp = conns.filter((c) => pickedMcp.includes(c.id));
+  const data = { modelId, agentIds: JSON.stringify(agents.map((a) => a.id)), mcpIds: JSON.stringify(mcp.map((c) => c.id)), apis: JSON.stringify(apis) };
   await prisma.assistant.upsert({ where: { ownerId: user.id }, create: { ownerId: user.id, ...data }, update: data });
 
   const list = (xs: string[]) => (xs.length ? xs.join(", ") : "нет");
-  await audit("agent", `Настройки ассистента: модель — ${model?.name ?? "по умолчанию"}; агенты — ${list(agents.map((a) => `«${a.name}»`))}; ` +
+  await audit("agent", `Настройки ассистента: модель — ${model?.name ?? "по умолчанию"}; агенты — ${list(agents.map((a) => `«${a.name}»`))}; MCP — ${list(mcp.map((c) => `«${c.name}»`))}; ` +
     `API — ${list(apis.map((k) => ASSISTANT_APIS[k].label))}`, user);
   revalidatePath("/agents");
   return { ok: "Настройки сохранены" };

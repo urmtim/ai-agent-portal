@@ -48,6 +48,8 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, select: { id: true } });
   const agentIds = formData.getAll("agent").map(String).filter((id) => id !== agentId && own.some((a) => a.id === id));
   const apis = formData.getAll("api").map(String).filter((k) => Object.prototype.hasOwnProperty.call(ASSISTANT_APIS, k));
+  const conns = await prisma.mcpConnection.findMany({ where: { ownerId: user.id }, select: { id: true } });
+  const mcpIds = formData.getAll("mcp").map(String).filter((id) => conns.some((c) => c.id === id));
   const config = {
     sinceDays: clamp(formData.get("sinceDays"), 1, 365, 30),
     fromFilter: String(formData.get("fromFilter") ?? "").trim(),
@@ -55,7 +57,7 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   };
   const data = {
     name, modelId, enabled: formData.get("enabled") === "on", config: JSON.stringify(config),
-    agentIds: JSON.stringify([...new Set(agentIds)]), mcpIds: "[]", apis: JSON.stringify([...new Set(apis)]),
+    agentIds: JSON.stringify([...new Set(agentIds)]), mcpIds: JSON.stringify([...new Set(mcpIds)]), apis: JSON.stringify([...new Set(apis)]),
   };
 
   const saved = existing

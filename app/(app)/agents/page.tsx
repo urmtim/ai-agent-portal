@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { imapConfigured } from "@/lib/mailbox";
+import { ownConnections } from "@/lib/connections";
+import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
 import { envModelName, llmAvailable } from "@/lib/llm";
 import { AGENT_TYPES } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
@@ -32,8 +33,12 @@ export default async function AgentsPage() {
     include: { runs: { orderBy: { startedAt: "desc" }, take: 1 }, model: { select: { name: true } } },
   });
 
-  // the mail warning only matters to someone who has an agent that reads mail
-  const mailOk = imapConfigured() || !agents.some((a) => AGENT_TYPES[a.type].mcp.includes("Почта"));
+  const conns = await ownConnections(user.id);
+  const mailIds = conns.filter((c) => c.kind === "mail").map((c) => c.id);
+  const connNames = (a: (typeof agents)[number]) => agentEditData(a).mcpIds.map((id) => conns.find((c) => c.id === id)?.name).filter(Boolean).join(", ");
+  // agents that read mail but have no «Почта» connection on their MCP tab
+  const noMail = agents.filter((a) => AGENT_TYPES[a.type].mcp.includes("Почта") && !agentEditData(a).mcpIds.some((id) => mailIds.includes(id)));
+  const mailOk = noMail.length === 0;
   const llmOk = await llmAvailable();
   const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
@@ -41,12 +46,14 @@ export default async function AgentsPage() {
     models: models.map(({ id, name }) => ({ id, name })),
     defaultModel: model,
     agents: agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc, enabled: a.enabled })),
+    connections: conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind })),
   };
 
   // the chat's own agent: model and what it may use come from its modal (assistant/AssistantForm.tsx)
   const cfg = await loadAssistant(user.id);
   const allowed = [
     cfg.agentIds.length && `агенты: ${agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name).join(", ")}`,
+    cfg.mcpIds.length && `MCP: ${conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ")}`,
     cfg.apis.length && `API: ${cfg.apis.map((k) => ASSISTANT_APIS[k].label).join(", ")}`,
   ].filter(Boolean).join(" · ");
   const base: ListRow = {
@@ -59,7 +66,7 @@ export default async function AgentsPage() {
         <div className="sub">С ним вы говорите в чате, агенты — его исполнители · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
       </div>,
       <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? model}</span>,
-      <span key="m" className="muted">{cfg.mcpIds.length ? cfg.mcpIds.length : "—"}</span>,
+      <span key="m">{conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ") || <span className="muted">—</span>}</span>,
       <span key="st" className="st info">встроенный</span>,
       <span key="r" className="muted">—</span>,
       <AssistantActions key="a" cfg={cfg} {...choices} />,
@@ -82,7 +89,7 @@ export default async function AgentsPage() {
           <div className="sub">{t.desc}</div>
         </div>,
         <span key="mo" style={{ whiteSpace: "nowrap" }}>{a.model?.name ?? model}</span>,
-        t.mcp.join(", "),
+        connNames(a) || <span key="m" className="muted">—</span>,
         <span key="st" className={`st ${a.enabled ? "ok" : "mut"}`}>{status}</span>,
         last ? (
           <div key="r">
@@ -114,10 +121,9 @@ export default async function AgentsPage() {
           <div style={{ fontSize: 13.5, lineHeight: 1.55 }}>
             {!mailOk && (
               <p style={{ margin: 0 }}>
-                <b>Почта не подключена.</b> Агент «Чеки из почты» читает письма в вашем ящике и находит в них чеки — для этого ему нужен
-                доступ к ящику: адрес почтового сервера, логин и пароль приложения (в Mail.ru — «Пароли для внешних приложений»).
-                Пока их задают в файле <code>.env</code> на сервере: <code>IMAP_HOST</code>, <code>IMAP_USER</code>, <code>IMAP_PASSWORD</code>.
-                Без этого запуск агента закончится ошибкой «Почта не настроена».
+                <b>Агенту нужна почта.</b> {noMail.map((a) => `«${a.name}»`).join(", ")} читает письма в вашем ящике и находит в них чеки.
+                Подключите ящик в разделе <Link href="/mcp" className="b link">MCP</Link> и добавьте его агенту на вкладке MCP.
+                Без этого запуск агента закончится ошибкой.
               </p>
             )}
             {!llmOk && (

@@ -14,7 +14,7 @@ export type ChatScreenData = {
   envModel: string | null; // used when the registry is empty
   agents: AgentInfo[];
   /** What the base assistant is set up with («Агенты» → «Ассистент»). */
-  assistant: { modelName: string | null; agentNames: string[] };
+  assistant: { modelName: string | null; agentNames: string[]; mail: boolean };
 };
 
 export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
@@ -36,6 +36,7 @@ export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
     assistant: {
       modelName: models.find((m) => m.id === cfg.modelId)?.name ?? null,
       agentNames: agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name),
+      mail: (await prisma.mcpConnection.count({ where: { ownerId: userId, kind: "mail", id: { in: cfg.mcpIds } } })) > 0,
     },
   };
 }

@@ -6,6 +6,8 @@ import { runAgentNow, deleteAgent } from "../actions";
 import { AgentEditButton } from "../AgentModals";
 import { agentEditData } from "@/lib/agents/edit-data";
 import { AGENT_TYPES } from "@/lib/agents/types";
+import { ownConnections } from "@/lib/connections";
+import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
 import { envModelName } from "@/lib/llm";
 
 const RUN_ST: Record<string, { label: string; cls: string }> = {
@@ -28,6 +30,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
     include: { runs: { orderBy: { startedAt: "desc" }, take: 20 } },
   });
   if (!agent || agent.ownerId !== user.id) notFound();
+  const conns = await ownConnections(user.id);
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" } });
   const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const defaultName = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
@@ -44,7 +47,8 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         </div>
         <div className="spacer" />
         <AgentEditButton models={models.map(({ id, name }) => ({ id, name }))} defaultModel={defaultName} a={agentEditData(agent)}
-          agents={own.map((x) => ({ id: x.id, name: x.name, desc: AGENT_TYPES[x.type].desc, enabled: x.enabled }))} />
+          agents={own.map((x) => ({ id: x.id, name: x.name, desc: AGENT_TYPES[x.type].desc, enabled: x.enabled }))}
+          connections={conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind }))} />
         <form action={runAgentNow}>
           <input type="hidden" name="agentId" value={agent.id} />
           <button className="btn primary" type="submit">▶ Запустить сейчас</button>

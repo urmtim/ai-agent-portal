@@ -4,7 +4,7 @@ import Link from "next/link";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { UIMessage } from "ai";
-import type { RunAgentResult, SpendingResult } from "@/lib/chat/tools";
+import type { MailReadResult, MailSearchResult, RunAgentResult, SpendingResult } from "@/lib/chat/tools";
 import type { AgentInfo } from "./data";
 
 // How one assistant message looks: Markdown text, a line per tool call (mockup .cstep)
@@ -49,6 +49,29 @@ function SpendingStep({ part }: { part: ToolPart }) {
     ...(o.topMerchants.length ? ["", "Крупнейшие магазины:", ...o.topMerchants.map((m) => `${m.merchant} — ${rub(m.total)}`)] : []),
   ].join("\n");
   return <Step summary={<>Траты за {o.days} дн. · <b>{rub(o.total)}</b>, чеков: {o.count}</>} details={details || "Чеков за этот период нет"} />;
+}
+
+const day = (iso: string | null) => (iso ? new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) : "");
+
+function MailSearchStep({ part }: { part: ToolPart }) {
+  if (part.state === "output-error") return <Step summary="Почта" fail="Ошибка" details={part.errorText} />;
+  if (part.state !== "output-available") return <Step running summary="Ищу письма…" />;
+  const o = part.output as MailSearchResult;
+  if ("error" in o) return <Step summary="Почта" fail="Ошибка" details={o.error} />;
+  const q = part.input as { query?: string; from?: string; days?: number } | undefined;
+  const what = [q?.query && `«${q.query}»`, q?.from && `от ${q.from}`].filter(Boolean).join(" ");
+  const details = o.letters.map((l) => `${l.unread ? "● " : ""}${day(l.date)} — ${l.from} — ${l.subject || "(без темы)"}`).join("\n");
+  return <Step summary={<>Почта · найдено <b>{o.total}</b>{what ? <> по запросу {what}</> : null}{q?.days ? ` за ${q.days} дн.` : ""}</>} details={details || "Писем не найдено"} />;
+}
+
+function MailReadStep({ part }: { part: ToolPart }) {
+  if (part.state === "output-error") return <Step summary="Письмо" fail="Ошибка" details={part.errorText} />;
+  if (part.state !== "output-available") return <Step running summary="Открываю письмо…" />;
+  const o = part.output as MailReadResult;
+  if ("error" in o) return <Step summary="Письмо" fail="Ошибка" details={o.error} />;
+  const l = o.letter;
+  return <Step summary={<>Письмо <b>«{l.subject || "без темы"}»</b> от {l.from}</>}
+    details={`${day(l.date)}\n${l.text.slice(0, 1500)}${l.attachments.length ? `\n\nВложения: ${l.attachments.join(", ")}` : ""}`} />;
 }
 
 function AgentStep({ part, agents, onApprove, canApprove }: {
@@ -104,6 +127,8 @@ export function AssistantParts({ message, agents, canApprove, onApprove }: {
       return p.text.trim() ? <div className="ca" key={i}><Markdown remarkPlugins={[remarkGfm]}>{p.text}</Markdown></div> : null;
     }
     if (p.type === "tool-get_spending") return <SpendingStep key={i} part={p as ToolPart} />;
+    if (p.type === "tool-mail_search") return <MailSearchStep key={i} part={p as ToolPart} />;
+    if (p.type === "tool-mail_read") return <MailReadStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-run_agent") {
       return <AgentStep key={i} part={p as ToolPart} agents={agents} canApprove={canApprove} onApprove={onApprove} />;
     }

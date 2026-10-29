@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { audit, type AuditActor } from "@/lib/audit";
 import type { AuditChannel } from "@/lib/audit-events";
 import { runReceiptsAgent, type ReceiptsConfig } from "./receipts";
+import { firstMailConnection, mailAccess } from "@/lib/connections";
+
+const ids = (raw: string): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
 
 /** Who started a run and from where — for the journal. */
 export type RunBy = { actor: AuditActor; channel: AuditChannel };
@@ -21,9 +24,13 @@ export async function runAgent(agentId: string, by: RunBy = { actor: null, chann
     let result: { processed: number; created: number; log: string[] };
 
     switch (agent.type) {
-      case "RECEIPTS":
-        result = await runReceiptsAgent(agent.ownerId, agent.id, config as ReceiptsConfig, agent.modelId);
+      case "RECEIPTS": {
+        // the mailbox comes from the agent's MCP tab, never from .env
+        const conn = await firstMailConnection(agent.ownerId, ids(agent.mcpIds));
+        if (!conn) throw new Error("Агенту не добавлена почта: подключите ящик в разделе MCP и добавьте его агенту на вкладке MCP");
+        result = await runReceiptsAgent(agent.ownerId, agent.id, config as ReceiptsConfig, agent.modelId, mailAccess(conn));
         break;
+      }
       default:
         throw new Error(`Неизвестный тип агента: ${agent.type}`);
     }

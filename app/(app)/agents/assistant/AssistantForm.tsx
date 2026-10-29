@@ -14,12 +14,13 @@ type Props = {
   models: { id: string; name: string }[];
   defaultModel: string;
   agents: { id: string; name: string; desc: string; enabled: boolean }[];
+  connections: { id: string; name: string; desc: string }[];
 };
 
 const ON = "включён", OFF = "выключен";
 type Tab = "general" | "agents" | "mcp" | "apis";
 
-function AssistantForm({ cfg, models, defaultModel, agents, onDone }: Props & { onDone: () => void }) {
+function AssistantForm({ cfg, models, defaultModel, agents, connections, onDone }: Props & { onDone: () => void }) {
   const toast = useToast();
   const [state, onSubmit, pending] = useFormAction(saveAssistant, undefined);
   useEffect(() => { if (state?.ok) { toast(state.ok); onDone(); } }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -55,7 +56,9 @@ function AssistantForm({ cfg, models, defaultModel, agents, onDone }: Props & { 
           nothingHint="У вас пока нет агентов — создайте их кнопкой «Новый агент»." />
       </div>
       <div className="mpanel" hidden={tab !== "mcp"}>
-        <TablePart items={[]} picked={picked.mcp} onChange={set("mcp")} nothingHint="MCP-серверов пока нет — их будут добавлять в разделе MCP." />
+        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>Подключения из раздела MCP, которыми ассистент пользуется в чате. С «Почтой» он ищет и читает письма по вашей просьбе.</div>
+        <TablePart items={connections.map((c) => ({ id: c.id, name: c.name, desc: c.desc }))} picked={picked.mcp} onChange={set("mcp")}
+          nothingHint="Подключений пока нет — добавьте их в разделе MCP." />
       </div>
       <div className="mpanel" hidden={tab !== "apis"}>
         <TablePart items={apiItems} picked={picked.apis} onChange={set("apis")} nothingHint="API портала пока нет." />
@@ -63,6 +66,7 @@ function AssistantForm({ cfg, models, defaultModel, agents, onDone }: Props & { 
 
       {/* what gets saved, whichever tab is open */}
       {picked.agents.map((id) => <input key={`a${id}`} type="hidden" name="agent" value={id} />)}
+      {picked.mcp.map((id) => <input key={`m${id}`} type="hidden" name="mcp" value={id} />)}
       {picked.apis.map((id) => <input key={`p${id}`} type="hidden" name="api" value={id} />)}
 
       {state?.error && <div className="formerr">{state.error}</div>}

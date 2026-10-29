@@ -21,13 +21,15 @@ export type AgentChoices = {
   models: { id: string; name: string }[];
   defaultModel: string;
   agents: { id: string; name: string; desc: string; enabled: boolean }[];
+  /** The user's MCP connections (section MCP). */
+  connections: { id: string; name: string; desc: string }[];
 };
 
 const ON = "включён", OFF = "выключен";
 type Tab = "general" | "agents" | "mcp" | "apis";
 
 /** The agent window: «Общее · Агенты · MCP · API». Creates when `a` is missing. */
-function AgentForm({ a, models, defaultModel, agents, onDone }: { a?: AgentEditData; onDone: () => void } & AgentChoices) {
+function AgentForm({ a, models, defaultModel, agents, connections, onDone }: { a?: AgentEditData; onDone: () => void } & AgentChoices) {
   const toast = useToast();
   const [state, onSubmit, pending] = useFormAction(saveAgent, undefined);
   useEffect(() => { if (state?.ok) { toast(state.ok); onDone(); } }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -38,6 +40,7 @@ function AgentForm({ a, models, defaultModel, agents, onDone }: { a?: AgentEditD
   const agentItems: PartItem[] = agents.filter((x) => x.id !== a?.id)
     .map((x) => ({ id: x.id, name: x.name, desc: x.desc, note: x.enabled ? undefined : OFF, facet: x.enabled ? ON : OFF }));
   const apiItems: PartItem[] = Object.entries(ASSISTANT_APIS).map(([k, v]) => ({ id: k, name: v.label, desc: v.desc }));
+  const connItems: PartItem[] = connections.map((c) => ({ id: c.id, name: c.name, desc: c.desc }));
 
   return (
     <form onSubmit={onSubmit}>
@@ -97,13 +100,15 @@ function AgentForm({ a, models, defaultModel, agents, onDone }: { a?: AgentEditD
           nothingHint="Других агентов пока нет — создайте их кнопкой «Новый агент»." />
       </div>
       <div className="mpanel" hidden={tab !== "mcp"}>
-        <TablePart items={[]} picked={picked.mcp} onChange={set("mcp")} nothingHint="MCP-серверов пока нет — их будут добавлять в разделе MCP." />
+        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>Подключения из раздела MCP, которыми пользуется агент. «Чекам из почты» нужна «Почта».</div>
+        <TablePart items={connItems} picked={picked.mcp} onChange={set("mcp")} nothingHint="Подключений пока нет — добавьте их в разделе MCP." />
       </div>
       <div className="mpanel" hidden={tab !== "apis"}>
         <TablePart items={apiItems} picked={picked.apis} onChange={set("apis")} nothingHint="API портала пока нет." />
       </div>
 
       {picked.agents.map((id) => <input key={`a${id}`} type="hidden" name="agent" value={id} />)}
+      {picked.mcp.map((id) => <input key={`m${id}`} type="hidden" name="mcp" value={id} />)}
       {picked.apis.map((id) => <input key={`p${id}`} type="hidden" name="api" value={id} />)}
 
       {state?.error && <div className="formerr">{state.error}</div>}

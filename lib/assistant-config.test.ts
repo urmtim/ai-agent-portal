@@ -20,3 +20,9 @@ test("allowedTools follows the table parts; run_agent only with an allowed enabl
   assert.deepEqual(allowedTools({ modelId: null, agentIds: ["a1"], mcpIds: [], apis: [] }, ["a1"]), ["run_agent"]);
   assert.deepEqual(allowedTools({ modelId: null, agentIds: ["a2"], mcpIds: [], apis: [] }, ["a1"]), []); // a2 is off
 });
+
+test("a «Почта» connection on the MCP tab unlocks the mail tools", () => {
+  assert.deepEqual(allowedTools({ modelId: null, agentIds: [], mcpIds: ["c1"], apis: [] }, [], ["c1"]), ["mail_search", "mail_read"]);
+  assert.deepEqual(allowedTools({ modelId: null, agentIds: [], mcpIds: ["c1"], apis: [] }, [], ["c2"]), []); // not mail
+  assert.deepEqual(allowedTools({ modelId: null, agentIds: [], mcpIds: [], apis: [] }, [], ["c1"]), []);
+});

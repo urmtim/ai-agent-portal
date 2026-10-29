@@ -30,12 +30,15 @@ function approvalSecret(): Uint8Array {
   return createHash("sha256").update(`chat-tool-approval:${process.env.AUTH_SECRET ?? ""}`).digest();
 }
 
-function instructions(userName: string, agents: { id: string; name: string }[]): string {
+function instructions(userName: string, agents: { id: string; name: string }[], mailbox: string | null): string {
   const today = new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "long" }).format(new Date());
   return [
     "Ты — ассистент портала AI Portal. Отвечай по-русски, коротко и по делу; можно Markdown.",
     `Сегодня ${today}. Пользователь: ${userName}.`,
     "Данных о тратах и других данных портала у тебя нет — цифр не выдумывай.",
+    mailbox
+      ? `У тебя есть доступ к почте пользователя (ящик «${mailbox}»): ищи письма инструментом mail_search, открывай нужные mail_read. Письма не выдумывай, отвечай по найденному; отправлять письма ты не умеешь.`
+      : "Доступа к почте пользователя у тебя нет.",
     agents.length
       ? `Тебе разрешено запускать агентов инструментом run_agent (пользователь подтверждает запуск): ${agents.map((a) => `«${a.name}»`).join(", ")}.`
       : "Запускать агентов тебе не разрешено.",
@@ -68,7 +71,7 @@ export async function POST(req: Request) {
   }
   if (!llm) return plain(NO_MODEL_MESSAGE, 400);
 
-  const { tools, activeTools, agents } = await chatTools(user, assistant);
+  const { tools, activeTools, agents, mailbox } = await chatTools(user, assistant);
 
   let messages: UIMessage[];
   try {
@@ -95,7 +98,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: llm.model,
-    instructions: instructions(user.name ?? "", agents),
+    instructions: instructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null),
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     activeTools,
