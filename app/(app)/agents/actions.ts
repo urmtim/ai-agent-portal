@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
 import { AGENT_TYPES } from "@/lib/agents/types";
+import { audit } from "@/lib/audit";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -33,7 +34,7 @@ export async function createAgent(_prev: FormState, formData: FormData): Promise
   if (!parsed.success) return { error: "Выберите тип агента" };
 
   const t = AGENT_TYPES[parsed.data.type];
-  await prisma.agent.create({
+  const agent = await prisma.agent.create({
     data: {
       ownerId: user.id,
       type: parsed.data.type,
@@ -41,6 +42,7 @@ export async function createAgent(_prev: FormState, formData: FormData): Promise
       config: JSON.stringify(t.defaultConfig),
     },
   });
+  await audit("agent", `Создан агент «${agent.name}» (${t.label})`, user);
   revalidatePath("/agents");
   return { ok: "Агент создан" };
 }
@@ -49,7 +51,7 @@ export async function createAgent(_prev: FormState, formData: FormData): Promise
 export async function runAgentById(agentId: string): Promise<FormState> {
   const user = await requireUser();
   await ownAgentOrThrow(agentId, user.id);
-  const runId = await runAgent(agentId);
+  const runId = await runAgent(agentId, { actor: user, channel: "портал" });
   const run = await prisma.agentRun.findUnique({ where: { id: runId } });
   revalidateAgent(agentId);
   revalidatePath("/stats");
@@ -59,8 +61,9 @@ export async function runAgentById(agentId: string): Promise<FormState> {
 /** Delete an agent with its run history (collected receipts stay). */
 export async function deleteAgentById(agentId: string): Promise<FormState> {
   const user = await requireUser();
-  await ownAgentOrThrow(agentId, user.id);
+  const agent = await ownAgentOrThrow(agentId, user.id);
   await prisma.agent.delete({ where: { id: agentId } });
+  await audit("agent", `Удалён агент «${agent.name}»`, user);
   revalidatePath("/agents");
   return { ok: "Агент удалён" };
 }
@@ -85,7 +88,7 @@ export async function saveAgentConfig(formData: FormData): Promise<void> {
   const modelId = String(formData.get("modelId") ?? "") || null;
   if (modelId && !(await prisma.llmModel.findUnique({ where: { id: modelId } }))) throw new Error("Модель не найдена");
 
-  await prisma.agent.update({
+  const saved = await prisma.agent.update({
     where: { id: agentId },
     data: {
       modelId,
@@ -94,6 +97,7 @@ export async function saveAgentConfig(formData: FormData): Promise<void> {
       config: JSON.stringify(config),
     },
   });
+  await audit("agent", `Сохранены настройки агента «${saved.name}»${saved.enabled ? "" : " (выключен)"}`, user);
   revalidateAgent(agentId);
 }
 

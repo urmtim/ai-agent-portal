@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { cleanTitle, fallbackTitle } from "@/lib/chat/history";
 import { chatModel } from "@/lib/chat/model";
+import { audit } from "@/lib/audit";
 
 // Sidebar and header actions. A chat that isn't yours behaves as missing.
 // updatedAt is kept on purpose: pinning or renaming must not move a chat to "Сегодня".
@@ -13,8 +14,10 @@ import { chatModel } from "@/lib/chat/model";
 async function ownChat(chatId: string) {
   const user = await requireUser();
   const chat = await prisma.chat.findUnique({ where: { id: chatId } });
-  return chat && chat.ownerId === user.id ? chat : null;
+  return chat && chat.ownerId === user.id ? Object.assign(chat, { user }) : null;
 }
+
+const chatName = (c: { title: string }) => `«${c.title || "Новый чат"}»`;
 
 function textOf(m: UIMessage | undefined): string {
   return (m?.parts ?? []).map((p) => (p.type === "text" ? p.text : "")).join(" ").trim();
@@ -64,16 +67,19 @@ export async function pinChat(chatId: string, pinned: boolean) {
   const chat = await ownChat(chatId);
   if (!chat) return;
   await prisma.chat.update({ where: { id: chat.id }, data: { pinned, updatedAt: chat.updatedAt } });
+  await audit("chat", `Чат ${chatName(chat)} ${pinned ? "закреплён" : "откреплён"}`, chat.user, "чат");
 }
 
 export async function archiveChat(chatId: string, archived: boolean) {
   const chat = await ownChat(chatId);
   if (!chat) return;
   await prisma.chat.update({ where: { id: chat.id }, data: { archived, updatedAt: chat.updatedAt } });
+  await audit("chat", `Чат ${chatName(chat)} ${archived ? "отправлен в архив" : "возвращён из архива"}`, chat.user, "чат");
 }
 
 export async function deleteChat(chatId: string) {
   const chat = await ownChat(chatId);
   if (!chat) return;
   await prisma.chat.delete({ where: { id: chat.id } });
+  await audit("chat", `Удалён чат ${chatName(chat)}`, chat.user, "чат");
 }

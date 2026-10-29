@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/secret";
 import { pingModel } from "@/lib/llm";
+import { audit } from "@/lib/audit";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 export type TestState = { ok: boolean; message: string } | undefined;
@@ -35,7 +36,7 @@ function revalidate() {
 
 /** Add or edit a model. Empty token on edit keeps the saved one, a new one replaces it. */
 export async function saveModel(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const p = parse(formData);
   if (!p.success) return { error: p.error.issues[0]?.message ?? "Проверьте поля" };
   const { id, name, baseUrl, model, token } = p.data;
@@ -55,6 +56,9 @@ export async function saveModel(_prev: FormState, formData: FormData): Promise<F
     }
   });
 
+  // never the token itself — only whether it changed
+  await audit("model", `${id ? "Изменена" : "Добавлена"} модель «${data.name}» (${data.model}, ${data.baseUrl})` +
+    `${token ? (id ? ", токен заменён" : ", с токеном") : ""}${makeDefault ? ", по умолчанию" : ""}`, admin);
   revalidate();
   return { ok: id ? "Модель сохранена" : "Модель добавлена" };
 }
@@ -74,7 +78,7 @@ export async function testModel(formData: FormData): Promise<TestState> {
 
 /** Row "Проверить": pings the saved model and stores the result as its status. */
 export async function checkSavedModel(id: string): Promise<TestState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const m = await prisma.llmModel.findUnique({ where: { id } });
   if (!m) return { ok: false, message: "Модель не найдена" };
 
@@ -84,17 +88,19 @@ export async function checkSavedModel(id: string): Promise<TestState> {
   else r = await pingModel({ baseUrl: m.baseUrl, model: m.model, token });
 
   await prisma.llmModel.update({ where: { id }, data: { checkedAt: new Date(), checkOk: r.ok, checkMsg: r.message } });
+  await audit("model", `Проверка модели «${m.name}»: ${r.message}`, admin);
   revalidatePath("/models");
   return r;
 }
 
 /** Delete a model (not the default one); its agents fall back to the default. */
 export async function deleteModel(id: string): Promise<FormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const m = await prisma.llmModel.findUnique({ where: { id } });
   if (!m) return { error: "Модель не найдена" };
   if (m.isDefault) return { error: "Модель по умолчанию удалить нельзя — сначала назначьте другую" };
   await prisma.llmModel.delete({ where: { id } });
+  await audit("model", `Удалена модель «${m.name}» (${m.model})`, admin);
   revalidate();
   return { ok: "Модель удалена" };
 }

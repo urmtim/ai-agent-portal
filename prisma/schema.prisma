@@ -38,6 +38,7 @@ model User {
   agents      Agent[]
   receipts    Receipt[]
   chats       Chat[]
+  auditLogs   AuditLog[]
 }
 
 // One-time invite / password-set link sent by email.
@@ -189,4 +190,20 @@ model Chat {
   updatedAt DateTime  @updatedAt
 
   @@index([ownerId, updatedAt])
+}
+
+// ─── Journal (admin «Журнал») ─────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  at        DateTime @default(now())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorName String // snapshot: user name, e-mail of a failed login, or «Система»
+  event     String // key in lib/audit-events.ts
+  channel   String   @default("портал") // портал | чат | система
+  details   String   @default("")
+  search    String   @default("") // lower-cased actor + event + details: SQLite LIKE ignores case only for ASCII
+
+  @@index([at])
 }

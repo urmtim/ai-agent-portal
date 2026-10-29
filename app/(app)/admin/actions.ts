@@ -7,6 +7,10 @@ import { prisma } from "@/lib/db";
 import { createInvite, inviteLink } from "@/lib/invites";
 import { sendMail, inviteEmail, mailIsConsole } from "@/lib/mail";
 import { checkUserChange, statusFor } from "@/lib/user-guard";
+import { audit } from "@/lib/audit";
+import { getCourse } from "@/lib/courses";
+
+const roleLabel = (r: string) => (r === "ADMIN" ? "администратор" : "пользователь");
 
 /** Result of a form action shown in a modal: error keeps it open, ok closes it with a toast. */
 export type FormState = { error?: string; ok?: string; link?: string } | undefined;
@@ -27,7 +31,7 @@ async function sendInvite(user: { id: string; name: string; email: string }) {
 
 /** Create a user (status INVITED) and send an invite link by email. */
 export async function createUser(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const parsed = createSchema.safeParse({
     email: formData.get("email") ?? "",
@@ -45,6 +49,7 @@ export async function createUser(_prev: FormState, formData: FormData): Promise<
   const name = [firstName, lastName].filter(Boolean).join(" ") || email.split("@")[0];
   const user = await prisma.user.create({ data: { name, email, role, status: "INVITED" } });
   const link = await sendInvite(user);
+  await audit("invite", `Приглашён ${name} (${email}), роль: ${roleLabel(role)}`, admin);
 
   revalidatePath("/admin/users");
   return { ok: "Приглашение отправлено", link };
@@ -52,11 +57,12 @@ export async function createUser(_prev: FormState, formData: FormData): Promise<
 
 /** Issue a fresh invite link for a user who hasn't activated yet. */
 export async function resendInvite(userId: string): Promise<FormState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.status !== "INVITED") return { error: "Пользователь не ждёт приглашения" };
 
   const link = await sendInvite(user);
+  await audit("invite", `Повторное приглашение: ${user.name} (${user.email})`, admin);
   revalidatePath("/admin/users");
   return { ok: "Приглашение отправлено повторно", link };
 }
@@ -90,10 +96,14 @@ export async function updateUser(_prev: FormState, formData: FormData): Promise<
   const g = await guard(admin.id, userId, { kind: "update", role, canLogin });
   if ("error" in g) return { error: g.error };
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { name, role, status: statusFor(canLogin, !!g.target.passwordHash) },
-  });
+  const status = statusFor(canLogin, !!g.target.passwordHash);
+  await prisma.user.update({ where: { id: userId }, data: { name, role, status } });
+  const changes = [
+    name !== g.target.name && `имя «${g.target.name}» → «${name}»`,
+    role !== g.target.role && `роль: ${roleLabel(role)}`,
+    status !== g.target.status && (status === "DISABLED" ? "вход запрещён" : "вход разрешён"),
+  ].filter(Boolean);
+  await audit("user", `Изменён ${name} (${g.target.email}): ${changes.join(", ") || "без изменений"}`, admin);
   revalidatePath("/admin/users");
   return { ok: "Сохранено" };
 }
@@ -105,6 +115,7 @@ export async function deleteUser(userId: string): Promise<FormState> {
   if ("error" in g) return { error: g.error };
 
   await prisma.user.delete({ where: { id: userId } });
+  await audit("user", `Удалён ${g.target.name} (${g.target.email})`, admin);
   revalidatePath("/admin/users");
   revalidatePath("/admin/access");
   return { ok: "Пользователь удалён" };
@@ -126,6 +137,9 @@ export async function toggleAccess(formData: FormData): Promise<void> {
   } else {
     await prisma.courseAccess.deleteMany({ where: { userId, courseSlug } });
   }
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+  const course = getCourse(courseSlug)?.title ?? courseSlug;
+  await audit("access", `${grant ? "Выдан" : "Снят"} доступ к курсу «${course}»: ${user?.name ?? userId}`, admin);
 
   revalidatePath("/admin/access");
 }

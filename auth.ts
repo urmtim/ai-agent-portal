@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { audit } from "@/lib/audit";
 import { authConfig } from "./auth.config";
 
 const credentialsSchema = z.object({
@@ -36,10 +37,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = parsed.data.email.toLowerCase().trim();
         const user = await prisma.user.findUnique({ where: { email } });
 
-        if (!user || user.status !== "ACTIVE" || !user.passwordHash) return null;
+        // the journal gets the e-mail and the reason, never the password
+        const failed = async (why: string) => { await audit("login_failed", `Неудачная попытка входа: ${email} — ${why}`, { name: email }); return null; };
+        if (!user) return failed("нет такого пользователя");
+        if (user.status !== "ACTIVE" || !user.passwordHash) return failed(user.status === "DISABLED" ? "вход запрещён" : "приглашение не принято");
 
         const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!ok) return null;
+        if (!ok) return failed("неверный пароль");
+        await audit("login", "Вход в систему", user);
 
         return {
           id: user.id,

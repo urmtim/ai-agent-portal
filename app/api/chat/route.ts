@@ -14,6 +14,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
 import { chatTools } from "@/lib/chat/tools";
+import { audit } from "@/lib/audit";
 
 // One chat turn: the browser sends the whole history (useChat), we check it,
 // save it, stream the model's answer with tools and save again with the answer.
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
   }
   if (!llm) return plain(NO_MODEL_MESSAGE, 400);
 
-  const { tools, activeTools, agents } = await chatTools(user.id);
+  const { tools, activeTools, agents } = await chatTools(user);
 
   let messages: UIMessage[];
   try {
@@ -83,6 +84,15 @@ export async function POST(req: Request) {
     update: { modelId, messages: JSON.stringify(msgs) },
   });
   await save(messages); // the user's message survives a failing model
+  if (!chat) await audit("chat", "Создан чат", user, "чат");
+  // a fresh "no" to an agent run (approvals are journaled when the run actually starts, in lib/chat/tools.ts)
+  for (const p of messages.at(-1)?.role === "assistant" ? messages.at(-1)!.parts : []) {
+    const part = p as { type: string; state?: string; approval?: { approved?: boolean }; input?: { agentId?: string } };
+    if (part.type === "tool-run_agent" && part.state === "approval-responded" && part.approval?.approved === false) {
+      const name = agents.find((a) => a.id === part.input?.agentId)?.name ?? "агент";
+      await audit("approval", `Отклонён запуск агента «${name}»`, user, "чат");
+    }
+  }
 
   const result = streamText({
     model: llm.model,

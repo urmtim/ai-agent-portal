@@ -51,6 +51,7 @@ test("navKeyForPath: sections and child pages", () => {
   assert.equal(navKeyForPath("/agents"), "agents");
   assert.equal(navKeyForPath("/agents/abc"), "agents");
   assert.equal(navKeyForPath("/admin/users"), "users");
+  assert.equal(navKeyForPath("/admin/log"), "log");
   assert.equal(navKeyForPath("/stats"), "stats");
   assert.equal(navKeyForPath("/statsx"), undefined);
 });

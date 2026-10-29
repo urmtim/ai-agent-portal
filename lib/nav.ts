@@ -4,7 +4,7 @@
 export type NavKey =
   | "chat" | "agents" | "mcp" | "models"
   | "learn" | "stats" | "me"
-  | "users" | "access";
+  | "users" | "access" | "log";
 
 export type NavItem = {
   key: NavKey;
@@ -34,13 +34,14 @@ export const NAV: Record<NavKey, NavItem> = {
   me: { key: "me", label: "Прогресс", href: "/me" },
   users: { key: "users", label: "Пользователи", href: "/admin/users", adminOnly: true },
   access: { key: "access", label: "Доступы", href: "/admin/access", adminOnly: true },
+  log: { key: "log", label: "Журнал", href: "/admin/log", adminOnly: true },
 };
 
 export const NAV_GROUPS: NavGroup[] = [
   { title: "Основное", items: ["chat"] },
   { title: "AI", items: ["agents", "mcp", "models"] },
   { title: "Семья", note: "(скрыто)", dim: true, items: ["learn", "stats", "me"] },
-  { title: "Админ", adminOnly: true, items: ["users", "access"] },
+  { title: "Админ", adminOnly: true, items: ["users", "access", "log"] },
 ];
 
 export const DEFAULT_PINS: NavKey[] = ["chat", "agents", "mcp", "models"];

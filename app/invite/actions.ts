@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { findValidInvite } from "@/lib/invites";
+import { audit } from "@/lib/audit";
 
 export type InviteState = { error?: string } | undefined;
 
@@ -40,7 +41,7 @@ export async function setPassword(
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 10);
 
-  await prisma.$transaction([
+  const [user] = await prisma.$transaction([
     prisma.user.update({
       where: { id: invite.userId },
       data: { passwordHash, status: "ACTIVE" },
@@ -50,6 +51,7 @@ export async function setPassword(
       data: { usedAt: new Date() },
     }),
   ]);
+  await audit("invite", `Приглашение принято, пароль задан: ${user.email}`, user);
 
   redirect("/login?welcome=1");
 }

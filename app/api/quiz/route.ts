@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { getQuiz } from "@/lib/courses";
+import { getCourse, getQuiz } from "@/lib/courses";
 import { hasAccess } from "@/lib/progress";
+import { audit } from "@/lib/audit";
 
 const bodySchema = z.object({
   courseSlug: z.string(),
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
       answers: JSON.stringify(answers),
     },
   });
+  await audit("learning", `Тест в курсе «${getCourse(courseSlug)?.title ?? courseSlug}»: ${score} из ${total}, ${passed ? "сдан" : "не сдан"}`, session.user);
 
   return NextResponse.json({ score, total, passed, correct, explanations });
 }
