@@ -8,6 +8,7 @@ import { runAgent } from "@/lib/agents/runner";
 import { AGENT_TYPES } from "@/lib/agents/types";
 import { audit } from "@/lib/audit";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
+import { parseGuardrails } from "@/lib/agents/guardrails";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -28,8 +29,8 @@ const clamp = (v: FormDataEntryValue | null, min: number, max: number, def: numb
 };
 
 /**
- * The agent window (create when there is no agentId, edit otherwise): «Общее» fields plus the agents, MCP servers
- * and APIs it may use. Foreign or unknown ids are dropped; an agent can't list itself.
+ * The agent window (create when there is no agentId, edit otherwise): «Общее» fields, instruction, HITL and guardrails,
+ * plus the agents, MCP servers and APIs it may use. Foreign or unknown ids are dropped; an agent can't list itself.
  */
 export async function saveAgent(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
@@ -55,8 +56,16 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
     fromFilter: String(formData.get("fromFilter") ?? "").trim(),
     max: clamp(formData.get("max"), 1, 200, 40),
   };
+  const guardrails = type !== "CUSTOM" ? parseGuardrails(existing?.guardrails ?? "") : parseGuardrails({
+    maskPii: formData.get("maskPii") === "on",
+    maxSteps: Number(formData.get("maxSteps")),
+    forbiddenTopics: String(formData.get("topics") ?? "").split(/[\n,]/),
+  });
   const data = {
     name, modelId, enabled: formData.get("enabled") === "on", config: JSON.stringify(config),
+    instruction: String(formData.get("instruction") ?? "").trim().slice(0, 8000),
+    hitl: formData.get("hitl") === "none" ? "none" : "confirm",
+    guardrails: JSON.stringify(guardrails),
     agentIds: JSON.stringify([...new Set(agentIds)]), mcpIds: JSON.stringify([...new Set(mcpIds)]), apis: JSON.stringify([...new Set(apis)]),
   };
 
@@ -71,11 +80,11 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   return { ok: existing ? "Сохранено" : "Агент создан" };
 }
 
-/** Run an agent now; returns the run summary for a toast. */
-export async function runAgentById(agentId: string): Promise<FormState> {
+/** Run an agent now (with a task for «Свой агент»); returns the run summary for a toast. */
+export async function runAgentById(agentId: string, task = ""): Promise<FormState> {
   const user = await requireUser();
   await ownAgentOrThrow(agentId, user.id);
-  const runId = await runAgent(agentId, { actor: user, channel: "портал" });
+  const runId = await runAgent(agentId, { actor: user, channel: "портал" }, task.trim().slice(0, 2000));
   const run = await prisma.agentRun.findUnique({ where: { id: runId } });
   revalidateAgent(agentId);
   revalidatePath("/stats");
@@ -95,7 +104,7 @@ export async function deleteAgentById(agentId: string): Promise<FormState> {
 // ---- form actions used by the agent page (/agents/[id]) ----
 
 export async function runAgentNow(formData: FormData): Promise<void> {
-  await runAgentById(String(formData.get("agentId")));
+  await runAgentById(String(formData.get("agentId")), String(formData.get("task") ?? ""));
 }
 
 export async function deleteAgent(formData: FormData): Promise<void> {

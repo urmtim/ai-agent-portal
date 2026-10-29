@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { envModelName } from "@/lib/llm";
-import { AGENT_TYPES } from "@/lib/agents/types";
+import { agentDesc } from "@/lib/agents/types";
 import { loadAssistant } from "@/lib/assistant";
 
 /** Plain data the chat screen needs (dates as ISO strings — they cross into the browser). */
@@ -32,7 +32,7 @@ export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
     chats: chats.map((c) => ({ ...c, updatedAt: c.updatedAt.toISOString() })),
     models,
     envModel: models.length ? null : envModelName(),
-    agents: agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc })),
+    agents: agents.map((a) => ({ id: a.id, name: a.name, desc: agentDesc(a) })),
     assistant: {
       modelName: models.find((m) => m.id === cfg.modelId)?.name ?? null,
       agentNames: agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name),

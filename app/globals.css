@@ -485,3 +485,7 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 .addpop button:hover { background: var(--soft); }
 .addpop .sub { display: block; }
 .mpanel[hidden] { display: none; }
+
+/* agent window: YAML tab */
+.yaml-edit { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; line-height: 1.5; min-height: 300px; resize: vertical; white-space: pre; tab-size: 2; }
+.yaml-warn { margin: 10px 0 0; font-size: 13px; }

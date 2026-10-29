@@ -3,14 +3,16 @@ import { tool } from "ai";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
-import { AGENT_TYPES } from "@/lib/agents/types";
+import { agentDesc } from "@/lib/agents/types";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
-import { firstMailConnection, mailAccess } from "@/lib/connections";
-import { mailError, readEmail, searchEmails, type MailLetter, type MailSummary } from "@/lib/mailbox";
+import { firstMailConnection } from "@/lib/connections";
+import { mailTools } from "@/lib/chat/mail-tools";
+
+export type { MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
 
 // Tools the chat assistant can call — always scoped to one user's data.
-// run_agent acts (reads mail, writes receipts), so the route requires approval for it.
+// run_agent acts (reads mail, writes receipts), so the route asks for approval unless the agent's HITL is «без подтверждения».
 
 /** Output of the removed «Траты» tool — still rendered in old chats. */
 export type SpendingResult = {
@@ -20,9 +22,6 @@ export type SpendingResult = {
   categories: { category: string; total: number }[];
   topMerchants: { merchant: string; total: number }[];
 };
-
-export type MailSearchResult = { mailbox: string; total: number; letters: MailSummary[] } | { error: string };
-export type MailReadResult = { mailbox: string; letter: MailLetter } | { error: string };
 
 export type RunAgentResult =
   | { agent: string; status: "ok" | "error"; summary: string; processed: number; created: number; log: string }
@@ -35,45 +34,8 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
 
   // the assistant's mailbox: the first «Почта» connection on its MCP tab
   const mailConn = await firstMailConnection(userId, cfg.mcpIds);
-  const mail = () => {
-    if (!mailConn) throw new Error("Почта не добавлена ассистенту");
-    return mailAccess(mailConn);
-  };
-
   const tools = {
-    mail_search: tool({
-      description: "Искать письма в почте пользователя (только чтение). Без запроса — просто последние письма за период. Возвращает id, дату, отправителя, тему и начало текста.",
-      inputSchema: z.object({
-        query: z.string().max(200).optional().describe("Слова для поиска в теме, тексте или отправителе"),
-        from: z.string().max(200).optional().describe("Часть адреса или имени отправителя"),
-        days: z.number().int().min(1).max(90).describe("За сколько последних дней, обычно 1–7"),
-        unreadOnly: z.boolean().optional().describe("Только непрочитанные"),
-        limit: z.number().int().min(1).max(20).optional().describe("Сколько писем вернуть, по умолчанию 10"),
-      }),
-      execute: async (q): Promise<MailSearchResult> => {
-        try {
-          const r = await searchEmails(mail(), { ...q, limit: q.limit ?? 10 });
-          await audit("tool", `Ассистент искал письма в «${mailConn!.name}» за ${q.days} дн.: найдено ${r.total}`, user, "чат");
-          return { mailbox: mailConn!.name, ...r };
-        } catch (e) {
-          return { error: e instanceof Error && /не добавлена|не читается|не до конца/.test(e.message) ? e.message : mailError(e) };
-        }
-      },
-    }),
-    mail_read: tool({
-      description: "Прочитать одно письмо целиком по его id из mail_search. Письмо не помечается прочитанным.",
-      inputSchema: z.object({ id: z.number().int().positive().describe("id письма из mail_search") }),
-      execute: async ({ id }): Promise<MailReadResult> => {
-        try {
-          const letter = await readEmail(mail(), id);
-          if (!letter) return { error: "Такого письма нет" };
-          await audit("tool", `Ассистент открыл письмо в «${mailConn!.name}»`, user, "чат");
-          return { mailbox: mailConn!.name, letter };
-        } catch (e) {
-          return { error: e instanceof Error && /не добавлена|не читается|не до конца/.test(e.message) ? e.message : mailError(e) };
-        }
-      },
-    }),
+    ...mailTools({ conn: mailConn, who: "Ассистент", actor: user, channel: "чат", missing: "Почта не добавлена ассистенту" }),
     // removed «Траты» tool: kept only so chats that called it still validate; never in activeTools
     get_spending: tool({
       description: "Устарело: не используется.",
@@ -82,14 +44,17 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
     }),
     run_agent: tool({
       description: "Запустить агента пользователя (перед запуском пользователь подтверждает). Агенты:\n" +
-        agents.map((a) => `- ${a.id}: «${a.name}» — ${AGENT_TYPES[a.type].desc}`).join("\n"),
-      inputSchema: z.object({ agentId: z.string().describe("id агента из списка") }),
-      execute: async ({ agentId }): Promise<RunAgentResult> => {
+        agents.map((a) => `- ${a.id}: «${a.name}» — ${agentDesc(a)}`).join("\n"),
+      inputSchema: z.object({
+        agentId: z.string().describe("id агента из списка"),
+        task: z.string().max(2000).optional().describe("Задача для агента своими словами (для агентов с инструкцией)"),
+      }),
+      execute: async ({ agentId, task }): Promise<RunAgentResult> => {
         const agent = agents.find((a) => a.id === agentId);
         if (!agent) return { error: "Такого агента нет" };
-        // execute only runs after a verified approval, so this is where it is journaled
-        await audit("approval", `Подтверждён запуск агента «${agent.name}»`, user, "чат");
-        const runId = await runAgent(agent.id, { actor: user, channel: "чат" });
+        // for agents that need confirmation execute only runs after a verified approval, so this is where it is journaled
+        if (agent.hitl !== "none") await audit("approval", `Подтверждён запуск агента «${agent.name}»`, user, "чат");
+        const runId = await runAgent(agent.id, { actor: user, channel: "чат" }, task ?? "");
         const run = await prisma.agentRun.findUniqueOrThrow({ where: { id: runId } });
         return {
           agent: agent.name,
@@ -105,7 +70,11 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
 
   // every tool stays defined so stored history validates; the model is offered only the allowed ones
   const activeTools = allowedTools(cfg, agents.map((a) => a.id), mailConn ? [mailConn.id] : []) as (keyof typeof tools)[];
-  return { tools, activeTools, agents, mailbox: mailConn?.name ?? null };
+  // HITL per agent: «без подтверждения» runs at once; everything else (and unknown ids) waits for the user
+  const approval = {
+    run_agent: ({ agentId }: { agentId: string }) => (agents.find((a) => a.id === agentId)?.hitl === "none" ? undefined : ("user-approval" as const)),
+  };
+  return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null };
 }
 
 export type ChatTools = Awaited<ReturnType<typeof chatTools>>["tools"];

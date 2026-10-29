@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { ownConnections } from "@/lib/connections";
 import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
 import { envModelName, llmAvailable } from "@/lib/llm";
-import { AGENT_TYPES } from "@/lib/agents/types";
+import { AGENT_TYPES, agentDesc } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
 import { ListTable, type ListRow } from "@/components/ui/ListTable";
 import { AgentActions, NewAgentButton } from "./AgentModals";
@@ -46,7 +46,7 @@ export default async function AgentsPage() {
     models: models.map(({ id, name }) => ({ id, name })),
     defaultModel: model,
     defaultModelId: (models.find((m) => m.isDefault) ?? models[0])?.id ?? "",
-    agents: agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc, enabled: a.enabled })),
+    agents: agents.map((a) => ({ id: a.id, name: a.name, desc: agentDesc(a), enabled: a.enabled })),
     connections: conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind })),
   };
 
@@ -76,18 +76,19 @@ export default async function AgentsPage() {
 
   const rows: ListRow[] = agents.map((a, i) => {
     const t = AGENT_TYPES[a.type];
+    const desc = agentDesc(a);
     const last = a.runs[0];
     const rs = last ? RUN_ST[last.status] : null;
     const status = a.enabled ? "включён" : "выключен";
     return {
       key: a.id,
-      search: `${a.name} ${t.desc} ${t.mcp.join(" ")}`,
+      search: `${a.name} ${desc} ${t.mcp.join(" ")}`,
       facets: { status },
       cells: [
         <span key="id" className="muted">#{i + 2}</span>, // #1 is the base assistant
         <div key="n">
           <Link href={`/agents/${a.id}`} className="b link">{a.name}</Link>
-          <div className="sub">{t.desc}</div>
+          <div className="sub">{desc}</div>
         </div>,
         <span key="mo" style={{ whiteSpace: "nowrap" }}>{a.model?.name ?? model}</span>,
         connNames(a) || <span key="m" className="muted">—</span>,

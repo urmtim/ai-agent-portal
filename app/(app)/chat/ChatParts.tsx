@@ -88,6 +88,7 @@ function AgentStep({ part, agents, onApprove, canApprove }: {
         <div className="hitl">
           <div className="ht">⏸ Нужно подтверждение · Запустить агента</div>
           <div className="hd">«{name}»{agent ? ` — ${agent.desc}` : ""}</div>
+          {typeof part.input?.task === "string" && part.input.task.trim() && <div className="hd">Задача: {part.input.task}</div>}
           <div className="wrap-gap">
             <button type="button" className="btn primary sm" disabled={!canApprove} onClick={() => onApprove(part.approval!.id, true)}>Запустить</button>
             <button type="button" className="btn ghost sm" disabled={!canApprove} onClick={() => onApprove(part.approval!.id, false)}>Отмена</button>

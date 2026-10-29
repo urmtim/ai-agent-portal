@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { runAgentNow, deleteAgent } from "../actions";
 import { AgentEditButton } from "../AgentModals";
 import { agentEditData } from "@/lib/agents/edit-data";
-import { AGENT_TYPES } from "@/lib/agents/types";
+import { agentDesc } from "@/lib/agents/types";
 import { ownConnections } from "@/lib/connections";
 import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
 import { envModelName } from "@/lib/llm";
@@ -34,7 +34,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" } });
   const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const defaultName = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
-
+  const custom = agent.type === "CUSTOM";
 
   return (
     <div className="narrow" style={{ margin: "0 auto" }}>
@@ -43,18 +43,31 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
       <div className="pagehead">
         <div>
           <h1 className="title">{agent.name}</h1>
-          <p className="lead">Собирает чеки из почты и пишет их в «Траты»</p>
+          <p className="lead">{agentDesc(agent)}</p>
         </div>
         <div className="spacer" />
         <AgentEditButton models={models.map(({ id, name }) => ({ id, name }))} defaultModel={defaultName}
           defaultModelId={(models.find((m) => m.isDefault) ?? models[0])?.id ?? ""} a={agentEditData(agent)}
-          agents={own.map((x) => ({ id: x.id, name: x.name, desc: AGENT_TYPES[x.type].desc, enabled: x.enabled }))}
+          agents={own.map((x) => ({ id: x.id, name: x.name, desc: agentDesc(x), enabled: x.enabled }))}
           connections={conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind }))} />
-        <form action={runAgentNow}>
-          <input type="hidden" name="agentId" value={agent.id} />
-          <button className="btn primary" type="submit">▶ Запустить сейчас</button>
-        </form>
+        {!custom && (
+          <form action={runAgentNow}>
+            <input type="hidden" name="agentId" value={agent.id} />
+            <button className="btn primary" type="submit">▶ Запустить сейчас</button>
+          </form>
+        )}
       </div>
+
+      {custom && (
+        <form action={runAgentNow} className="card pad" style={{ marginBottom: 20 }}>
+          <input type="hidden" name="agentId" value={agent.id} />
+          <div className="field" style={{ marginBottom: 10 }}>
+            <label htmlFor="ag-task">Задача</label>
+            <textarea id="ag-task" name="task" rows={3} maxLength={2000} placeholder="Что сделать на этот раз. Пусто — агент работает просто по своей инструкции." />
+          </div>
+          <button className="btn primary" type="submit">▶ Запустить</button>
+        </form>
+      )}
 
       <h2 className="title" style={{ fontSize: 16, marginBottom: 12 }}>История прогонов</h2>
       {agent.runs.length === 0 ? (

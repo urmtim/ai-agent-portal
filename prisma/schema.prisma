@@ -98,6 +98,7 @@ model QuizResult {
 
 enum AgentType {
   RECEIPTS // collects receipts from email into expense stats
+  CUSTOM // «Свой агент»: instruction + tools + guardrails (lib/agents/custom.ts)
 }
 
 enum AgentRunStatus {
@@ -140,6 +141,9 @@ model Agent {
   agentIds  String    @default("[]") // JSON: other agents this agent may call (not used by the receipts agent yet)
   mcpIds    String    @default("[]") // JSON: MCP servers it may use
   apis      String    @default("[]") // JSON: portal APIs it may call
+  instruction String  @default("") // system instruction («Свой агент»)
+  hitl      String    @default("confirm") // confirm | none — ask before the assistant runs it
+  guardrails String   @default("{}") // JSON: maskPii, maxSteps, forbiddenTopics (lib/agents/guardrails.ts)
   modelId   String? // null → the default model
   model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   createdAt DateTime  @default(now())

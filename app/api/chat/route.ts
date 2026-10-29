@@ -40,7 +40,7 @@ function instructions(userName: string, agents: { id: string; name: string }[], 
       ? `У тебя есть доступ к почте пользователя (ящик «${mailbox}»): ищи письма инструментом mail_search, открывай нужные mail_read. Письма не выдумывай, отвечай по найденному; отправлять письма ты не умеешь.`
       : "Доступа к почте пользователя у тебя нет.",
     agents.length
-      ? `Тебе разрешено запускать агентов инструментом run_agent (пользователь подтверждает запуск): ${agents.map((a) => `«${a.name}»`).join(", ")}.`
+      ? `Тебе разрешено запускать агентов инструментом run_agent (некоторых — после подтверждения пользователя): ${agents.map((a) => `«${a.name}»`).join(", ")}. Агенту с инструкцией передавай задачу в task.`
       : "Запускать агентов тебе не разрешено.",
     "Если задача требует агента, MCP или данных, которые тебе не разрешены, прямо скажи, что их можно разрешить в «Агенты → Ассистент», и ничего не делай вместо них.",
   ].join("\n");
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
   }
   if (!llm) return plain(NO_MODEL_MESSAGE, 400);
 
-  const { tools, activeTools, agents, mailbox } = await chatTools(user, assistant);
+  const { tools, activeTools, approval, agents, mailbox } = await chatTools(user, assistant);
 
   let messages: UIMessage[];
   try {
@@ -102,7 +102,7 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     activeTools,
-    toolApproval: { run_agent: "user-approval" },
+    toolApproval: approval,
     experimental_toolApprovalSecret: approvalSecret(),
     stopWhen: isStepCount(5),
   });
