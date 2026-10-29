@@ -56,15 +56,12 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
           </div>
         </div>
       </div>
-      {m?.hasToken && <div className="hint">Токен сохранён — оставьте пустым, чтобы не менять.</div>}
+      {m?.hasToken && <div className="hint">Токен сохранён. Чтобы заменить — впишите новый; пустое поле оставит прежний.</div>}
       <div className="wrap-gap" style={{ marginTop: 16, gap: 18 }}>
         <label className="toggle">
           <input type="checkbox" name="isDefault" defaultChecked={m?.isDefault} disabled={m?.isDefault} />
           <span>Сделать моделью по умолчанию</span>
         </label>
-        {m?.hasToken && (
-          <label className="toggle"><input type="checkbox" name="clearToken" /><span>Удалить токен</span></label>
-        )}
       </div>
       {test && (
         <div className={`status ${test === "checking" ? "checking" : test.ok ? "ok" : "err"}`} role="status">

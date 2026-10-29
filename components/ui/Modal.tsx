@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { createPortal } from "react-dom";
 
 /** Centered dialog over a blurred backdrop. Closes only by × or its own buttons — a stray click or Esc must not lose what was typed. */
 export function Modal({
@@ -25,7 +26,8 @@ export function Modal({
   }, [open]);
 
   if (!open) return null;
-  return (
+  // portal: opened from a table row, it must not inherit the cell's layout (td.acts is right-aligned)
+  return createPortal(
     <div className="mbg">
       <div ref={ref} className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <button type="button" className="mclose" aria-label="Закрыть" onClick={onClose}>×</button>
@@ -33,7 +35,8 @@ export function Modal({
         {sub && <p className="msub">{sub}</p>}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

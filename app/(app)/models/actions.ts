@@ -33,16 +33,15 @@ function revalidate() {
   revalidatePath("/agents");
 }
 
-/** Add or edit a model. Empty token on edit keeps the saved one; "clearToken" removes it. */
+/** Add or edit a model. Empty token on edit keeps the saved one, a new one replaces it. */
 export async function saveModel(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireAdmin();
   const p = parse(formData);
   if (!p.success) return { error: p.error.issues[0]?.message ?? "Проверьте поля" };
   const { id, name, baseUrl, model, token } = p.data;
   const makeDefault = formData.get("isDefault") === "on";
-  const clearToken = formData.get("clearToken") === "on";
 
-  const tokenEnc = token ? encryptSecret(token) : clearToken ? null : undefined; // undefined → unchanged
+  const tokenEnc = token ? encryptSecret(token) : undefined; // undefined → unchanged
   const data = { name: name || model, baseUrl: baseUrl.replace(/\/$/, ""), model, ...(tokenEnc !== undefined ? { tokenEnc } : {}) };
 
   await prisma.$transaction(async (tx) => {
@@ -66,7 +65,7 @@ export async function testModel(formData: FormData): Promise<TestState> {
   const p = parse(formData);
   if (!p.success) return { ok: false, message: "✕ " + (p.error.issues[0]?.message ?? "Проверьте поля") };
   let token: string | undefined = p.data.token || undefined;
-  if (!token && p.data.id && formData.get("clearToken") !== "on") {
+  if (!token && p.data.id) {
     const saved = await prisma.llmModel.findUnique({ where: { id: p.data.id } });
     if (saved?.tokenEnc) token = decryptSecret(saved.tokenEnc) ?? undefined;
   }
