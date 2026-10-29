@@ -74,7 +74,7 @@ export function InviteButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>+ Добавить пользователя</button>
+      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Добавить пользователя</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Новый пользователь"
         sub="Ссылка для установки пароля будет отправлена пользователю на почту.">
         {/* remount per opening so the form starts empty */}

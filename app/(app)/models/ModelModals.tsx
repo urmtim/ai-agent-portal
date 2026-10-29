@@ -82,7 +82,7 @@ export function AddModelButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>+ Добавить модель</button>
+      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Добавить модель</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Новая модель">
         {open && <ModelForm onDone={() => setOpen(false)} />}
       </Modal>

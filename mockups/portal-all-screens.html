@@ -479,7 +479,7 @@
 
     agents: () => appShell(`
       <div class="pagehead"><div><h1 class="title">Агенты</h1><p class="lead">ИИ-помощники, которые делают рутину за вас</p></div>
-        <button class="btn primary spacer">+ Новый агент</button></div>
+        <button class="btn primary spacer">Новый агент</button></div>
       ${aiTabs('agents')}
       ${tbar()}
       <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>MCP</th><th>Статус</th><th>Последний прогон</th><th></th></tr></thead><tbody>
@@ -518,7 +518,7 @@
 
     settings: () => appShell(`
       <div class="pagehead"><div><h1 class="title">Модели</h1><p class="lead">LLM, к которым ходят агенты. Моделей может быть много: базовый ассистент работает на одной, другой агент — на другой.</p></div>
-        <button class="btn primary spacer" id="addModelBtn">+ Добавить модель</button></div>
+        <button class="btn primary spacer" id="addModelBtn">Добавить модель</button></div>
       ${aiTabs('settings')}
       ${tbar()}
       <div class="card tcard"><table style="min-width:700px"><thead><tr><th>ID</th><th>Название</th><th>Адрес API</th><th>Агенты</th><th>Статус</th><th></th></tr></thead><tbody>
@@ -578,7 +578,7 @@
 
     users: () => appShell(`
       <div class="pagehead"><div><h1 class="title">Пользователи</h1><p class="lead">Заводите аккаунты и отправляйте приглашения по почте</p></div>
-        <button class="btn primary spacer" data-open="inviteModal">+ Добавить пользователя</button></div>
+        <button class="btn primary spacer" data-open="inviteModal">Добавить пользователя</button></div>
       ${tbar('Поиск по имени или e-mail…')}
       <div class="card tcard"><table style="min-width:680px"><thead><tr><th>ID</th><th>Пользователь</th><th>Роль</th><th>Статус</th><th>Создан</th><th></th></tr></thead><tbody>
         ${userRow(3,'Маша','masha@mail.ru','Пользователь','приглашён','wait','сегодня',true)}

@@ -42,7 +42,7 @@ export function NewAgentButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>+ Новый агент</button>
+      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Новый агент</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Новый агент">
         {open && <NewAgentForm onDone={() => setOpen(false)} />}
       </Modal>
