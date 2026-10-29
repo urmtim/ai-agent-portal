@@ -63,7 +63,8 @@ test("parsePins: an untouched old default menu becomes the new default, a custom
   assert.deepEqual(parsePins('["agents","chat","mcp","models"]'), ["agents", "chat", "mcp", "models"]);
 });
 
-test("AI group order and the API section", () => {
-  assert.deepEqual(NAV_GROUPS.find((g) => g.title === "AI")?.items, ["agents", "models", "mcp", "api"]);
+test("AI group order, API and guardrails sections", () => {
+  assert.deepEqual(NAV_GROUPS.find((g) => g.title === "AI")?.items, ["agents", "models", "mcp", "api", "guardrails"]);
   assert.equal(navKeyForPath("/api-access"), "api");
+  assert.equal(navKeyForPath("/guardrails"), "guardrails");
 });

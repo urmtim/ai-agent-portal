@@ -1,5 +1,5 @@
 // Agent row → what the agent window edits (pure; used by the agents list and the agent page).
-import { parseGuardPolicy, parseHitl, parseMcpAccess } from "./policy";
+import { parseGuardRules, parseHitl, parseMcpAccess } from "./policy";
 
 const ids = (raw: string): string[] => {
   try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []; } catch { return []; }
@@ -11,7 +11,7 @@ export function agentEditData(a: {
 }) {
   return {
     id: a.id, name: a.name, enabled: a.enabled, modelId: a.modelId, instruction: a.instruction,
-    hitl: parseHitl(a.hitl), guardrails: parseGuardPolicy(a.guardrails),
+    hitl: parseHitl(a.hitl), guardrails: parseGuardRules(a.guardrails),
     agentIds: ids(a.agentIds), mcpIds: ids(a.mcpIds), mcpAccess: parseMcpAccess(a.mcpAccess), apis: ids(a.apis),
   };
 }

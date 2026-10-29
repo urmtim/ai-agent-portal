@@ -7,7 +7,8 @@ import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
 import { firstMailConnection } from "@/lib/connections";
 import { guardrailInstructions, maskPii } from "./guardrails";
-import { agentGuardrails, parseHitl } from "./policy";
+import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules } from "./policy";
+import { docsInstructions } from "@/lib/guardrail-docs";
 import { agentDesc } from "./types";
 import type { RunBy } from "./runner";
 
@@ -25,7 +26,10 @@ export type RunNested = (agentId: string, task: string) => Promise<{ status: "ok
 export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunBy; depth: number; runNested: RunNested }): Promise<CustomResult> {
   const llm = await chatModel(agent.ownerId, agent.modelId);
   if (!llm) throw new Error(NO_MODEL_MESSAGE);
-  const g = agentGuardrails(agent.guardrails);
+  const rules = parseGuardRules(agent.guardrails);
+  const g = effectiveGuardrails(rules);
+  // documents: only the owner's, only switched on in the catalog
+  const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: agent.ownerId, enabled: true, id: { in: guardDocIds(rules) } }, select: { name: true, text: true } });
 
   const conn = await firstMailConnection(agent.ownerId, ids(agent.mcpIds));
   const tools: ToolSet = conn
@@ -36,7 +40,7 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   const subs = ctx.depth > 0 ? [] : (await prisma.agent.findMany({
     where: { ownerId: agent.ownerId, enabled: true, id: { in: ids(agent.agentIds).filter((x) => x !== agent.id) } },
     orderBy: { createdAt: "asc" },
-  })).filter((a) => !parseHitl(a.hitl).enabled);
+  })).filter((a) => !hitlAsks(a.hitl));
   if (subs.length) {
     tools.run_agent = tool({
       description: "Запустить другого агента и получить его итог. Агенты:\n" + subs.map((a) => `- ${a.id}: «${a.name}» — ${agentDesc(a)}`).join("\n"),
@@ -55,6 +59,7 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
     "Отвечай по-русски. Данные не выдумывай: опирайся только на результаты инструментов.",
     conn ? `Почта пользователя (ящик «${conn.name}»): mail_search ищет письма, mail_read открывает письмо.` : "Доступа к почте у тебя нет.",
     guardrailInstructions(g),
+    docsInstructions(docs),
   ].filter(Boolean).join("\n");
   const prompt = task.trim() ? (g.maskPii ? maskPii(task.trim()) : task.trim()) : "Выполни свою задачу по инструкции.";
 

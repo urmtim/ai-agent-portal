@@ -102,9 +102,13 @@ export async function deleteModel(id: string): Promise<FormState> {
   const user = await requireUser();
   const m = await prisma.llmModel.findFirst({ where: { id, ownerId: user.id } });
   if (!m) return { error: "Модель не найдена" };
-  if (m.isDefault) return { error: "Модель по умолчанию удалить нельзя — сначала назначьте другую" };
-  await prisma.llmModel.delete({ where: { id } });
-  await audit("model", `Удалена модель «${m.name}» (${m.model})`, user);
+  // the default one can go too: the earliest model left becomes the default
+  const next = m.isDefault ? await prisma.llmModel.findFirst({ where: { ownerId: user.id, id: { not: id } }, orderBy: { createdAt: "asc" } }) : null;
+  await prisma.$transaction([
+    prisma.llmModel.delete({ where: { id } }),
+    ...(next ? [prisma.llmModel.update({ where: { id: next.id }, data: { isDefault: true } })] : []),
+  ]);
+  await audit("model", `Удалена модель «${m.name}» (${m.model})${next ? `; по умолчанию теперь «${next.name}»` : ""}`, user);
   revalidate();
   return { ok: "Модель удалена" };
 }

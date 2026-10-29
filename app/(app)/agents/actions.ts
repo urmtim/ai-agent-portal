@@ -8,7 +8,7 @@ import { runAgent } from "@/lib/agents/runner";
 import { AGENT_TYPES } from "@/lib/agents/types";
 import { audit } from "@/lib/audit";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
-import { parseGuardPolicy, parseHitl, parseMcpAccess } from "@/lib/agents/policy";
+import { HITL_LABELS, ownGuardRules, parseHitl, parseMcpAccess } from "@/lib/agents/policy";
 
 /** id — the saved agent, for «▶ Тест-запуск» right after saving. */
 export type FormState = { error?: string; ok?: string; id?: string } | undefined;
@@ -46,12 +46,13 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   const mcpIds = [...new Set(formData.getAll("mcp").map(String).filter((id) => conns.some((c) => c.id === id)))];
   const access = parseMcpAccess(String(formData.get("mcpAccess") ?? "{}"));
   const hitl = parseHitl(String(formData.get("hitl") ?? ""));
-  const guardrails = parseGuardPolicy(String(formData.get("guardrails") ?? ""));
+  const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id }, select: { id: true } });
+  const guardrails = ownGuardRules(String(formData.get("guardrails") ?? ""), docs.map((d) => d.id));
   const data = {
     name, modelId, enabled: formData.get("enabled") === "on",
     instruction: String(formData.get("instruction") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 8000), // forms send \r\n
-    hitl: JSON.stringify(hitl),
-    guardrails: JSON.stringify(guardrails),
+    hitl,
+    guardrails: JSON.stringify({ rules: guardrails }),
     agentIds: JSON.stringify([...new Set(agentIds)]), mcpIds: JSON.stringify(mcpIds), apis: JSON.stringify([...new Set(apis)]),
     mcpAccess: JSON.stringify(Object.fromEntries(mcpIds.map((id) => [id, access[id] ?? "read"]))),
   };
@@ -60,7 +61,7 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
     ? await prisma.agent.update({ where: { id: existing.id }, data })
     : await prisma.agent.create({ data: { ownerId: user.id, type: "CUSTOM", ...data } });
   const extra = agentIds.length ? `; субагенты: ${agentIds.length}` : "";
-  const pol = `HITL ${hitl.enabled ? "вкл." : "выкл."}, гардрейлы ${guardrails.enabled ? `вкл. (${guardrails.rules.length})` : "выкл."}`;
+  const pol = `HITL — ${HITL_LABELS[hitl].toLowerCase()}, гардрейлов: ${guardrails.length}`;
   await audit("agent", existing
     ? `Сохранены настройки агента «${saved.name}»${saved.enabled ? "" : " (выключен)"}: ${pol}${extra}`
     : `Создан агент «${saved.name}»: ${pol}${extra}`, user);

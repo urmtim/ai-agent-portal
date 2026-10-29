@@ -362,7 +362,8 @@
         <option value="agents">Агенты — список</option>
         <option value="agentnew">Агент — окно: новый</option>
         <option value="agentwin">Агент — окно: правка</option>
-        <option value="assistantwin">Ассистент — окно (модель чата)</option>
+        <option value="assistantwin">Ассистент — окно (то же, что у агента)</option>
+        <option value="guardrails">Гардрейлы (документы)</option>
         <option value="constructor">Конструктор агента (граф)</option>
         <option value="agent">Агент — история</option>
         <option value="mcp">MCP</option>
@@ -546,7 +547,16 @@
         ${agentRow(5,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['1С'],'не настроен','wait','—')}
       </tbody></table></div>`),
 
-    assistantwin: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + assistantWin()),
+    assistantwin: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + agentWin('assistant')),
+    guardrails: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Гардрейлы</h1><p class="lead">Документы с правилами — регламенты, политики, инструкции. Агент получает их текст как правила, которые нельзя нарушать, когда документ добавлен ему на вкладке «Политики».</p></div>
+        <button class="btn primary spacer">Добавить документ</button></div>
+      ${aiTabs('guardrails')}
+      ${tbar()}
+      <div class="card tcard"><table style="min-width:760px"><thead><tr><th>ID</th><th>Название</th><th>Файл</th><th>Используют</th><th>Статус</th><th></th></tr></thead><tbody>
+        <tr><td>#1</td><td><div class="b">Регламент работы с почтой</div><div class="sub">Что можно отвечать клиентам и чего нельзя</div></td><td class="muted">Регламент.docx · 24 КБ</td><td>Ассистент, Сводка почты</td><td><span class="st ok">включён</span></td><td class="acts">${ibtn('edit','Изменить')}${ibtn('del','Удалить')}</td></tr>
+        <tr><td>#2</td><td><div class="b">Политика ПДн</div><div class="sub">Обработка персональных данных</div></td><td class="muted">Политика ПДн.pdf · 310 КБ</td><td class="muted">—</td><td><span class="st mut">выключен</span></td><td class="acts">${ibtn('edit','Изменить')}${ibtn('del','Удалить')}</td></tr>
+      </tbody></table></div>`),
     agentnew: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + agentWin('new')),
     agentwin: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + agentWin('custom')),
 
@@ -734,50 +744,25 @@
     return `<div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" placeholder="Поиск…"></label><button type="button" class="btn dashed">+ Фильтр</button><button type="button" class="btn primary spacer">Добавить</button></div>
       <div class="tpart"><table><thead><tr><th>Название</th><th>Описание</th>${withAccess ? '<th>Доступ</th>' : ''}<th></th></tr></thead><tbody>${body}</tbody></table></div>${nothing ? `<div class="hint">${nothing}</div>` : ''}`;
   }
-  // The chat's own assistant: same window style; it has no instruction or policies of its own here, only what it may use.
-  function assistantWin() {
-    const tab = (k, l, n, on) => `<button class="${on ? 'on' : ''}" data-atab="${k}">${l}${n === undefined ? '' : ` <span class="n">${n}</span>`}</button>`;
-    return `
-      <div class="mbg" id="agentWin">
-        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle">
-          <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
-          <h2 class="mtitle" id="awTitle" style="margin-bottom:14px">Ассистент</h2>
-          <div class="mtabs" role="tablist">${tab('gen', 'Общее', undefined, true)}${tab('agt', 'Агенты', 1)}${tab('mcp', 'MCP', 1)}${tab('api', 'API', 0)}</div>
-          <div class="apanel" data-apanel="gen">
-            <div class="field"><label>Модель</label><select class="f"><option selected>GLM-4 · по умолчанию</option><option>Llama 3.1 (локально)</option></select>
-              <div class="hint">На этой модели работает чат. Только ваши подключённые модели (раздел «Модели»).</div></div>
-          </div>
-          <div class="apanel" data-apanel="agt" hidden>
-            <div class="hint" style="margin:0 0 10px">Каких агентов ассистент может запускать из чата. Их действия подтверждаются по их собственным политикам.</div>
-            ${tpart([['Сводка почты', 'Составь сводку новых писем: от кого, о чём, что требует ответа.']])}
-          </div>
-          <div class="apanel" data-apanel="mcp" hidden>
-            <div class="hint" style="margin:0 0 10px">Подключения из раздела MCP, которыми ассистент пользуется в чате.</div>
-            ${tpart([['Моя почта', 'Почта: поиск, чтение и отправка писем', ['только чтение', 'чтение и отправка'], 0]], '', true)}
-          </div>
-          <div class="apanel" data-apanel="api" hidden>${tpart([], 'API портала пока нет.')}</div>
-          <div class="mfoot"><span class="spacer"></span><button class="btn primary" data-close data-toast="Сохранено">Сохранить</button></div>
-        </div>
-      </div>`;
-  }
   function agentWin(mode) {
-    const isNew = mode === 'new';
-    const name = isNew ? '' : 'Сводка почты';
+    const isNew = mode === 'new', builtin = mode === 'assistant';
+    const name = isNew ? '' : builtin ? 'Ассистент' : 'Сводка почты';
     const instr = isNew ? '' : 'Составь сводку новых писем: от кого, о чём, что требует ответа.\nКоротко, списком, важное — первым.';
     const agents = isNew ? [] : [['Ответы на письма', 'Готовит черновики ответов на письма']];
     const mcp = isNew ? [] : [['Моя почта', 'Почта: поиск, чтение и отправка писем', ['только чтение', 'чтение и отправка'], 0]];
     const tab = (k, l, n, on) => `<button class="${on ? 'on' : ''}" data-atab="${k}">${l}${n === undefined ? '' : ` <span class="n">${n}</span>`}</button>`;
-    // guardrails: [name with its value, what it does]; the value is set when the guardrail is added
+    // guardrails: [name with its value, kind, what it does]; documents come from the «Гардрейлы» section
     const guards = [
-      ['Маскирование ПДн', 'Почта, телефоны, карты и паспорта заменяются метками до отправки модели'],
-      ['Лимит шагов — 5', 'Сколько раз за запуск агент обращается к модели и инструментам'],
-      ...(isNew ? [] : [['Запрещённая тема — политика', 'Агент отказывается обсуждать и выполнять задачи на эту тему']]),
+      ['Маскирование ПДн', 'встроенный', 'Почта, телефоны, карты и паспорта заменяются метками до отправки модели'],
+      ['Лимит шагов — 5', 'встроенный', 'Сколько раз за запуск агент обращается к модели и инструментам'],
+      ...(isNew ? [] : [['Регламент работы с почтой', 'документ', 'Что можно отвечать клиентам и чего нельзя']]),
     ];
-    const guardRows = guards.map(([n, d]) => `<tr><td><b>${n}</b></td><td class="muted">${d}</td><td class="acts">${ibtn('del', 'Убрать')}</td></tr>`).join('');
+    const guardRows = guards.map(([n, k, d]) => `<tr><td><b>${n}</b></td><td><span class="st ${k === 'документ' ? 'info' : 'mut'}">${k}</span></td><td class="muted">${d}</td><td class="acts">${ibtn('del', 'Убрать')}</td></tr>`).join('');
+    const lock = builtin ? 'disabled' : '';
     const sw = (label, on) => `<label class="switch"><input type="checkbox" role="switch" ${on ? 'checked' : ''}><span class="track"></span><span>${label}</span></label>`;
     const yaml = isNew
-      ? `version: 1\nname: ""\nenabled: true\nmodel: GLM-4\ninstruction: ""\nhitl:\n  enabled: true\n  ask: changes_and_send\nguardrails:\n  enabled: true\n  rules:\n    - maskPii\n    - maxSteps: 5\nmcp: []\nagents: []\napi: []`
-      : `version: 1\nname: Сводка почты\nenabled: true\nmodel: GLM-4\ninstruction: |-\n  Составь сводку новых писем: от кого, о чём, что требует ответа.\n  Коротко, списком, важное — первым.\nhitl:\n  enabled: true\n  ask: changes_and_send\nguardrails:\n  enabled: true\n  rules:\n    - maskPii\n    - maxSteps: 5\n    - forbiddenTopic: политика\nmcp:\n  - name: Моя почта\n    access: read\nagents:\n  - Ответы на письма\napi: []`;
+      ? `version: 3\nname: ""\nenabled: true\nmodel: GLM-4\ninstruction: ""\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\nmcp: []\nagents: []\napi: []`
+      : `version: 3\nname: Сводка почты\nenabled: true\nmodel: GLM-4\ninstruction: |-\n  Составь сводку новых писем: от кого, о чём, что требует ответа.\n  Коротко, списком, важное — первым.\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\n  - document: Регламент работы с почтой\nmcp:\n  - name: Моя почта\n    access: read\nagents:\n  - Ответы на письма\napi: []`;
     return `
       <div class="mbg" id="agentWin">
         <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle">
@@ -787,9 +772,9 @@
 
           <div class="apanel" data-apanel="gen">
             <div class="psec">
-              ${sw('Агент включён', true)}
-              <div class="hint" style="margin:6px 0 14px">Выключенный агент не запускается: ни из чата, ни другими агентами, ни вручную.</div>
-              <div class="field"><label>Название</label><input value="${name}" placeholder="например, Сводка почты"></div>
+              ${sw('Агент включён', true).replace('role="switch"', `role="switch" ${lock}`)}
+              <div class="hint" style="margin:6px 0 14px">${builtin ? 'Встроенный агент — это чат, выключить его нельзя.' : 'Выключенный агент не запускается: ни из чата, ни другими агентами, ни вручную.'}</div>
+              <div class="field"><label>Название</label><input value="${name}" placeholder="например, Сводка почты" ${lock}></div>
               <div class="field"><label>Модель</label><select class="f"><option selected>GLM-4 · по умолчанию</option><option>Llama 3.1 (локально)</option></select>
                 <div class="hint">Только ваши подключённые модели (раздел «Модели»). У нового агента сразу стоит модель по умолчанию.</div></div>
               <div class="field" style="margin-bottom:0"><label>Системная инструкция</label>
@@ -800,15 +785,15 @@
 
           <div class="apanel" data-apanel="grd" hidden>
             <div class="psec">
-              ${sw('Человек в контуре (HITL)', true)}
-              <div class="hint" style="margin:6px 0 10px">Агент спрашивает вас перед действием и показывает, что именно сделает: кому письмо, какой текст. Чтение не подтверждается.</div>
-              <select class="f" aria-label="Когда спрашивать"><option selected>Спрашивать перед изменением и отправкой</option><option>Спрашивать только перед отправкой</option></select>
+              <div class="field"><label>Подтверждение действий (HITL)</label>
+                <select class="f"><option selected>Спрашивать перед изменением и отправкой</option><option>Спрашивать только перед отправкой</option><option>Не спрашивать</option></select>
+                <div class="hint">Агент спрашивает вас перед действием и показывает, что именно сделает: кому письмо, какой текст. Чтение не подтверждается.</div></div>
             </div>
             <div class="psec">
-              ${sw('Гардрейлы', true)}
-              <div class="hint" style="margin:6px 0 10px">Правила, которые агент не может нарушить, что бы ни было в задаче.</div>
+              <label>Гардрейлы</label>
+              <div class="hint" style="margin:0 0 10px">Правила, которые агент не может нарушить, что бы ни было в задаче: встроенные и документы из раздела «Гардрейлы».</div>
               <div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" placeholder="Поиск…"></label><button type="button" class="btn dashed">+ Фильтр</button><button type="button" class="btn primary spacer">Добавить</button></div>
-              <div class="tpart"><table><thead><tr><th>Гардрейл</th><th>Описание</th><th></th></tr></thead><tbody>${guardRows}</tbody></table></div>
+              <div class="tpart"><table><thead><tr><th>Гардрейл</th><th>Вид</th><th>Описание</th><th></th></tr></thead><tbody>${guardRows}</tbody></table></div>
             </div>
           </div>
 
@@ -828,7 +813,7 @@
             <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn primary">Скачать .yaml</button><button type="button" class="btn primary">Загрузить .yaml</button></div>
           </div>
 
-          <div class="mfoot"><button class="btn ghost">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-toast="${isNew ? 'Агент создан' : 'Сохранено'}">Сохранить</button></div>
+          <div class="mfoot"><button class="btn ghost" ${lock} title="${builtin ? 'Встроенный агент проверяют прямо в чате' : 'Сохранить и сразу запустить агента'}">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-toast="${isNew ? 'Агент создан' : 'Сохранено'}">Сохранить</button></div>
         </div>
       </div>`;
   }
@@ -846,7 +831,7 @@
   function accessRow(n,e,on){ const cell=(v)=>`<td style="text-align:center"><button class="btn sm" style="min-width:44px;${v?'background:var(--primary);color:#fff;border-color:transparent':'background:var(--card);border:1px solid var(--line);color:var(--muted)'}">${v?'✓':'+'}</button></td>`; return `<tr><td><div class="b">${n}</div><div class="sub">${e}</div></td>${cell(on[0])}${cell(on[1])}${cell(on[2])}</tr>`; }
 
   function chip(t){ return `<button class="btn ghost sm" style="border-radius:20px">${t}</button>`; }
-  function aiTabs(active){ const t=[['agents','Агенты'],['mcp','MCP'],['settings','Модели']]; return `<div class="tabs" style="margin:-4px 0 18px">${t.map(([k,l])=>`<button class="${active===k?'on':''}" data-go="${k}">${l}</button>`).join('')}</div>`; }
+  function aiTabs(active){ const t=[['agents','Агенты'],['settings','Модели'],['mcp','MCP'],['guardrails','Гардрейлы']]; return `<div class="tabs" style="margin:-4px 0 18px">${t.map(([k,l])=>`<button class="${active===k?'on':''}" data-go="${k}">${l}</button>`).join('')}</div>`; }
   const IC = {
     download: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>',
     upload: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/></svg>',
@@ -899,7 +884,7 @@
     nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.go === current || a.dataset.key === navKeyFor(current) || (!!a.dataset.sec && a.dataset.sec === sec)));
   }
   // screens without their own menu item belong to their parent's item
-  const SCREEN_KEY = { agent: 'agents', agentnew: 'agents', agentwin: 'agents', assistantwin: 'agents', constructor: 'agents', course: 'learn', lesson: 'learn' };
+  const SCREEN_KEY = { agent: 'agents', agentnew: 'agents', agentwin: 'agents', assistantwin: 'agents', guardrails: 'agents', constructor: 'agents', course: 'learn', lesson: 'learn' };
   const PIN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4v2H6v-2l4-4z"/></svg>';
   function navKeyFor(screen) { return Object.keys(NAV).find(k => NAV[k].go === screen) || SCREEN_KEY[screen]; }
   function renderNav() {
@@ -960,7 +945,7 @@
     if (dragFrom !== 'nav' || !dragKey || pins.length <= 1) return;
     pins = pins.filter(k => k !== dragKey); savePins(); renderNav();
   });
-  const navSection = { chat:'chat', agents:'agents', agent:'agents', agentnew:'agents', agentwin:'agents', assistantwin:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
+  const navSection = { chat:'chat', agents:'agents', agent:'agents', agentnew:'agents', agentwin:'agents', assistantwin:'agents', guardrails:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
 
   function render(name) {
     if (!SCREENS[name]) name = 'chat';

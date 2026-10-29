@@ -556,3 +556,5 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 /* a <label> styled as a button (file pickers) looks exactly like one */
 label.btn { font-size: 13.5px; margin-bottom: 0; }
 label.btn.sm { font-size: 12.5px; }
+.gadd .flabel { padding: 8px 10px 2px; }
+.gadd .flabel:not(:first-child) { margin-top: 6px; border-top: 1px solid var(--line); padding-top: 10px; }

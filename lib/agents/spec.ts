@@ -1,9 +1,10 @@
 // Agent ↔ YAML for import/export (pure, unit-tested in spec.test.ts).
-// Models, MCP connections and agents travel by name; secrets never appear here. The version-1 format is still read.
+// Models, MCP connections, agents and guardrail documents travel by name; secrets and document texts never appear here.
+// Versions 1 and 2 are still read.
 import { parse, stringify } from "yaml";
 import {
-  DEFAULT_GUARD_POLICY, DEFAULT_HITL, parseGuardPolicy, parseHitl, parseRules, rulesToYaml,
-  type GuardPolicy, type HitlPolicy, type McpAccess,
+  DEFAULT_GUARD_RULES, DEFAULT_HITL, parseGuardRules, parseHitl, parseRules, rulesToYaml,
+  type GuardRule, type HitlChoice, type McpAccess,
 } from "./policy";
 
 export type AgentSpec = {
@@ -11,35 +12,35 @@ export type AgentSpec = {
   enabled: boolean;
   model: string | null; // model name; null → the owner's default
   instruction: string;
-  hitl: HitlPolicy;
-  guardrails: GuardPolicy;
+  hitl: HitlChoice;
+  guardrails: GuardRule[]; // documents by id
   mcp: { name: string; access: McpAccess }[]; // connection names
   agents: string[]; // subagent names
   api: string[]; // portal API keys
 };
 
 export const EMPTY_SPEC: AgentSpec = {
-  name: "", enabled: true, model: null, instruction: "",
-  hitl: { ...DEFAULT_HITL }, guardrails: { enabled: DEFAULT_GUARD_POLICY.enabled, rules: [...DEFAULT_GUARD_POLICY.rules] },
-  mcp: [], agents: [], api: [],
+  name: "", enabled: true, model: null, instruction: "", hitl: DEFAULT_HITL, guardrails: [...DEFAULT_GUARD_RULES], mcp: [], agents: [], api: [],
 };
 
+/** What exists for this user, by name; documents are {id, name}. */
+export type Known = { models: string[]; connections: string[]; agents: string[]; apis: string[]; documents: { id: string; name: string }[] };
+
 /** The YAML text of an agent. */
-export function specToYaml(s: AgentSpec): string {
+export function specToYaml(s: AgentSpec, documents: { id: string; name: string }[]): string {
   const doc = {
-    version: 2,
+    version: 3,
     name: s.name,
     enabled: s.enabled,
     model: s.model,
     instruction: s.instruction,
-    hitl: { enabled: s.hitl.enabled, ask: s.hitl.ask },
-    guardrails: { enabled: s.guardrails.enabled, rules: rulesToYaml(s.guardrails.rules) },
+    hitl: s.hitl,
+    guardrails: rulesToYaml(s.guardrails, (id) => documents.find((d) => d.id === id)?.name),
     mcp: s.mcp.map((m) => ({ name: m.name, access: m.access })),
     agents: s.agents,
     api: s.api,
   };
-  return "# AI Portal — агент. Пароли и токены сюда не попадают.\n" +
-    stringify(doc, { lineWidth: 0 });
+  return "# AI Portal — агент. Пароли и токены сюда не попадают.\n" + stringify(doc, { lineWidth: 0 });
 }
 
 const names = (v: unknown): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean))] : []);
@@ -61,8 +62,7 @@ function mcpItems(v: unknown): { name: string; access: McpAccess }[] {
  * YAML text → agent, keeping only names that exist for this user (the rest become warnings).
  * Returns { error } when the text is not a YAML object.
  */
-export function yamlToSpec(text: string, known: { models: string[]; connections: string[]; agents: string[]; apis: string[] }):
-  { spec: AgentSpec; warnings: string[] } | { error: string } {
+export function yamlToSpec(text: string, known: Known): { spec: AgentSpec; warnings: string[] } | { error: string } {
   let doc: unknown;
   try { doc = parse(text); } catch (e) { return { error: `Не получилось прочитать YAML: ${(e as Error).message.split("\n")[0]}` }; }
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) return { error: "В YAML нет описания агента" };
@@ -78,11 +78,24 @@ export function yamlToSpec(text: string, known: { models: string[]; connections:
   if (model && !known.models.includes(model)) { warnings.push(`Модель «${model}» не найдена — будет модель по умолчанию`); model = null; }
   if (o.type === "receipts") warnings.push("Встроенного типа «Чеки из почты» больше нет — агент будет «Своим», задайте ему инструкцию");
 
-  // guardrails: {enabled, rules: [...]} now, {maskPii, maxSteps, forbiddenTopics} in version 1
-  const g = o.guardrails as { enabled?: unknown; rules?: unknown } | undefined;
-  const guardrails: GuardPolicy = g && typeof g === "object" && Array.isArray(g.rules)
-    ? { enabled: g.enabled !== false, rules: parseRules(g.rules) }
-    : g === undefined ? { enabled: DEFAULT_GUARD_POLICY.enabled, rules: [...DEFAULT_GUARD_POLICY.rules] } : parseGuardPolicy(g);
+  // guardrails: a list now ({document: name} by name), {enabled, rules} in version 2, an object in version 1
+  const g = o.guardrails;
+  let guardrails: GuardRule[];
+  if (g === undefined) guardrails = [...DEFAULT_GUARD_RULES];
+  else {
+    const items = Array.isArray(g) ? g : g && typeof g === "object" && Array.isArray((g as { rules?: unknown }).rules) ? (g as { rules: unknown[] }).rules : null;
+    if (!items) guardrails = parseGuardRules(g);
+    else {
+      const withIds = items.flatMap((x) => {
+        const name = x && typeof x === "object" ? (x as { document?: unknown }).document : undefined;
+        if (typeof name !== "string") return [x];
+        const d = known.documents.find((k) => k.name === name.trim());
+        if (!d) { warnings.push(`Документ «${name.trim()}» не найден — пропущен`); return []; }
+        return [{ kind: "document", id: d.id }];
+      });
+      guardrails = parseRules(withIds);
+    }
+  }
 
   const mcp = mcpItems(o.mcp).filter((m) => {
     if (known.connections.includes(m.name)) return true;

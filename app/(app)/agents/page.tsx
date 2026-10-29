@@ -34,6 +34,7 @@ export default async function AgentsPage() {
   });
 
   const conns = await ownConnections(user.id);
+  const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, enabled: true } });
   const connNames = (a: (typeof agents)[number]) => agentEditData(a).mcpIds.map((id) => conns.find((c) => c.id === id)?.name).filter(Boolean).join(", ");
   const llmOk = await llmAvailable(user.id);
   const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
@@ -44,6 +45,7 @@ export default async function AgentsPage() {
     defaultModelId: (models.find((m) => m.isDefault) ?? models[0])?.id ?? "",
     agents: agents.map((a) => ({ id: a.id, name: a.name, desc: agentDesc(a), enabled: a.enabled })),
     connections: conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind })),
+    docs: docs.map((d) => ({ id: d.id, name: d.name, desc: d.description, enabled: d.enabled })),
   };
 
   // the chat's own agent: model and what it may use come from its modal (assistant/AssistantForm.tsx)

@@ -18,6 +18,9 @@ import { loadAssistant } from "@/lib/assistant";
 import { audit } from "@/lib/audit";
 import { estimateTokens, lastUserIndex, planSummary, summaryInput, trimToolResults } from "@/lib/chat/context";
 import { summarizeChat } from "@/lib/chat/summarize";
+import { effectiveGuardrails, guardDocIds } from "@/lib/agents/policy";
+import { guardrailInstructions } from "@/lib/agents/guardrails";
+import { docsInstructions } from "@/lib/guardrail-docs";
 
 // One chat turn: the browser sends the whole history (useChat), we check it,
 // save it, stream the model's answer with tools and save again with the answer.
@@ -98,8 +101,17 @@ export async function POST(req: Request) {
     }
   }
 
+  // the assistant's own settings: its instruction and guardrails (masking happens in the mail tools, lib/chat/tools.ts)
+  const g = effectiveGuardrails(assistant.guardrails);
+  const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id, enabled: true, id: { in: guardDocIds(assistant.guardrails) } }, select: { name: true, text: true } });
+  const base = [
+    instructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null),
+    assistant.instruction.trim() && `Указания пользователя для ассистента:\n${assistant.instruction.trim()}`,
+    guardrailInstructions(g),
+    docsInstructions(docs),
+  ].filter(Boolean).join("\n\n");
+
   // ---- long chats: old tool results in short form; the start retold once the history nears the context ----
-  const base = instructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null);
   let summary = chat?.summary ?? "", upto = chat?.summaryUpto ?? 0;
   if (upto > 0 && (upto > messages.length || messages[upto - 1]?.id !== chat?.summaryLastId)) { summary = ""; upto = 0; } // history edited
   const trimmed = trimToolResults(messages, lastUserIndex(messages));
@@ -126,7 +138,7 @@ export async function POST(req: Request) {
     activeTools,
     toolApproval: approval,
     experimental_toolApprovalSecret: approvalSecret(),
-    stopWhen: isStepCount(5),
+    stopWhen: isStepCount(g.maxSteps),
   });
 
   return createUIMessageStreamResponse({

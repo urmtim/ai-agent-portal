@@ -2,7 +2,7 @@
 // No React here, so it can be unit-tested (see nav.test.ts).
 
 export type NavKey =
-  | "chat" | "agents" | "models" | "mcp" | "api"
+  | "chat" | "agents" | "models" | "mcp" | "api" | "guardrails"
   | "learn" | "stats" | "me"
   | "users" | "access" | "log";
 
@@ -30,6 +30,7 @@ export const NAV: Record<NavKey, NavItem> = {
   agents: { key: "agents", label: "Агенты", href: "/agents" },
   mcp: { key: "mcp", label: "MCP", href: "/mcp" },
   api: { key: "api", label: "API", href: "/api-access" },
+  guardrails: { key: "guardrails", label: "Гардрейлы", href: "/guardrails" },
   learn: { key: "learn", label: "Обучение", href: "/", match: ["/courses"] },
   stats: { key: "stats", label: "Траты", href: "/stats" },
   me: { key: "me", label: "Прогресс", href: "/me" },
@@ -40,7 +41,7 @@ export const NAV: Record<NavKey, NavItem> = {
 
 export const NAV_GROUPS: NavGroup[] = [
   { title: "Основное", items: ["chat"] },
-  { title: "AI", items: ["agents", "models", "mcp", "api"] },
+  { title: "AI", items: ["agents", "models", "mcp", "api", "guardrails"] },
   { title: "Личное", note: "(скрыто)", dim: true, items: ["learn", "stats", "me"] },
   { title: "Админ", adminOnly: true, items: ["users", "access", "log"] },
 ];

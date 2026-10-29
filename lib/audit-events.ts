@@ -16,6 +16,7 @@ export const AUDIT_EVENTS = {
   tool: { label: "инструмент", tone: "mut" },
   learning: { label: "обучение", tone: "ok" },
   mcp: { label: "MCP", tone: "info" },
+  guardrail: { label: "гардрейл", tone: "info" },
 } as const;
 
 export type AuditEvent = keyof typeof AUDIT_EVENTS;

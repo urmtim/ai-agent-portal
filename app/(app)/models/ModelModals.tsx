@@ -5,6 +5,7 @@ import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
 import { useFormAction } from "@/components/ui/useFormAction";
+import { Switch } from "@/components/ui/Switch";
 import { checkSavedModel, deleteModel, saveModel, testModel, type FormState, type TestState } from "./actions";
 
 /** What the browser knows about a model — never the token itself. */
@@ -16,6 +17,7 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   const [state, onSubmit, pending] = useFormAction(saveModel, undefined);
   const [test, setTest] = useState<TestState | "checking">();
   const [showToken, setShowToken] = useState(false);
+  const [makeDefault, setMakeDefault] = useState(m?.isDefault ?? false);
   const [testing, startTest] = useTransition();
   // a save error is hidden once the fields change; the next save shows a fresh one
   const [errFor, setErrFor] = useState<FormState>();
@@ -62,10 +64,7 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
         <div className="hint">Сколько модель держит в памяти. Длинный чат пересказывается, когда история подходит к 70 %.</div>
       </div>
       <div className="wrap-gap" style={{ marginTop: 16, gap: 18 }}>
-        <label className="toggle">
-          <input type="checkbox" name="isDefault" defaultChecked={m?.isDefault} disabled={m?.isDefault} />
-          <span>Сделать моделью по умолчанию</span>
-        </label>
+        <Switch name="isDefault" checked={makeDefault} disabled={m?.isDefault} onChange={setMakeDefault} label="Сделать моделью по умолчанию" />
       </div>
       {test && (
         <div className={`status ${test === "checking" ? "checking" : test.ok ? "ok" : "err"}`} role="status">
@@ -107,13 +106,12 @@ export function ModelActions({ m }: { m: ModelRowData }) {
       <IconButton icon="check" title={checking ? "Проверяем…" : "Проверить"} disabled={checking}
         onClick={() => startCheck(async () => { const r = await checkSavedModel(m.id); if (r) toast(r.message); })} />
       <IconButton icon="edit" title="Изменить" data-row-open onClick={() => setModal("edit")} />
-      <IconButton icon="del" title={m.isDefault ? "Модель по умолчанию удалить нельзя" : "Удалить"} disabled={m.isDefault}
-        onClick={() => setModal("del")} />
+      <IconButton icon="del" title="Удалить" onClick={() => setModal("del")} />
       <Modal open={modal === "edit"} onClose={close} title="Изменить модель">
         {modal === "edit" && <ModelForm m={m} onDone={close} />}
       </Modal>
       <ConfirmModal open={modal === "del"} onClose={close} title="Удалить модель?" pending={deleting} error={delError}
-        text={<>«{m.name}» будет удалена. Агенты на этой модели перейдут на модель по умолчанию.</>}
+        text={<>«{m.name}» будет удалена. Агенты и чат на этой модели перейдут на модель по умолчанию.{m.isDefault && " Это модель по умолчанию — ею станет самая ранняя из оставшихся."}</>}
         onConfirm={() => startDel(async () => {
           const r = await deleteModel(m.id);
           if (r?.error) setDelError(r.error); else { toast(r!.ok!); close(); }

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
 import { agentDesc } from "@/lib/agents/types";
-import { parseHitl } from "@/lib/agents/policy";
+import { effectiveGuardrails, hitlAsks } from "@/lib/agents/policy";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
 import { firstMailConnection } from "@/lib/connections";
@@ -13,7 +13,8 @@ import { mailTools } from "@/lib/chat/mail-tools";
 export type { MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
 
 // Tools the chat assistant can call — always scoped to one user's data.
-// run_agent acts (reads mail, writes receipts), so the route asks for approval unless the agent's HITL is «без подтверждения».
+// run_agent acts, so the route asks for approval unless the agent's HITL is «Не спрашивать».
+// Mail results are masked when the assistant's guardrails include «Маскирование ПДн».
 
 /** Output of the removed «Траты» tool — still rendered in old chats. */
 export type SpendingResult = {
@@ -36,7 +37,7 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   // the assistant's mailbox: the first «Почта» connection on its MCP tab
   const mailConn = await firstMailConnection(userId, cfg.mcpIds);
   const tools = {
-    ...mailTools({ conn: mailConn, who: "Ассистент", actor: user, channel: "чат", missing: "Почта не добавлена ассистенту" }),
+    ...mailTools({ conn: mailConn, who: "Ассистент", actor: user, channel: "чат", missing: "Почта не добавлена ассистенту", mask: effectiveGuardrails(cfg.guardrails).maskPii }),
     // removed «Траты» tool: kept only so chats that called it still validate; never in activeTools
     get_spending: tool({
       description: "Устарело: не используется.",
@@ -54,7 +55,7 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
         const agent = agents.find((a) => a.id === agentId);
         if (!agent) return { error: "Такого агента нет" };
         // for agents that need confirmation execute only runs after a verified approval, so this is where it is journaled
-        if (parseHitl(agent.hitl).enabled) await audit("approval", `Подтверждён запуск агента «${agent.name}»`, user, "чат");
+        if (hitlAsks(agent.hitl)) await audit("approval", `Подтверждён запуск агента «${agent.name}»`, user, "чат");
         const runId = await runAgent(agent.id, { actor: user, channel: "чат" }, task ?? "");
         const run = await prisma.agentRun.findUniqueOrThrow({ where: { id: runId } });
         return {
@@ -74,7 +75,7 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   // HITL per agent: switched off → runs at once; on (and unknown ids) → waits for the user.
   // Until approvals move to the agent's own actions, «on» means: confirm the launch.
   const approval = {
-    run_agent: ({ agentId }: { agentId: string }) => { const a = agents.find((x) => x.id === agentId); return a && !parseHitl(a.hitl).enabled ? undefined : ("user-approval" as const); },
+    run_agent: ({ agentId }: { agentId: string }) => { const a = agents.find((x) => x.id === agentId); return a && !hitlAsks(a.hitl) ? undefined : ("user-approval" as const); },
   };
   return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null };
 }

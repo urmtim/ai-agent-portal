@@ -31,6 +31,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   });
   if (!agent || agent.ownerId !== user.id) notFound();
   const conns = await ownConnections(user.id);
+  const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, enabled: true } });
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" } });
   const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const defaultName = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
@@ -48,7 +49,8 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         <AgentEditButton models={models.map(({ id, name }) => ({ id, name }))} defaultModel={defaultName}
           defaultModelId={(models.find((m) => m.isDefault) ?? models[0])?.id ?? ""} a={agentEditData(agent)}
           agents={own.map((x) => ({ id: x.id, name: x.name, desc: agentDesc(x), enabled: x.enabled }))}
-          connections={conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind }))} />
+          connections={conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind }))}
+          docs={docs.map((d) => ({ id: d.id, name: d.name, desc: d.description, enabled: d.enabled }))} />
       </div>
 
       <form action={runAgentNow} className="card pad" style={{ marginBottom: 20 }}>

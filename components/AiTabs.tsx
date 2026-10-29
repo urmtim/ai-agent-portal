@@ -5,6 +5,7 @@ const TABS = [
   { href: "/models", label: "Модели" },
   { href: "/mcp", label: "MCP" },
   { href: "/api-access", label: "API" },
+  { href: "/guardrails", label: "Гардрейлы" },
 ] as const;
 
 /** Tabs under the page title of the AI section pages. */
