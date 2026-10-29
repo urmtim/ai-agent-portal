@@ -37,6 +37,7 @@ model User {
   invites     InviteToken[]
   agents      Agent[]
   receipts    Receipt[]
+  chats       Chat[]
 }
 
 // One-time invite / password-set link sent by email.
@@ -117,6 +118,7 @@ model LlmModel {
   createdAt DateTime  @default(now())
 
   agents Agent[]
+  chats  Chat[]
 }
 
 // A configured automation owned by a family member.
@@ -169,4 +171,22 @@ model Receipt {
   createdAt   DateTime @default(now())
 
   @@index([ownerId, purchasedAt])
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────
+
+model Chat {
+  id        String    @id // generated in the browser (AI SDK generateId)
+  ownerId   String
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title     String    @default("") // empty until the first answer
+  modelId   String? // null → the default model
+  model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  pinned    Boolean   @default(false)
+  archived  Boolean   @default(false)
+  messages  String    @default("[]") // JSON UIMessage[] (AI SDK)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([ownerId, updatedAt])
 }
