@@ -8,11 +8,18 @@ import { ICONS, IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
 import { ensureChatTitle, setChatModel } from "./actions";
 import { AssistantParts, messageText } from "./ChatParts";
-import type { AgentInfo, ModelOption } from "./data";
+import type { AgentInfo, ChatScreenData, ModelOption } from "./data";
 
-const SUGGESTIONS = ["Сколько я потратил за месяц?", "На что больше всего уходят деньги?", "Собери чеки из почты"];
+/** Empty-chat suggestions: only what the base assistant is allowed to do. */
+function suggestions(a: ChatScreenData["assistant"]): string[] {
+  const out = [
+    ...(a.spending ? ["Сколько я потратил за месяц?", "На что больше всего уходят деньги?"] : []),
+    ...a.agentNames.slice(0, 2).map((n) => `Запусти агента «${n}»`),
+  ];
+  return out.length ? out : ["Что ты умеешь?", "Помоги составить план на неделю"];
+}
 
-export function ChatThread({ chatId, title, initialMessages, initialModelId, models, envModel, agents, histHidden, onToggleHist, onSaved }: {
+export function ChatThread({ chatId, title, initialMessages, initialModelId, models, envModel, agents, assistant, histHidden, onToggleHist, onSaved }: {
   chatId: string;
   title: string;
   initialMessages: UIMessage[];
@@ -20,6 +27,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
   models: ModelOption[];
   envModel: string | null;
   agents: AgentInfo[];
+  assistant: ChatScreenData["assistant"];
   histHidden: boolean;
   onToggleHist: () => void;
   onSaved: (chatId: string, title: string) => void;
@@ -105,7 +113,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
         <span className="spacer" />
         {models.length > 0 ? (
           <select aria-label="Модель" value={modelId ?? ""} onChange={(e) => pickModel(e.target.value)} disabled={busy}>
-            <option value="">По умолчанию — {defaultModel.name}</option>
+            <option value="">По умолчанию — {assistant.modelName ?? defaultModel.name}</option>
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         ) : envModel ? <span className="muted" style={{ fontSize: 13 }}>Модель: {envModel}</span> : null}
@@ -116,9 +124,14 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
         {messages.length === 0 ? (
           <div className="cempty">
             <h2>Чем помочь?</h2>
-            <p className="muted">Спросите что угодно. Про траты отвечу по вашим чекам, агента запущу с вашего подтверждения.</p>
+            <p className="muted">
+              Спросите что угодно.{" "}
+              {assistant.spending || assistant.agentNames.length
+                ? <>{assistant.spending && "Про траты отвечу по вашим чекам. "}{assistant.agentNames.length > 0 && "Агента запущу с вашего подтверждения."}</>
+                : <>Траты и агентов можно разрешить в <Link href="/agents/assistant" className="link">настройках ассистента</Link>.</>}
+            </p>
             <div className="row" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-              {SUGGESTIONS.map((s) => (
+              {suggestions(assistant).map((s) => (
                 <button key={s} type="button" className="btn ghost sm" style={{ borderRadius: 20 }} disabled={noModel} onClick={() => send(s)}>{s}</button>
               ))}
             </div>

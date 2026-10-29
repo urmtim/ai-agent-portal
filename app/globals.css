@@ -452,3 +452,10 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 
 /* rows that open on click (ListTable + data-row-open) */
 .tcard tbody tr:has([data-row-open]):hover td { background: var(--soft); }
+
+/* ─── Base assistant settings ─── */
+.asec { margin-bottom: 16px; }
+.asec h2.title { font-size: 16px; margin: 0 0 12px; }
+.acheck { align-items: flex-start; margin: 8px 0; }
+.acheck .sub { display: block; font-weight: 400; }
+.asec > .muted { font-size: 13.5px; }

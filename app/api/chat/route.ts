@@ -14,6 +14,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
 import { chatTools } from "@/lib/chat/tools";
+import { loadAssistant } from "@/lib/assistant";
 import { audit } from "@/lib/audit";
 
 // One chat turn: the browser sends the whole history (useChat), we check it,
@@ -30,16 +31,18 @@ function approvalSecret(): Uint8Array {
   return createHash("sha256").update(`chat-tool-approval:${process.env.AUTH_SECRET ?? ""}`).digest();
 }
 
-function instructions(userName: string, agents: { id: string; name: string }[]): string {
+function instructions(userName: string, agents: { id: string; name: string }[], spending: boolean): string {
   const today = new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "long" }).format(new Date());
   return [
     "Ты — ассистент портала AI Portal. Отвечай по-русски, коротко и по делу; можно Markdown.",
     `Сегодня ${today}. Пользователь: ${userName}.`,
-    "Про траты пользователя спрашивай инструмент get_spending, не выдумывай цифры. Суммы — в рублях.",
+    spending
+      ? "Про траты пользователя спрашивай инструмент get_spending, не выдумывай цифры. Суммы — в рублях."
+      : "Доступа к тратам пользователя у тебя нет: он не разрешён в настройках ассистента. О тратах цифр не называй.",
     agents.length
-      ? `Агенты пользователя запускаются инструментом run_agent (пользователь подтверждает запуск): ${agents.map((a) => `«${a.name}»`).join(", ")}.`
-      : "Агентов у пользователя пока нет — их создают в разделе «Агенты».",
-    "Если для задачи нет подходящего агента или инструмента, скажи об этом прямо и ничего не делай вместо него.",
+      ? `Тебе разрешено запускать агентов инструментом run_agent (пользователь подтверждает запуск): ${agents.map((a) => `«${a.name}»`).join(", ")}.`
+      : "Запускать агентов тебе не разрешено.",
+    "Если задача требует агента, MCP или данных, которые тебе не разрешены, прямо скажи, что их можно разрешить в «Агенты → Базовый ассистент», и ничего не делай вместо них.",
   ].join("\n");
 }
 
@@ -61,15 +64,16 @@ export async function POST(req: Request) {
   let modelId = parsed.data.modelId === undefined ? chat?.modelId ?? null : parsed.data.modelId;
   if (modelId && !(await prisma.llmModel.findUnique({ where: { id: modelId } }))) modelId = null;
 
+  const assistant = await loadAssistant(user.id);
   let llm: Awaited<ReturnType<typeof chatModel>>;
   try {
-    llm = await chatModel(modelId);
+    llm = await chatModel(modelId ?? assistant.modelId); // chat's model → assistant's → default
   } catch (e) {
     return plain(errorText(e), 400);
   }
   if (!llm) return plain(NO_MODEL_MESSAGE, 400);
 
-  const { tools, activeTools, agents } = await chatTools(user);
+  const { tools, activeTools, agents } = await chatTools(user, assistant);
 
   let messages: UIMessage[];
   try {
@@ -96,7 +100,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: llm.model,
-    instructions: instructions(user.name ?? "", agents),
+    instructions: instructions(user.name ?? "", agents, activeTools.includes("get_spending")),
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     activeTools,

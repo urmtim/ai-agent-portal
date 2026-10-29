@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
 import { AGENT_TYPES } from "@/lib/agents/types";
 import { audit } from "@/lib/audit";
+import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
 
 // Tools the chat assistant can call — always scoped to one user's data.
 // run_agent acts (reads mail, writes receipts), so the route requires approval for it.
@@ -38,9 +39,10 @@ async function spending(userId: string, days: number): Promise<SpendingResult> {
   };
 }
 
-export async function chatTools(user: { id: string; name?: string | null }) {
+export async function chatTools(user: { id: string; name?: string | null }, cfg: AssistantConfig) {
   const userId = user.id;
-  const agents = await prisma.agent.findMany({ where: { ownerId: userId, enabled: true }, orderBy: { createdAt: "asc" } });
+  // only the agents the base assistant is allowed to run (settings in /agents/assistant), and only enabled ones
+  const agents = await prisma.agent.findMany({ where: { ownerId: userId, enabled: true, id: { in: cfg.agentIds } }, orderBy: { createdAt: "asc" } });
 
   const tools = {
     get_spending: tool({
@@ -74,8 +76,8 @@ export async function chatTools(user: { id: string; name?: string | null }) {
     }),
   };
 
-  // run_agent stays defined so stored history validates, but is only offered when there is an agent
-  const activeTools: (keyof typeof tools)[] = agents.length ? ["get_spending", "run_agent"] : ["get_spending"];
+  // every tool stays defined so stored history validates; the model is offered only the allowed ones
+  const activeTools = allowedTools(cfg, agents.map((a) => a.id)) as (keyof typeof tools)[];
   return { tools, activeTools, agents };
 }
 

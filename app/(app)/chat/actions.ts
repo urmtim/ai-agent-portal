@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/session";
 import { cleanTitle, fallbackTitle } from "@/lib/chat/history";
 import { chatModel } from "@/lib/chat/model";
 import { audit } from "@/lib/audit";
+import { loadAssistant } from "@/lib/assistant";
 
 // Sidebar and header actions. A chat that isn't yours behaves as missing.
 // updatedAt is kept on purpose: pinning or renaming must not move a chat to "Сегодня".
@@ -36,7 +37,7 @@ export async function ensureChatTitle(chatId: string): Promise<string | null> {
 
   let title: string | null = null;
   try {
-    const llm = await chatModel(chat.modelId);
+    const llm = await chatModel(chat.modelId ?? (await loadAssistant(chat.user.id)).modelId);
     if (llm) {
       const { text } = await generateText({
         model: llm.model,

@@ -10,7 +10,7 @@ import { ChatThread } from "./ChatThread";
 import type { ChatScreenData } from "./data";
 
 /** The chat page from the mockup: history on the left, the thread on the right. */
-export function ChatScreen({ chats: initialChats, models, envModel, agents, chatId, saved, title: initialTitle, initialMessages, initialModelId }:
+export function ChatScreen({ chats: initialChats, models, envModel, agents, assistant, chatId, saved, title: initialTitle, initialMessages, initialModelId }:
   ChatScreenData & { chatId: string; saved: boolean; title: string; initialMessages: UIMessage[]; initialModelId: string | null }) {
   const router = useRouter();
   const toast = useToast();
@@ -61,7 +61,7 @@ export function ChatScreen({ chats: initialChats, models, envModel, agents, chat
           if (id === chatId) router.push("/chat");
         }} />
       <ChatThread chatId={chatId} title={title} initialMessages={initialMessages} initialModelId={initialModelId}
-        models={models} envModel={envModel} agents={agents} histHidden={histHidden} onSaved={onSaved}
+        models={models} envModel={envModel} agents={agents} assistant={assistant} histHidden={histHidden} onSaved={onSaved}
         onToggleHist={() => {
           if (window.matchMedia("(max-width: 760px)").matches) setHistOpen((o) => !o);
           else setHistHidden((h) => !h);

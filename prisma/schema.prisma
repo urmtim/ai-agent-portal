@@ -39,6 +39,7 @@ model User {
   receipts    Receipt[]
   chats       Chat[]
   auditLogs   AuditLog[]
+  assistant   Assistant?
 }
 
 // One-time invite / password-set link sent by email.
@@ -120,6 +121,7 @@ model LlmModel {
 
   agents Agent[]
   chats  Chat[]
+  assistants Assistant[]
 }
 
 // A configured automation owned by a family member.
@@ -206,4 +208,17 @@ model AuditLog {
   search    String   @default("") // lower-cased actor + event + details: SQLite LIKE ignores case only for ASCII
 
   @@index([at])
+}
+
+// ─── Base assistant (the chat's own agent), one per user ───────────
+
+model Assistant {
+  ownerId   String    @id
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  modelId   String? // null → the default model
+  model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  agentIds  String    @default("[]") // JSON: agents it may run; nothing allowed until chosen
+  mcpIds    String    @default("[]") // JSON: MCP servers it may use (none exist yet)
+  apis      String    @default("[]") // JSON: portal APIs it may call, keys of ASSISTANT_APIS
+  updatedAt DateTime  @updatedAt
 }

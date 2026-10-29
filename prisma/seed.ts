@@ -25,20 +25,7 @@ async function main() {
     });
   }
 
-  // A default receipts agent for the admin.
-  const existingAgent = await prisma.agent.findFirst({
-    where: { ownerId: admin.id, type: "RECEIPTS" },
-  });
-  if (!existingAgent) {
-    await prisma.agent.create({
-      data: {
-        ownerId: admin.id,
-        type: "RECEIPTS",
-        name: "Чеки из почты",
-        config: JSON.stringify({ sinceDays: 30, fromFilter: "", max: 40 }),
-      },
-    });
-  }
+  // No demo agents: agents are created by the user in «Агенты» (the receipts type is still there).
 
   // Demo receipts so the /stats dashboard shows something before live mail.
   const now = new Date();
@@ -81,7 +68,7 @@ async function main() {
   }
 
   console.log(`✔ Admin ready: ${email} / ${password}`);
-  console.log(`✔ Demo receipts + receipts agent seeded`);
+  console.log(`✔ Demo receipts seeded`);
 }
 
 main()

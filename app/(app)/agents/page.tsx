@@ -7,6 +7,9 @@ import { AGENT_TYPES } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
 import { ListTable, type ListRow } from "@/components/ui/ListTable";
 import { AgentActions, NewAgentButton } from "./AgentModals";
+import { ICONS } from "@/components/ui/icons";
+import { loadAssistant } from "@/lib/assistant";
+import { ASSISTANT_APIS } from "@/lib/assistant-config";
 
 const RUN_ST: Record<string, { label: string; cls: string }> = {
   RUNNING: { label: "идёт", cls: "info" },
@@ -30,24 +33,29 @@ export default async function AgentsPage() {
 
   const mailOk = imapConfigured();
   const llmOk = await llmAvailable();
-  const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { name: true, isDefault: true } });
+  const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
 
+  // the chat's own agent: model and what it may use come from /agents/assistant
+  const cfg = await loadAssistant(user.id);
+  const allowed = [
+    cfg.agentIds.length && `агенты: ${agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name).join(", ")}`,
+    cfg.apis.length && `API: ${cfg.apis.map((k) => ASSISTANT_APIS[k].label).join(", ")}`,
+  ].filter(Boolean).join(" · ");
   const base: ListRow = {
     key: "base",
-    className: "off",
-    search: "Базовый ассистент встроенный",
+    search: "Базовый ассистент встроенный чат",
     cells: [
       <span key="id" className="muted">—</span>,
       <div key="n">
-        <div className="b">Базовый ассистент</div>
-        <div className="sub">Отвечает, когда не подошёл спец-агент · встроенный, не настраивается</div>
+        <Link href="/agents/assistant" className="b link">Базовый ассистент</Link>
+        <div className="sub">Отвечает в чате · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
       </div>,
-      model,
-      <span key="m" className="muted">—</span>,
-      <span key="st" className="st mut">встроенный</span>,
+      <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? model}</span>,
+      <span key="m" className="muted">{cfg.mcpIds.length ? cfg.mcpIds.length : "—"}</span>,
+      <span key="st" className="st info">встроенный</span>,
       <span key="r" className="muted">—</span>,
-      null,
+      <Link key="a" href="/agents/assistant" className="ibtn" title="Настроить" aria-label="Настроить" data-row-open>{ICONS.edit}</Link>,
     ],
   };
 
