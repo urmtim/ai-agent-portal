@@ -480,7 +480,6 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 
 .modal.wide { width: min(780px, 100%); }
 .tpartwrap .tbar { margin-bottom: 10px; }
-.tpartwrap .search { flex: 1; min-width: 160px; }
 .addpop { right: 0; left: auto; min-width: 280px; max-height: 280px; overflow: auto; padding: 6px; }
 .addpop button { display: block; width: 100%; text-align: left; font: inherit; font-size: 13.5px; color: var(--ink); background: none; border: 0; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
 .addpop button:hover { background: var(--soft); }
