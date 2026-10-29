@@ -37,7 +37,7 @@ export async function ensureChatTitle(chatId: string): Promise<string | null> {
 
   let title: string | null = null;
   try {
-    const llm = await chatModel(chat.modelId ?? (await loadAssistant(chat.user.id)).modelId);
+    const llm = await chatModel((await loadAssistant(chat.user.id)).modelId);
     if (llm) {
       const { text } = await generateText({
         model: llm.model,
@@ -55,13 +55,6 @@ export async function ensureChatTitle(chatId: string): Promise<string | null> {
 
   await prisma.chat.update({ where: { id: chat.id }, data: { title, updatedAt: chat.updatedAt } });
   return title;
-}
-
-export async function setChatModel(chatId: string, modelId: string | null) {
-  const chat = await ownChat(chatId);
-  if (!chat) return;
-  if (modelId && !(await prisma.llmModel.findUnique({ where: { id: modelId } }))) return;
-  await prisma.chat.update({ where: { id: chat.id }, data: { modelId, updatedAt: chat.updatedAt } });
 }
 
 export async function pinChat(chatId: string, pinned: boolean) {

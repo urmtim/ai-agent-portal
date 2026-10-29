@@ -483,7 +483,7 @@
       ${aiTabs('agents')}
       ${tbar()}
       <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>MCP</th><th>Статус</th><th>Последний прогон</th><th></th></tr></thead><tbody>
-        <tr class="off"><td>—</td><td><div class="b">Базовый ассистент</div><div class="sub">Отвечает, когда не подошёл спец-агент · встроенный, не настраивается</div></td><td>GLM-4</td><td class="muted">—</td><td><span class="st mut">встроенный</span></td><td class="muted">—</td><td class="acts"></td></tr>
+        <tr class="off"><td>—</td><td><div class="b">Ассистент</div><div class="sub">Отвечает, когда не подошёл спец-агент · встроенный, не настраивается</div></td><td>GLM-4</td><td class="muted">—</td><td><span class="st mut">встроенный</span></td><td class="muted">—</td><td class="acts"></td></tr>
         ${agentRow(1,'Чеки из почты','Читает письма → пишет в «Траты»','GLM-4',['Почта'],'включён','ok','23 окт · +4 чека')}
         ${agentRow(2,'Разбор писем','Разбирает входящие и готовит ответы','GLM-4',['Почта','Документы'],'включён','ok','22 окт')}
         ${agentRow(3,'Документы по политике','Проверяет документ по регламенту','GLM-4',['Документы'],'черновик','mut','—')}
@@ -517,7 +517,7 @@
       </div>`),
 
     settings: () => appShell(`
-      <div class="pagehead"><div><h1 class="title">Модели</h1><p class="lead">LLM, к которым ходят агенты. Моделей может быть много: базовый ассистент работает на одной, другой агент — на другой.</p></div>
+      <div class="pagehead"><div><h1 class="title">Модели</h1><p class="lead">LLM, к которым ходят агенты. Моделей может быть много: ассистент работает на одной, другой агент — на другой.</p></div>
         <button class="btn primary spacer" id="addModelBtn">Добавить модель</button></div>
       ${aiTabs('settings')}
       ${tbar()}

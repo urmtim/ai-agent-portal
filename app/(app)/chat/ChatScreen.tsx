@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { UIMessage } from "ai";
 import { useToast } from "@/components/ui/Toast";
 import { archiveChat, deleteChat, pinChat } from "./actions";
@@ -9,15 +9,31 @@ import { ChatHistory } from "./ChatHistory";
 import { ChatThread } from "./ChatThread";
 import type { ChatScreenData } from "./data";
 
+// Wide screens: history is hidden until the user shows it; the choice is kept in this browser.
+const HIST_KEY = "portal.chat.history.v1";
+const HIST_EVENT = "portal:chat-history";
+function subscribeHist(cb: () => void) {
+  window.addEventListener(HIST_EVENT, cb);
+  window.addEventListener("storage", cb);
+  return () => { window.removeEventListener(HIST_EVENT, cb); window.removeEventListener("storage", cb); };
+}
+function histShown(): boolean {
+  try { return localStorage.getItem(HIST_KEY) === "shown"; } catch { return false; }
+}
+function setHistShown(shown: boolean) {
+  try { localStorage.setItem(HIST_KEY, shown ? "shown" : "hidden"); } catch { /* private mode: just this page */ }
+  window.dispatchEvent(new Event(HIST_EVENT));
+}
+
 /** The chat page from the mockup: history on the left, the thread on the right. */
-export function ChatScreen({ chats: initialChats, models, envModel, agents, assistant, chatId, saved, title: initialTitle, initialMessages, initialModelId }:
-  ChatScreenData & { chatId: string; saved: boolean; title: string; initialMessages: UIMessage[]; initialModelId: string | null }) {
+export function ChatScreen({ chats: initialChats, models, envModel, agents, assistant, chatId, saved, title: initialTitle, initialMessages }:
+  ChatScreenData & { chatId: string; saved: boolean; title: string; initialMessages: UIMessage[] }) {
   const router = useRouter();
   const toast = useToast();
   const [chats, setChats] = useState(initialChats);
   const [title, setTitle] = useState(initialTitle);
   const [histOpen, setHistOpen] = useState(false); // narrow screens: overlay
-  const [histHidden, setHistHidden] = useState(false); // wide screens: collapsed
+  const histHidden = !useSyncExternalStore(subscribeHist, histShown, () => false); // wide screens: collapsed by default
   const savedRef = useRef(saved);
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -60,11 +76,11 @@ export function ChatScreen({ chats: initialChats, models, envModel, agents, assi
           toast("Чат удалён");
           if (id === chatId) router.push("/chat");
         }} />
-      <ChatThread chatId={chatId} title={title} initialMessages={initialMessages} initialModelId={initialModelId}
+      <ChatThread chatId={chatId} title={title} initialMessages={initialMessages}
         models={models} envModel={envModel} agents={agents} assistant={assistant} histHidden={histHidden} onSaved={onSaved}
         onToggleHist={() => {
           if (window.matchMedia("(max-width: 760px)").matches) setHistOpen((o) => !o);
-          else setHistHidden((h) => !h);
+          else setHistShown(histHidden);
         }} />
     </div>
   );

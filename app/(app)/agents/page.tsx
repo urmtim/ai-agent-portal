@@ -48,12 +48,12 @@ export default async function AgentsPage() {
   ].filter(Boolean).join(" · ");
   const base: ListRow = {
     key: "base",
-    search: "Базовый ассистент встроенный чат",
+    search: "Ассистент встроенный чат",
     cells: [
       <span key="id" className="muted">#1</span>,
       <div key="n">
-        <div className="b">Базовый ассистент</div>
-        <div className="sub">Отвечает в чате · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
+        <div className="b">Ассистент</div>
+        <div className="sub">С ним вы говорите в чате, агенты — его исполнители · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
       </div>,
       <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? model}</span>,
       <span key="m" className="muted">{cfg.mcpIds.length ? cfg.mcpIds.length : "—"}</span>,

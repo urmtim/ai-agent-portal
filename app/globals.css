@@ -474,3 +474,6 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 .tpart td.acts { width: 1%; text-align: right; }
 .tadd { display: flex; gap: 8px; margin-top: 10px; }
 .tadd select { flex: 1; min-width: 0; }
+
+/* hidden-by-default history must still open as the overlay on phones */
+@media (max-width: 760px) { .cwrap.nohist .hist.open { display: block; } }

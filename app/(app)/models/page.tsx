@@ -44,7 +44,7 @@ export default async function ModelsPage() {
       <div className="pagehead">
         <div>
           <h1 className="title">Модели</h1>
-          <p className="lead">LLM, к которым ходят агенты. Моделей может быть много: базовый ассистент работает на одной, другой агент — на другой.</p>
+          <p className="lead">LLM, к которым ходят агенты. Моделей может быть много: ассистент работает на одной, другой агент — на другой.</p>
         </div>
       </div>
       <AiTabs active="/models" />

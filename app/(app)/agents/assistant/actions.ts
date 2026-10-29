@@ -25,7 +25,7 @@ export async function saveAssistant(_prev: FormState, formData: FormData): Promi
   await prisma.assistant.upsert({ where: { ownerId: user.id }, create: { ownerId: user.id, ...data }, update: data });
 
   const list = (xs: string[]) => (xs.length ? xs.join(", ") : "нет");
-  await audit("agent", `Настройки базового ассистента: модель — ${model?.name ?? "по умолчанию"}; агенты — ${list(agents.map((a) => `«${a.name}»`))}; ` +
+  await audit("agent", `Настройки ассистента: модель — ${model?.name ?? "по умолчанию"}; агенты — ${list(agents.map((a) => `«${a.name}»`))}; ` +
     `API — ${list(apis.map((k) => ASSISTANT_APIS[k].label))}`, user);
   revalidatePath("/agents");
   return { ok: "Настройки сохранены" };

@@ -120,13 +120,13 @@ function AssistantForm({ cfg, models, defaultModel, agents, onDone }: Props & { 
   );
 }
 
-/** ✎ in the «Базовый ассистент» row (and the row click): its settings in a modal. */
+/** ✎ in the «Ассистент» row (and the row click): its settings in a modal. */
 export function AssistantActions(props: Props) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <IconButton icon="edit" title="Изменить" data-row-open onClick={() => setOpen(true)} />
-      <Modal open={open} onClose={() => setOpen(false)} title="Базовый ассистент" sub="Отвечает в чате. Обращается только к тому, что вы здесь добавили.">
+      <Modal open={open} onClose={() => setOpen(false)} title="Ассистент" sub="С ним вы говорите в чате. Он обращается только к тому, что вы здесь добавили.">
         {open && <AssistantForm {...props} onDone={() => setOpen(false)} />}
       </Modal>
     </>

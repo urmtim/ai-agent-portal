@@ -23,7 +23,6 @@ import { audit } from "@/lib/audit";
 const Body = z.object({
   id: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/),
   messages: z.array(z.unknown()).min(1),
-  modelId: z.string().nullish(),
 });
 
 /** Signs approval requests so a forged "approved" from the browser can't run an agent. */
@@ -40,7 +39,7 @@ function instructions(userName: string, agents: { id: string; name: string }[]):
     agents.length
       ? `Тебе разрешено запускать агентов инструментом run_agent (пользователь подтверждает запуск): ${agents.map((a) => `«${a.name}»`).join(", ")}.`
       : "Запускать агентов тебе не разрешено.",
-    "Если задача требует агента, MCP или данных, которые тебе не разрешены, прямо скажи, что их можно разрешить в «Агенты → Базовый ассистент», и ничего не делай вместо них.",
+    "Если задача требует агента, MCP или данных, которые тебе не разрешены, прямо скажи, что их можно разрешить в «Агенты → Ассистент», и ничего не делай вместо них.",
   ].join("\n");
 }
 
@@ -59,13 +58,11 @@ export async function POST(req: Request) {
   if (chat && chat.ownerId !== user.id) return plain("Чат не найден", 404);
 
   // the model picked in the header; an unknown id falls back to the default
-  let modelId = parsed.data.modelId === undefined ? chat?.modelId ?? null : parsed.data.modelId;
-  if (modelId && !(await prisma.llmModel.findUnique({ where: { id: modelId } }))) modelId = null;
 
   const assistant = await loadAssistant(user.id);
   let llm: Awaited<ReturnType<typeof chatModel>>;
   try {
-    llm = await chatModel(modelId ?? assistant.modelId); // chat's model → assistant's → default
+    llm = await chatModel(assistant.modelId); // the chat is the assistant: its model, else the default
   } catch (e) {
     return plain(errorText(e), 400);
   }
@@ -82,8 +79,8 @@ export async function POST(req: Request) {
 
   const save = (msgs: UIMessage[]) => prisma.chat.upsert({
     where: { id },
-    create: { id, ownerId: user.id, modelId, messages: JSON.stringify(msgs) },
-    update: { modelId, messages: JSON.stringify(msgs) },
+    create: { id, ownerId: user.id, messages: JSON.stringify(msgs) },
+    update: { messages: JSON.stringify(msgs) },
   });
   await save(messages); // the user's message survives a failing model
   if (!chat) await audit("chat", "Создан чат", user, "чат");

@@ -8,5 +8,5 @@ export default async function NewChatPage() {
   const data = await loadChatScreen(user.id);
   // a fresh id per visit, so "+ Новый чат" always starts clean
   const id = generateId();
-  return <ChatScreen key={id} {...data} chatId={id} saved={false} title="" initialMessages={[]} initialModelId={null} />;
+  return <ChatScreen key={id} {...data} chatId={id} saved={false} title="" initialMessages={[]} />;
 }

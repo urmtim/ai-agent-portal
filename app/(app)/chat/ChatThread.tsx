@@ -6,7 +6,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
 import { ICONS, IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
-import { ensureChatTitle, setChatModel } from "./actions";
+import { ensureChatTitle } from "./actions";
 import { AssistantParts, messageText } from "./ChatParts";
 import type { AgentInfo, ChatScreenData, ModelOption } from "./data";
 
@@ -18,11 +18,10 @@ function suggestions(a: ChatScreenData["assistant"]): string[] {
   return out.length ? out : ["Что ты умеешь?", "Помоги составить план на неделю"];
 }
 
-export function ChatThread({ chatId, title, initialMessages, initialModelId, models, envModel, agents, assistant, histHidden, onToggleHist, onSaved }: {
+export function ChatThread({ chatId, title, initialMessages, models, envModel, agents, assistant, histHidden, onToggleHist, onSaved }: {
   chatId: string;
   title: string;
   initialMessages: UIMessage[];
-  initialModelId: string | null;
   models: ModelOption[];
   envModel: string | null;
   agents: AgentInfo[];
@@ -32,10 +31,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
   onSaved: (chatId: string, title: string) => void;
 }) {
   const toast = useToast();
-  const [modelId, setModelId] = useState(initialModelId && models.some((m) => m.id === initialModelId) ? initialModelId : null);
   const [transport] = useState(() => new DefaultChatTransport({ api: "/api/chat" }));
-  // the picked model rides along with each request; automatic sends (after an approval) use the one saved in the chat
-  const withModel = { body: { modelId } };
   const { messages, sendMessage, status, stop, regenerate, error, addToolApprovalResponse } = useChat({
     id: chatId,
     messages: initialMessages,
@@ -53,7 +49,6 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
 
   const busy = status === "submitted" || status === "streaming";
   const noModel = !models.length && !envModel;
-  const defaultModel = models.find((m) => m.isDefault) ?? models[0];
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
 
   // keep the newest content in view unless the user scrolled up
@@ -72,7 +67,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
   function send(text: string) {
     if (!text.trim() || busy || noModel) return;
     stick.current = true;
-    sendMessage({ text: text.trim() }, withModel);
+    sendMessage({ text: text.trim() });
     setInput("");
     requestAnimationFrame(autosize);
   }
@@ -91,15 +86,10 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
   function saveEdit() {
     if (!editing || !editing.text.trim()) return;
     stick.current = true;
-    sendMessage({ text: editing.text.trim(), messageId: editing.id }, withModel); // replaces it and drops what followed
+    sendMessage({ text: editing.text.trim(), messageId: editing.id }); // replaces it and drops what followed
     setEditing(null);
   }
 
-  function pickModel(value: string) {
-    const id = value || null;
-    setModelId(id);
-    setChatModel(chatId, id).catch(() => {});
-  }
 
   return (
     <section className="cmain">
@@ -109,13 +99,6 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
           {ICONS.list}
         </button>
         <span className="ctitle">{title || "Новый чат"}</span>
-        <span className="spacer" />
-        {models.length > 0 ? (
-          <select aria-label="Модель" value={modelId ?? ""} onChange={(e) => pickModel(e.target.value)} disabled={busy}>
-            <option value="">По умолчанию — {assistant.modelName ?? defaultModel.name}</option>
-            {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-        ) : envModel ? <span className="muted" style={{ fontSize: 13 }}>Модель: {envModel}</span> : null}
       </div>
 
       <div className="cscroll" ref={scroller}
@@ -127,7 +110,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
               Спросите что угодно.{" "}
               {assistant.agentNames.length
                 ? "Агента запущу с вашего подтверждения."
-                : <>Агентов можно разрешить в <Link href="/agents" className="link">«Агенты» → «Базовый ассистент»</Link>.</>}
+                : <>Агентов можно разрешить в <Link href="/agents" className="link">«Агенты» → «Ассистент»</Link>.</>}
             </p>
             <div className="row" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
               {suggestions(assistant).map((s) => (
@@ -176,7 +159,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
                   {text && !(isLast && busy) && (
                     <div className="macts">
                       <IconButton icon="copy" title="Копировать" onClick={() => copy(text)} />
-                      {isLast && <IconButton icon="retry" title="Повторить" disabled={busy} onClick={() => regenerate(withModel)} />}
+                      {isLast && <IconButton icon="retry" title="Повторить" disabled={busy} onClick={() => regenerate()} />}
                     </div>
                   )}
                 </div>
@@ -187,7 +170,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
               <div className="cmsg">
                 <div className="ca err" role="alert">{error.message || "Не удалось получить ответ"}</div>
                 <div className="macts" style={{ opacity: 1 }}>
-                  <button type="button" className="btn ghost sm" onClick={() => regenerate(withModel)}>Повторить</button>
+                  <button type="button" className="btn ghost sm" onClick={() => regenerate()}>Повторить</button>
                 </div>
               </div>
             )}

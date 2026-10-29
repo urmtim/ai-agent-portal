@@ -25,7 +25,7 @@ export type RunAgentResult =
 
 export async function chatTools(user: { id: string; name?: string | null }, cfg: AssistantConfig) {
   const userId = user.id;
-  // only the agents the base assistant is allowed to run (settings: «Агенты» → «Базовый ассистент»), and only enabled ones
+  // only the agents the base assistant is allowed to run (settings: «Агенты» → «Ассистент»), and only enabled ones
   const agents = await prisma.agent.findMany({ where: { ownerId: userId, enabled: true, id: { in: cfg.agentIds } }, orderBy: { createdAt: "asc" } });
 
   const tools = {

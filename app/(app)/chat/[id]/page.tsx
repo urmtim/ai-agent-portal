@@ -13,6 +13,6 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
   const data = await loadChatScreen(user.id);
   return (
     <ChatScreen key={chat.id} {...data} chatId={chat.id} saved title={chat.title}
-      initialMessages={JSON.parse(chat.messages) as UIMessage[]} initialModelId={chat.modelId} />
+      initialMessages={JSON.parse(chat.messages) as UIMessage[]} />
   );
 }
