@@ -36,6 +36,7 @@ export function ListTable({
   searchPlaceholder = "Поиск по названию…",
   minWidth,
   emptyText = "Пока пусто",
+  action,
 }: {
   columns: Col[];
   rows: ListRow[];
@@ -44,6 +45,8 @@ export function ListTable({
   minWidth?: number;
   /** Shown when there are no rows at all (as opposed to nothing matching). */
   emptyText?: string;
+  /** The add button, shown at the right end of the search row, right above the table. */
+  action?: React.ReactNode;
 }) {
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<Record<string, string[]>>({});
@@ -108,6 +111,7 @@ export function ListTable({
             )}
           </div>
         )}
+        {action}
       </div>
 
       <div className="card tcard">

@@ -45,10 +45,10 @@ export default async function AdminUsersPage() {
           <h1 className="title">Пользователи</h1>
           <p className="lead">Заводите аккаунты и отправляйте приглашения по почте</p>
         </div>
-        <InviteButton />
       </div>
 
       <ListTable
+        action={<InviteButton />}
         columns={["ID", "Пользователь", "Роль", "Статус", "Создан", ""]}
         rows={rows}
         minWidth={680}

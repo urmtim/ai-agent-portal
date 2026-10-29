@@ -50,7 +50,7 @@ export default async function AgentsPage() {
     key: "base",
     search: "Базовый ассистент встроенный чат",
     cells: [
-      <span key="id" className="muted">—</span>,
+      <span key="id" className="muted">#1</span>,
       <div key="n">
         <div className="b">Базовый ассистент</div>
         <div className="sub">Отвечает в чате · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
@@ -74,7 +74,7 @@ export default async function AgentsPage() {
       search: `${a.name} ${t.desc} ${t.mcp.join(" ")}`,
       facets: { status },
       cells: [
-        <span key="id" className="muted">#{i + 1}</span>,
+        <span key="id" className="muted">#{i + 2}</span>, // #1 is the base assistant
         <div key="n">
           <Link href={`/agents/${a.id}`} className="b link">{a.name}</Link>
           <div className="sub">{t.desc}</div>
@@ -104,7 +104,6 @@ export default async function AgentsPage() {
           <h1 className="title">Агенты</h1>
           <p className="lead">ИИ-помощники, которые делают рутину за вас</p>
         </div>
-        <NewAgentButton />
       </div>
       <AiTabs active="/agents" />
 
@@ -130,6 +129,7 @@ export default async function AgentsPage() {
       )}
 
       <ListTable
+        action={<NewAgentButton />}
         columns={["ID", "Название", "Модель", "MCP", "Статус", "Последний прогон", ""]}
         rows={[base, ...rows]}
         minWidth={820}

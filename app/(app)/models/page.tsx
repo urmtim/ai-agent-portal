@@ -46,7 +46,6 @@ export default async function ModelsPage() {
           <h1 className="title">Модели</h1>
           <p className="lead">LLM, к которым ходят агенты. Моделей может быть много: базовый ассистент работает на одной, другой агент — на другой.</p>
         </div>
-        {isAdmin && <AddModelButton />}
       </div>
       <AiTabs active="/models" />
 
@@ -59,7 +58,7 @@ export default async function ModelsPage() {
         </div>
       )}
 
-      <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} minWidth={700}
+      <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} action={isAdmin ? <AddModelButton /> : undefined} minWidth={700}
         emptyText={isAdmin ? "Моделей пока нет — добавьте первую" : "Моделей пока нет"} />
     </div>
   );
