@@ -145,7 +145,7 @@ export function UserActions({ user }: { user: UserRowData }) {
       {user.status === "INVITED" && (
         <IconButton icon="send" title="Выслать приглашение снова" disabled={pending} onClick={resend} />
       )}
-      <IconButton icon="edit" title="Изменить" onClick={() => setModal("edit")} />
+      <IconButton icon="edit" title="Изменить" data-row-open onClick={() => setModal("edit")} />
       <IconButton icon="del" title={user.isSelf ? "Нельзя удалить самого себя" : "Удалить"} disabled={user.isSelf}
         onClick={() => setModal("del")} />
 

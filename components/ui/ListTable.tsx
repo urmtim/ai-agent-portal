@@ -17,6 +17,17 @@ export type ListFilter = { id: string; label: string; options: string[] };
 
 type Col = string | { label: string; align?: "right" | "center" };
 
+/**
+ * A click on a row opens it: presses the row's own edit control, marked with `data-row-open`.
+ * Clicks on controls, text selection and clicks inside a modal (a portal, so outside the row's DOM) don't.
+ */
+function openRow(e: React.MouseEvent<HTMLTableRowElement>) {
+  const row = e.currentTarget, target = e.target as Element;
+  if (!row.contains(target) || target.closest("button, a, input, select, textarea, label")) return;
+  if (window.getSelection()?.toString()) return;
+  row.querySelector<HTMLElement>("[data-row-open]")?.click();
+}
+
 /** Table card with a search box and a "+ Фильтр" checklist; filtering happens in the browser. */
 export function ListTable({
   columns,
@@ -111,7 +122,7 @@ export function ListTable({
           </thead>
           <tbody>
             {shown.map((r) => (
-              <tr key={r.key} className={r.className}>
+              <tr key={r.key} className={r.className} onClick={openRow}>
                 {r.cells.map((cell, i) => <td key={i} className={i === r.cells.length - 1 ? "acts" : undefined}>{cell}</td>)}
               </tr>
             ))}

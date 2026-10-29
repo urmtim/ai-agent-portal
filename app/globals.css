@@ -449,3 +449,6 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 .pager a:hover { background: var(--soft); }
 .pager a.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .pager .off, .pager .gap { color: var(--muted); }
+
+/* rows that open on click (ListTable + data-row-open) */
+.tcard tbody tr:has([data-row-open]):hover td { background: var(--soft); }

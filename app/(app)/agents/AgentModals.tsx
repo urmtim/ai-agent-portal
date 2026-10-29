@@ -73,7 +73,7 @@ export function AgentActions({ id, name }: { id: string; name: string }) {
   return (
     <>
       <IconButton icon="run" title={running ? "Выполняется…" : "Запустить"} disabled={running} onClick={run} />
-      <Link href={`/agents/${id}`} className="ibtn" title="Настроить" aria-label="Настроить">{ICONS.edit}</Link>
+      <Link href={`/agents/${id}`} className="ibtn" title="Настроить" aria-label="Настроить" data-row-open>{ICONS.edit}</Link>
       <IconButton icon="del" title="Удалить" onClick={() => setConfirm(true)} />
       <ConfirmModal open={confirm} onClose={() => setConfirm(false)} title="Удалить агента?" pending={deleting}
         text={<>«{name}» и история его прогонов будут удалены. Собранные чеки останутся в «Тратах».</>}

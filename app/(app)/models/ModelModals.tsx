@@ -102,7 +102,7 @@ export function ModelActions({ m }: { m: ModelRowData }) {
     <>
       <IconButton icon="check" title={checking ? "Проверяем…" : "Проверить"} disabled={checking}
         onClick={() => startCheck(async () => { const r = await checkSavedModel(m.id); if (r) toast(r.message); })} />
-      <IconButton icon="edit" title="Изменить" onClick={() => setModal("edit")} />
+      <IconButton icon="edit" title="Изменить" data-row-open onClick={() => setModal("edit")} />
       <IconButton icon="del" title={m.isDefault ? "Модель по умолчанию удалить нельзя" : "Удалить"} disabled={m.isDefault}
         onClick={() => setModal("del")} />
       <Modal open={modal === "edit"} onClose={close} title="Изменить модель">
