@@ -22,8 +22,8 @@ test("parsePins: saved order kept", () => {
   assert.deepEqual(parsePins('["models","chat","agents","mcp"]'), ["models", "chat", "agents", "mcp"]);
 });
 
-test("movePin: pin from tray between chat and models", () => {
-  assert.deepEqual(movePin(DEFAULT_PINS, "stats", 1), ["chat", "stats", "models", "agents", "mcp", "api"]);
+test("movePin: pin from tray between chat and agents", () => {
+  assert.deepEqual(movePin(DEFAULT_PINS, "stats", 1), ["chat", "stats", "agents", "models", "mcp", "api"]);
 });
 
 test("movePin: reorder models to the start", () => {
@@ -31,11 +31,11 @@ test("movePin: reorder models to the start", () => {
 });
 
 test("movePin: index past the end appends", () => {
-  assert.deepEqual(movePin(DEFAULT_PINS, "chat", 99), ["models", "agents", "mcp", "api", "chat"]);
+  assert.deepEqual(movePin(DEFAULT_PINS, "chat", 99), ["agents", "models", "mcp", "api", "chat"]);
 });
 
 test("unpin: removes the item, keeps the last one", () => {
-  assert.deepEqual(unpin(DEFAULT_PINS, "mcp"), ["chat", "models", "agents", "api"]);
+  assert.deepEqual(unpin(DEFAULT_PINS, "mcp"), ["chat", "agents", "models", "api"]);
   assert.deepEqual(unpin(["chat"], "chat"), ["chat"]);
 });
 
@@ -57,12 +57,13 @@ test("navKeyForPath: sections and child pages", () => {
 });
 
 test("parsePins: an untouched old default menu becomes the new default, a custom one stays", () => {
-  assert.deepEqual(parsePins('["chat","agents","mcp","models"]'), ["chat", "models", "agents", "mcp", "api"]);
+  assert.deepEqual(parsePins('["chat","agents","mcp","models"]'), ["chat", "agents", "models", "mcp", "api"]);
+  assert.deepEqual(parsePins('["chat","models","agents","mcp","api"]'), ["chat", "agents", "models", "mcp", "api"]);
   assert.deepEqual(parsePins('["chat","stats","agents"]'), ["chat", "stats", "agents"]);
   assert.deepEqual(parsePins('["agents","chat","mcp","models"]'), ["agents", "chat", "mcp", "models"]);
 });
 
 test("AI group order and the API section", () => {
-  assert.deepEqual(NAV_GROUPS.find((g) => g.title === "AI")?.items, ["models", "agents", "mcp", "api"]);
+  assert.deepEqual(NAV_GROUPS.find((g) => g.title === "AI")?.items, ["agents", "models", "mcp", "api"]);
   assert.equal(navKeyForPath("/api-access"), "api");
 });

@@ -2,7 +2,7 @@
 // No React here, so it can be unit-tested (see nav.test.ts).
 
 export type NavKey =
-  | "chat" | "models" | "agents" | "mcp" | "api"
+  | "chat" | "agents" | "models" | "mcp" | "api"
   | "learn" | "stats" | "me"
   | "users" | "access" | "log";
 
@@ -40,15 +40,15 @@ export const NAV: Record<NavKey, NavItem> = {
 
 export const NAV_GROUPS: NavGroup[] = [
   { title: "Основное", items: ["chat"] },
-  { title: "AI", items: ["models", "agents", "mcp", "api"] },
+  { title: "AI", items: ["agents", "models", "mcp", "api"] },
   { title: "Семья", note: "(скрыто)", dim: true, items: ["learn", "stats", "me"] },
   { title: "Админ", adminOnly: true, items: ["users", "access", "log"] },
 ];
 
-export const DEFAULT_PINS: NavKey[] = ["chat", "models", "agents", "mcp", "api"];
+export const DEFAULT_PINS: NavKey[] = ["chat", "agents", "models", "mcp", "api"];
 
 /** Earlier default menus: a browser still holding one exactly gets the current default. */
-const OLD_DEFAULT_PINS: NavKey[][] = [["chat", "agents", "mcp", "models"]];
+const OLD_DEFAULT_PINS: NavKey[][] = [["chat", "agents", "mcp", "models"], ["chat", "models", "agents", "mcp", "api"]];
 
 export const PINS_STORAGE_KEY = "portal.nav.pins.v1";
 

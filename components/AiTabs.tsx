@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 const TABS = [
-  { href: "/models", label: "Модели" },
   { href: "/agents", label: "Агенты" },
+  { href: "/models", label: "Модели" },
   { href: "/mcp", label: "MCP" },
   { href: "/api-access", label: "API" },
 ] as const;
