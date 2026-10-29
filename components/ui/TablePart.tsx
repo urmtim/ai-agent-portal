@@ -5,8 +5,16 @@ import { ICONS, IconButton } from "./icons";
 
 export type PartItem = { id: string; name: string; desc: string; note?: string; facet?: string };
 
+/** A per-row choice shown as its own column (e.g. «Доступ» of an MCP connection). */
+export type PartColumn = {
+  label: string;
+  options: { value: string; label: string }[];
+  value: (id: string) => string;
+  onChange: (id: string, value: string) => void;
+};
+
 /** Close a popover on an outside click. */
-function useOutside(open: boolean, ref: React.RefObject<HTMLElement | null>, close: () => void) {
+export function useOutside(open: boolean, ref: React.RefObject<HTMLElement | null>, close: () => void) {
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) close(); };
@@ -19,7 +27,7 @@ function useOutside(open: boolean, ref: React.RefObject<HTMLElement | null>, clo
  * «Табличная часть» (1C-style) inside a form: what was added, with search, «+ Фильтр» and «Добавить» right above
  * the table and «Убрать» per row. The parent keeps `picked` and renders the hidden inputs.
  */
-export function TablePart({ items, picked, onChange, nothingHint, filter }: {
+export function TablePart({ items, picked, onChange, nothingHint, filter, column }: {
   items: PartItem[];
   picked: string[];
   onChange: (ids: string[]) => void;
@@ -27,6 +35,7 @@ export function TablePart({ items, picked, onChange, nothingHint, filter }: {
   nothingHint: React.ReactNode;
   /** Facet to filter the added rows by (e.g. включён / выключен). */
   filter?: { label: string; options: string[] };
+  column?: PartColumn;
 }) {
   const [q, setQ] = useState("");
   const [chosen, setChosen] = useState<string[]>([]);
@@ -88,14 +97,21 @@ export function TablePart({ items, picked, onChange, nothingHint, filter }: {
 
       <div className="tpart">
         <table>
-          <thead><tr><th>Название</th><th>Описание</th><th /></tr></thead>
+          <thead><tr><th>Название</th><th>Описание</th>{column && <th>{column.label}</th>}<th /></tr></thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={3} className="muted tempty">{added.length ? "Ничего не найдено" : "Пока ничего не добавлено"}</td></tr>
+              <tr><td colSpan={column ? 4 : 3} className="muted tempty">{added.length ? "Ничего не найдено" : "Пока ничего не добавлено"}</td></tr>
             ) : rows.map((i) => (
               <tr key={i.id}>
                 <td><b>{i.name}</b>{i.note && <span className="muted"> · {i.note}</span>}</td>
                 <td className="muted">{i.desc}</td>
+                {column && (
+                  <td>
+                    <select className="sm" aria-label={`${column.label}: ${i.name}`} value={column.value(i.id)} onChange={(e) => column.onChange(i.id, e.target.value)}>
+                      {column.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </td>
+                )}
                 <td className="acts"><IconButton icon="del" title="Убрать" onClick={() => onChange(picked.filter((x) => x !== i.id))} /></td>
               </tr>
             ))}

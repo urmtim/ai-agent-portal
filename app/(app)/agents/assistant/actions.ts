@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { audit } from "@/lib/audit";
 import { ASSISTANT_APIS, type AssistantApi } from "@/lib/assistant-config";
+import { parseMcpAccess } from "@/lib/agents/policy";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
@@ -24,7 +25,11 @@ export async function saveAssistant(_prev: FormState, formData: FormData): Promi
   const conns = await prisma.mcpConnection.findMany({ where: { ownerId: user.id }, select: { id: true, name: true } });
   const pickedMcp = formData.getAll("mcp").map(String);
   const mcp = conns.filter((c) => pickedMcp.includes(c.id));
-  const data = { modelId, agentIds: JSON.stringify(agents.map((a) => a.id)), mcpIds: JSON.stringify(mcp.map((c) => c.id)), apis: JSON.stringify(apis) };
+  const access = parseMcpAccess(String(formData.get("mcpAccess") ?? "{}"));
+  const data = {
+    modelId, agentIds: JSON.stringify(agents.map((a) => a.id)), mcpIds: JSON.stringify(mcp.map((c) => c.id)), apis: JSON.stringify(apis),
+    mcpAccess: JSON.stringify(Object.fromEntries(mcp.map((c) => [c.id, access[c.id] ?? "read"]))),
+  };
   await prisma.assistant.upsert({ where: { ownerId: user.id }, create: { ownerId: user.id, ...data }, update: data });
 
   const list = (xs: string[]) => (xs.length ? xs.join(", ") : "нет");

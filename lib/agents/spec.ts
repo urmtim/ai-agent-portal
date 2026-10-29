@@ -1,50 +1,61 @@
 // Agent ↔ YAML for import/export (pure, unit-tested in spec.test.ts).
-// Models, MCP connections and agents travel by name; secrets never appear here.
+// Models, MCP connections and agents travel by name; secrets never appear here. The version-1 format is still read.
 import { parse, stringify } from "yaml";
-import { DEFAULT_GUARDRAILS, parseGuardrails, type Guardrails } from "./guardrails";
-
-export type AgentKind = "custom" | "receipts";
-export type Hitl = "confirm" | "none";
+import {
+  DEFAULT_GUARD_POLICY, DEFAULT_HITL, parseGuardPolicy, parseHitl, parseRules, rulesToYaml,
+  type GuardPolicy, type HitlPolicy, type McpAccess,
+} from "./policy";
 
 export type AgentSpec = {
   name: string;
-  type: AgentKind;
   enabled: boolean;
   model: string | null; // model name; null → the owner's default
   instruction: string;
-  hitl: Hitl;
-  guardrails: Guardrails;
-  mcp: string[]; // connection names
-  agents: string[]; // agent names
+  hitl: HitlPolicy;
+  guardrails: GuardPolicy;
+  mcp: { name: string; access: McpAccess }[]; // connection names
+  agents: string[]; // subagent names
   api: string[]; // portal API keys
-  receipts: { sinceDays: number; max: number; fromFilter: string };
 };
 
 export const EMPTY_SPEC: AgentSpec = {
-  name: "", type: "custom", enabled: true, model: null, instruction: "", hitl: "confirm",
-  guardrails: { ...DEFAULT_GUARDRAILS }, mcp: [], agents: [], api: [],
-  receipts: { sinceDays: 30, max: 40, fromFilter: "" },
+  name: "", enabled: true, model: null, instruction: "",
+  hitl: { ...DEFAULT_HITL }, guardrails: { enabled: DEFAULT_GUARD_POLICY.enabled, rules: [...DEFAULT_GUARD_POLICY.rules] },
+  mcp: [], agents: [], api: [],
 };
 
-/** The YAML text of an agent (custom agents omit receipts settings, receipts agents omit instruction and guardrails). */
+/** The YAML text of an agent. */
 export function specToYaml(s: AgentSpec): string {
-  const doc: Record<string, unknown> = { version: 1, name: s.name, type: s.type, enabled: s.enabled, model: s.model };
-  if (s.type === "custom") {
-    doc.instruction = s.instruction;
-    doc.guardrails = s.guardrails;
-  } else {
-    doc.receipts = s.receipts;
-  }
-  doc.hitl = s.hitl;
-  doc.mcp = s.mcp;
-  doc.agents = s.agents;
-  doc.api = s.api;
-  return "# AI Portal — агент. Модель, подключения и агенты — по названию; пароли и токены сюда не попадают.\n" +
+  const doc = {
+    version: 2,
+    name: s.name,
+    enabled: s.enabled,
+    model: s.model,
+    instruction: s.instruction,
+    hitl: { enabled: s.hitl.enabled, ask: s.hitl.ask },
+    guardrails: { enabled: s.guardrails.enabled, rules: rulesToYaml(s.guardrails.rules) },
+    mcp: s.mcp.map((m) => ({ name: m.name, access: m.access })),
+    agents: s.agents,
+    api: s.api,
+  };
+  return "# AI Portal — агент. Пароли и токены сюда не попадают.\n" +
     stringify(doc, { lineWidth: 0 });
 }
 
 const names = (v: unknown): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean))] : []);
-const int = (v: unknown, min: number, max: number, def: number) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= min ? Math.min(n, max) : def; };
+
+/** mcp items: "Моя почта" (version 1) or {name, access}. */
+function mcpItems(v: unknown): { name: string; access: McpAccess }[] {
+  if (!Array.isArray(v)) return [];
+  const out: { name: string; access: McpAccess }[] = [];
+  for (const x of v) {
+    const o = x && typeof x === "object" ? (x as { name?: unknown; access?: unknown }) : null;
+    const name = typeof x === "string" ? x.trim() : typeof o?.name === "string" ? o.name.trim() : "";
+    const access: McpAccess = o?.access === "send" ? "send" : "read";
+    if (name && !out.some((m) => m.name === name)) out.push({ name, access });
+  }
+  return out;
+}
 
 /**
  * YAML text → agent, keeping only names that exist for this user (the rest become warnings).
@@ -63,23 +74,32 @@ export function yamlToSpec(text: string, known: { models: string[]; connections:
     return false;
   });
 
-  const type: AgentKind = o.type === "receipts" ? "receipts" : "custom";
   let model = typeof o.model === "string" && o.model.trim() ? o.model.trim() : null;
   if (model && !known.models.includes(model)) { warnings.push(`Модель «${model}» не найдена — будет модель по умолчанию`); model = null; }
-  const r = (o.receipts && typeof o.receipts === "object" ? o.receipts : {}) as Record<string, unknown>;
+  if (o.type === "receipts") warnings.push("Встроенного типа «Чеки из почты» больше нет — агент будет «Своим», задайте ему инструкцию");
+
+  // guardrails: {enabled, rules: [...]} now, {maskPii, maxSteps, forbiddenTopics} in version 1
+  const g = o.guardrails as { enabled?: unknown; rules?: unknown } | undefined;
+  const guardrails: GuardPolicy = g && typeof g === "object" && Array.isArray(g.rules)
+    ? { enabled: g.enabled !== false, rules: parseRules(g.rules) }
+    : g === undefined ? { enabled: DEFAULT_GUARD_POLICY.enabled, rules: [...DEFAULT_GUARD_POLICY.rules] } : parseGuardPolicy(g);
+
+  const mcp = mcpItems(o.mcp).filter((m) => {
+    if (known.connections.includes(m.name)) return true;
+    warnings.push(`Подключение «${m.name}» не найдено — пропущено`);
+    return false;
+  });
 
   const spec: AgentSpec = {
     name: typeof o.name === "string" ? o.name.trim().slice(0, 80) : "",
-    type,
     enabled: o.enabled !== false,
     model,
     instruction: typeof o.instruction === "string" ? o.instruction.trim() : "",
-    hitl: o.hitl === "none" ? "none" : "confirm",
-    guardrails: parseGuardrails(o.guardrails ?? {}),
-    mcp: keep(names(o.mcp), known.connections, (n) => `Подключение «${n}» не найдено — пропущено`),
+    hitl: parseHitl(o.hitl ?? null),
+    guardrails,
+    mcp,
     agents: keep(names(o.agents), known.agents, (n) => `Агент «${n}» не найден — пропущен`),
     api: keep(names(o.api), known.apis, (n) => `API «${n}» не найдено — пропущено`),
-    receipts: { sinceDays: int(r.sinceDays, 1, 365, 30), max: int(r.max, 1, 200, 40), fromFilter: typeof r.fromFilter === "string" ? r.fromFilter.trim() : "" },
   };
   return { spec, warnings };
 }

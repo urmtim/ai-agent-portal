@@ -137,8 +137,20 @@
   /* ---- forms ---- */
   label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 6px; }
   .req { color: var(--err); }
-  input, select.f { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--card); }
-  input:focus, select.f:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+  input, select.f, .field textarea { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--card); }
+  .field textarea { line-height: 1.55; resize: vertical; }
+  input:focus, select.f:focus, .field textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+  select.f { appearance: none; -webkit-appearance: none; padding-right: 40px; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8799' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 12px; }
+  select.f.sm { width: auto; min-width: 170px; font-size: 13px; padding: 6px 34px 6px 10px; border-radius: 8px; background-position: right 11px center; }
+  /* switch: a knob sliding along an oval; the checkbox stays for keyboard and screen readers, visually hidden */
+  .switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; font-weight: 600; margin: 0; position: relative; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; }
+  .switch .track { flex: 0 0 auto; width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; }
+  .switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(20,16,40,.3); transition: transform .2s; }
+  .switch input:checked + .track { background: var(--primary); }
+  .switch input:checked + .track::after { transform: translateX(18px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .switch .track, .switch .track::after { transition: none; } }
   .field { margin-bottom: 14px; }
   .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; } .hint a { color: var(--primary-dark); font-weight: 600; }
   .pwd { position: relative; } .pwd input { padding-right: 44px; }
@@ -205,14 +217,19 @@
   .arrow { align-self: center; color: var(--muted); font-size: 22px; flex: 0 0 auto; }
 
   /* agent window (no graph) */
-  .modal.wide { width: min(820px, 100%); height: min(700px, calc(93vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
+  .modal.wide { width: min(820px, 100%); height: min(720px, calc(88vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
   .modal.wide .mfoot { margin-top: 12px; }
   .mtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 0 0 16px; }
   .mtabs button { font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 8px 13px; cursor: pointer; }
   .mtabs button.on { color: var(--primary-dark); border-bottom-color: var(--primary); }
+  .mtabs .n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 2px; border-radius: 9px; background: var(--soft); color: var(--muted); font-size: 11.5px; text-align: center; }
+  .tpart { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; } .tpart table { width: 100%; }
+  .tpart th { padding: 8px 12px; font-size: 11px; } .tpart td { padding: 8px 12px; vertical-align: middle; } .tpart td.tempty { text-align: center; padding: 16px 12px; }
+  .apanel .tbar { margin-bottom: 10px; }
+  .psec { margin-bottom: 24px; } .psec:last-child { margin-bottom: 0; } .tpart .sub { font-size: 12px; margin-top: 2px; font-weight: 400; }
   .apanel { flex: 1; min-height: 0; overflow: auto; padding-right: 2px; } .apanel[hidden] { display: none; }
   .ed { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
-  .ed textarea { width: 100%; min-height: 420px; resize: vertical; font-family: inherit; font-size: 13.5px; line-height: 1.55; }
+  .ed textarea { width: 100%; min-height: 380px; resize: vertical; font-family: inherit; font-size: 13.5px; line-height: 1.55; }
   .asec { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 7px; margin-bottom: 10px; background: var(--card); }
   .asec .nlabel { margin: 0 0 7px; display: flex; align-items: center; gap: 6px; } .asec .nlabel .n { color: var(--ink); }
   .npill .x { margin-left: 6px; color: var(--muted); cursor: pointer; font-weight: 700; } .npill .x:hover { color: var(--err); }
@@ -221,7 +238,22 @@
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 5px; }
   .seg button { font-family: inherit; font-size: 12.5px; font-weight: 600; border: 0; background: var(--card); color: var(--muted); padding: 6px 11px; cursor: pointer; }
   .seg button + button { border-left: 1px solid var(--line); } .seg button.on { background: var(--primary-soft); color: var(--primary-dark); }
-  .yaml { width: 100%; min-height: 380px; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.5; white-space: pre; resize: vertical; }
+  .yamlwrap { position: relative; height: 400px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); overflow: hidden; }
+  .yamlwrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+  .yamlwrap pre, .yamlwrap textarea { position: absolute; inset: 0; margin: 0; padding: 14px 16px; border: 0; background: transparent; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 14px; line-height: 1.65; white-space: pre; tab-size: 2; overflow: auto; }
+  .yamlwrap pre { pointer-events: none; color: var(--ink); }
+  .yamlwrap textarea { color: transparent; caret-color: var(--ink); resize: none; outline: none; width: 100%; height: 100%; }
+  .yamlwrap textarea::selection { background: color-mix(in srgb, var(--primary) 25%, transparent); }
+  .y-key { color: var(--primary-dark); font-weight: 600; } .y-str { color: var(--ok); } .y-lit { color: var(--warn); } .y-com { color: var(--muted); font-style: italic; } .y-pun { color: var(--muted); }
+  .yaml { display: block; width: 100%; min-height: 380px; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.6; white-space: pre; resize: vertical; color: var(--ink); background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .yaml:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+  .ahead { display: flex; align-items: center; gap: 10px; padding-right: 40px; margin: -4px 0 12px; }
+  .aname { flex: 1; min-width: 0; font: inherit; font-size: 18px; font-weight: 700; color: var(--ink); border: 1px solid transparent; border-radius: 8px; padding: 5px 8px; margin-left: -9px; background: transparent; }
+  .aname:hover { border-color: var(--line); } .aname:focus { outline: none; border-color: var(--primary); background: var(--card); }
+  .aname::placeholder { color: var(--muted); font-weight: 600; }
+  .ahead .npill { margin: 0; } .atoggle { font-size: 13px; font-weight: 600; margin: 0; white-space: nowrap; }
+  .builtin { border: 1px dashed var(--line); border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+  @media (max-width: 760px) { .ahead { flex-wrap: wrap; } .aname { flex-basis: 100%; } }
   .asec.pair { display: grid; grid-template-columns: 1fr auto; gap: 14px; } .asec .seg button, .asec .npill { white-space: nowrap; }
   @media (max-width: 760px) { .ed { grid-template-columns: 1fr; } .ed textarea { min-height: 200px; } .modal.wide { height: calc(93vh - 16px); } }
 
@@ -306,9 +338,9 @@
     .cwrap { grid-template-columns: 1fr; }
     .hist { display: none; position: absolute; top: 0; bottom: 0; left: 0; width: min(300px, 86vw); z-index: 5; box-shadow: var(--shadow-pop); } .hist.open { display: block; }
   }
-  .mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: start center; padding: 7vh 16px 16px; }
+  .mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: start center; padding: 12vh 16px 16px; }
   .mbg[hidden] { display: none; }
-  .modal { position: relative; width: min(520px, 100%); max-height: calc(93vh - 16px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
+  .modal { position: relative; width: min(520px, 100%); max-height: calc(88vh - 16px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
   .mtitle { font-size: 18px; font-weight: 700; margin: 0 0 6px; padding-right: 36px; } .msub { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0 0 18px; }
   .mclose { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
   .mclose:hover { background: var(--soft); color: var(--ink); }
@@ -328,7 +360,9 @@
       <optgroup label="Приложение">
         <option value="chat" selected>Чат с агентом</option>
         <option value="agents">Агенты — список</option>
-        <option value="agentwin">Агент — окно (редактор, без графа)</option>
+        <option value="agentnew">Агент — окно: новый</option>
+        <option value="agentwin">Агент — окно: правка</option>
+        <option value="assistantwin">Ассистент — окно (модель чата)</option>
         <option value="constructor">Конструктор агента (граф)</option>
         <option value="agent">Агент — история</option>
         <option value="mcp">MCP</option>
@@ -501,107 +535,38 @@
 
     agents: () => appShell(`
       <div class="pagehead"><div><h1 class="title">Агенты</h1><p class="lead">ИИ-помощники, которые делают рутину за вас</p></div>
-        <button class="btn primary spacer">Новый агент</button></div>
+        <button class="btn primary spacer" data-go="agentnew">Новый агент</button></div>
       ${aiTabs('agents')}
       ${tbar()}
       <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>MCP</th><th>Статус</th><th>Последний прогон</th><th></th></tr></thead><tbody>
-        <tr class="off"><td>—</td><td><div class="b">Ассистент</div><div class="sub">Отвечает, когда не подошёл спец-агент · встроенный, не настраивается</div></td><td>GLM-4</td><td class="muted">—</td><td><span class="st mut">встроенный</span></td><td class="muted">—</td><td class="acts"></td></tr>
-        ${agentRow(1,'Чеки из почты','Читает письма → пишет в «Траты»','GLM-4',['Почта'],'включён','ok','23 окт · +4 чека')}
-        ${agentRow(2,'Разбор писем','Разбирает входящие и готовит ответы','GLM-4',['Почта','Документы'],'включён','ok','22 окт')}
-        ${agentRow(3,'Документы по политике','Проверяет документ по регламенту','GLM-4',['Документы'],'черновик','mut','—')}
-        ${agentRow(4,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['1С'],'не настроен','wait','—')}
+        <tr><td>#1</td><td><div class="b link" data-go="assistantwin">Ассистент</div><div class="sub">С ним вы говорите в чате, агенты — его исполнители · разрешено — агенты: Сводка почты · MCP: Моя почта</div></td><td>GLM-4</td><td>Моя почта</td><td><span class="st info">встроенный</span></td><td class="muted">—</td><td class="acts">${ibtn('edit','Изменить','data-go="assistantwin"')}</td></tr>
+        ${agentRow(2,'Сводка почты','Составь сводку новых писем: от кого, о чём, что требует ответа.','GLM-4',['Почта'],'включён','ok','23 окт · сводка по 12 письмам')}
+        ${agentRow(3,'Разбор писем','Разбирает входящие и готовит ответы','GLM-4',['Почта','Документы'],'включён','ok','22 окт')}
+        ${agentRow(4,'Документы по политике','Проверяет документ по регламенту','GLM-4',['Документы'],'черновик','mut','—')}
+        ${agentRow(5,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['1С'],'не настроен','wait','—')}
       </tbody></table></div>`),
 
-    agentwin: () => SCREENS.agents().replace('</tbody></table></div>', `</tbody></table></div>
-      <div class="mbg" id="agentWin">
-        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle">
-          <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
-          <h2 class="mtitle" id="awTitle" style="margin-bottom:14px">Изменить агента · Сводка почты</h2>
-          <div class="mtabs" role="tablist"><button class="on" data-atab="ed">Редактор</button><button data-atab="yaml">YAML</button><button data-atab="set">Настройки</button></div>
-
-          <div class="apanel" data-apanel="ed">
-            <div class="ed">
-              <div>
-                <div class="nlabel">Системная инструкция</div>
-                <textarea>Составь сводку новых писем: от кого, о чём, что требует ответа.
-Коротко, списком, важное — первым.</textarea>
-              </div>
-              <div>
-                <div class="asec pair">
-                  <div><div class="nlabel">HITL · запуск из чата</div><div class="seg" data-seg><button>Подтверждать</button><button class="on">Сразу</button></div></div>
-                  <div><div class="nlabel">Модель</div><span class="npill">🧠 GLM-4 ▾</span></div></div>
-                <div class="asec"><div class="nlabel">MCP-инструменты</div>
-                  <span class="npill mcp">📧 Моя почта<span class="x" title="Убрать">×</span></span><span class="npill add">+ Добавить</span></div>
-                <div class="asec"><div class="nlabel">Агенты · может запускать</div>
-                  <span class="npill">Чеки из почты<span class="x" title="Убрать">×</span></span><span class="npill add">+ Добавить</span></div>
-                <div class="asec"><div class="nlabel">API</div><span class="npill off">нет</span><span class="npill add">+ Добавить</span></div>
-                <div class="asec"><div class="nlabel">Гардрейлы</div>
-                  <span class="npill on" data-tgl>✓ Маскирование ПДн</span><span class="npill">Лимит шагов: 5 ▾</span>
-                  <div style="margin-top:2px"><span class="npill">⛔ политика<span class="x" title="Убрать">×</span></span><span class="npill add">+ Тема</span></div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="apanel" data-apanel="yaml" hidden>
-            <textarea class="yaml" spellcheck="false" style="min-height:440px"># AI Portal — агент. Модель, подключения и агенты — по названию; пароли и токены сюда не попадают.
-version: 1
-name: Сводка почты
-type: custom
-enabled: true
-model: GLM-4
-instruction: |-
-  Составь сводку новых писем: от кого, о чём, что требует ответа.
-  Коротко, списком, важное — первым.
-guardrails:
-  maskPii: true
-  maxSteps: 5
-  forbiddenTopics:
-    - политика
-hitl: none
-mcp:
-  - Моя почта
-agents:
-  - Чеки из почты
-api: []</textarea>
-            <div class="wrapgap" style="margin-top:10px"><button class="btn ghost sm">Скачать .yaml</button><button class="btn ghost sm">Загрузить файл</button>
-              <span class="hint" style="margin:0;align-self:center">Правка здесь сразу меняет «Редактор» и «Настройки».</span></div>
-          </div>
-
-          <div class="apanel" data-apanel="set" hidden>
-            <div class="grid c2">
-              <div class="field"><label>Название</label><input value="Сводка почты"></div>
-              <div class="field"><label>Тип агента</label><input value="Свой агент" disabled><div class="hint">Работает по вашей инструкции с выбранными инструментами</div></div>
-            </div>
-            <label class="toggle"><input type="checkbox" checked> <span>Агент включён</span></label>
-            <div class="hint" style="margin-top:18px">У «Чеков из почты» здесь же: за сколько дней смотреть, макс. писем за прогон, фильтр по отправителю.</div>
-          </div>
-
-          <div class="mfoot"><button class="btn ghost" data-go="agent">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-toast="Сохранено">Сохранить</button></div>
-        </div>
-      </div>`),
+    assistantwin: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + assistantWin()),
+    agentnew: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + agentWin('new')),
+    agentwin: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + agentWin('custom')),
 
     agent: () => appShell(`
       <div class="narrow">
         <div class="back" data-go="agents">← Агенты</div>
-        <div class="pagehead"><div><h1 class="title">Чеки из почты</h1><p class="lead">Собирает чеки из почты и пишет их в «Траты»</p></div>
+        <div class="pagehead"><div><h1 class="title">Сводка почты</h1><p class="lead">Составь сводку новых писем: от кого, о чём, что требует ответа.</p></div>
           <button class="btn primary spacer">▶ Запустить сейчас</button></div>
         <div class="card pad" style="margin-bottom:22px"><h2 class="title">Настройки</h2>
-          <div class="field"><label>Название</label><input value="Чеки из почты"></div>
-          <div class="grid c3">
-            <div><label>За сколько дней смотреть</label><input value="30"></div>
-            <div><label>Макс. писем за прогон</label><input value="40"></div>
-            <div><label>Фильтр по отправителю</label><input placeholder="например, pyaterochka"></div>
-          </div>
+          <div class="field"><label>Задача</label><textarea rows="3" placeholder="Что сделать на этот раз. Пусто — агент работает просто по своей инструкции."></textarea></div>
           <label class="toggle" style="margin:14px 0 18px"><input type="checkbox" checked> <span>Агент включён</span></label>
           <div><button class="btn primary">Сохранить</button></div>
         </div>
         <h2 class="title">История прогонов</h2>
         <div class="grid" style="gap:12px">
-          <div class="card pad"><div class="row"><span class="st ok">успех</span><span class="muted" style="font-size:13px">23 окт, 15:40</span><span class="spacer"></span><span style="font-size:13.5px">Обработано писем: 12, новых чеков: 4</span></div>
-            <pre class="log">Получено писем: 12
-✓ чек: Пятёрочка — 1240 RUB (продукты)
-✓ чек: Яндекс Еда — 980 RUB (кафе и рестораны)
-• не чек: Рассылка «Скидки недели»</pre></div>
+          <div class="card pad"><div class="row"><span class="st ok">успех</span><span class="muted" style="font-size:13px">23 окт, 15:40</span><span class="spacer"></span><span style="font-size:13.5px">Сводка: 3 письма требуют ответа — банк, Петя, магазин</span></div>
+            <pre class="log">Задача: за сегодня
+→ mail_search {"days":1}
+← mail_search: найдено 12
+Итог: Сводка: 3 письма требуют ответа — банк, Петя, магазин</pre></div>
           <div class="card pad"><div class="row"><span class="st err">ошибка</span><span class="muted" style="font-size:13px">23 окт, 12:10</span><span class="spacer"></span><span style="font-size:13.5px">Почта не настроена</span></div></div>
         </div>
       </div>`),
@@ -758,6 +723,115 @@ api: []</textarea>
       </div></div>`),
   };
 
+  // One window for a new and an existing agent: same tabs, fields and button; a new one just starts empty.
+  // rows: [name, desc] or [name, desc, accessOptions, selectedIndex] — the «Доступ» column appears when a row has options
+  function tpart(rows, nothing, withAccess) {
+    const access = (r) => r[2] ? `<td><select class="f sm">${r[2].map((o, i) => `<option ${i === r[3] ? 'selected' : ''}>${o}</option>`).join('')}</select></td>` : withAccess ? '<td></td>' : '';
+    const cols = withAccess ? 4 : 3;
+    const body = rows.length
+      ? rows.map((r) => `<tr><td><b>${r[0]}</b></td><td class="muted">${r[1]}</td>${access(r)}<td class="acts">${ibtn('del', 'Убрать')}</td></tr>`).join('')
+      : `<tr><td colspan="${cols}" class="muted tempty">Пока ничего не добавлено</td></tr>`;
+    return `<div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" placeholder="Поиск…"></label><button type="button" class="btn dashed">+ Фильтр</button><button type="button" class="btn primary spacer">Добавить</button></div>
+      <div class="tpart"><table><thead><tr><th>Название</th><th>Описание</th>${withAccess ? '<th>Доступ</th>' : ''}<th></th></tr></thead><tbody>${body}</tbody></table></div>${nothing ? `<div class="hint">${nothing}</div>` : ''}`;
+  }
+  // The chat's own assistant: same window style; it has no instruction or policies of its own here, only what it may use.
+  function assistantWin() {
+    const tab = (k, l, n, on) => `<button class="${on ? 'on' : ''}" data-atab="${k}">${l}${n === undefined ? '' : ` <span class="n">${n}</span>`}</button>`;
+    return `
+      <div class="mbg" id="agentWin">
+        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle">
+          <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
+          <h2 class="mtitle" id="awTitle" style="margin-bottom:14px">Ассистент</h2>
+          <div class="mtabs" role="tablist">${tab('gen', 'Общее', undefined, true)}${tab('agt', 'Агенты', 1)}${tab('mcp', 'MCP', 1)}${tab('api', 'API', 0)}</div>
+          <div class="apanel" data-apanel="gen">
+            <div class="field"><label>Модель</label><select class="f"><option selected>GLM-4 · по умолчанию</option><option>Llama 3.1 (локально)</option></select>
+              <div class="hint">На этой модели работает чат. Только ваши подключённые модели (раздел «Модели»).</div></div>
+          </div>
+          <div class="apanel" data-apanel="agt" hidden>
+            <div class="hint" style="margin:0 0 10px">Каких агентов ассистент может запускать из чата. Их действия подтверждаются по их собственным политикам.</div>
+            ${tpart([['Сводка почты', 'Составь сводку новых писем: от кого, о чём, что требует ответа.']])}
+          </div>
+          <div class="apanel" data-apanel="mcp" hidden>
+            <div class="hint" style="margin:0 0 10px">Подключения из раздела MCP, которыми ассистент пользуется в чате.</div>
+            ${tpart([['Моя почта', 'Почта: поиск, чтение и отправка писем', ['только чтение', 'чтение и отправка'], 0]], '', true)}
+          </div>
+          <div class="apanel" data-apanel="api" hidden>${tpart([], 'API портала пока нет.')}</div>
+          <div class="mfoot"><span class="spacer"></span><button class="btn primary" data-close data-toast="Сохранено">Сохранить</button></div>
+        </div>
+      </div>`;
+  }
+  function agentWin(mode) {
+    const isNew = mode === 'new';
+    const name = isNew ? '' : 'Сводка почты';
+    const instr = isNew ? '' : 'Составь сводку новых писем: от кого, о чём, что требует ответа.\nКоротко, списком, важное — первым.';
+    const agents = isNew ? [] : [['Ответы на письма', 'Готовит черновики ответов на письма']];
+    const mcp = isNew ? [] : [['Моя почта', 'Почта: поиск, чтение и отправка писем', ['только чтение', 'чтение и отправка'], 0]];
+    const tab = (k, l, n, on) => `<button class="${on ? 'on' : ''}" data-atab="${k}">${l}${n === undefined ? '' : ` <span class="n">${n}</span>`}</button>`;
+    // guardrails: [name with its value, what it does]; the value is set when the guardrail is added
+    const guards = [
+      ['Маскирование ПДн', 'Почта, телефоны, карты и паспорта заменяются метками до отправки модели'],
+      ['Лимит шагов — 5', 'Сколько раз за запуск агент обращается к модели и инструментам'],
+      ...(isNew ? [] : [['Запрещённая тема — политика', 'Агент отказывается обсуждать и выполнять задачи на эту тему']]),
+    ];
+    const guardRows = guards.map(([n, d]) => `<tr><td><b>${n}</b></td><td class="muted">${d}</td><td class="acts">${ibtn('del', 'Убрать')}</td></tr>`).join('');
+    const sw = (label, on) => `<label class="switch"><input type="checkbox" role="switch" ${on ? 'checked' : ''}><span class="track"></span><span>${label}</span></label>`;
+    const yaml = isNew
+      ? `version: 1\nname: ""\nenabled: true\nmodel: GLM-4\ninstruction: ""\nhitl:\n  enabled: true\n  ask: changes_and_send\nguardrails:\n  enabled: true\n  rules:\n    - maskPii\n    - maxSteps: 5\nmcp: []\nagents: []\napi: []`
+      : `version: 1\nname: Сводка почты\nenabled: true\nmodel: GLM-4\ninstruction: |-\n  Составь сводку новых писем: от кого, о чём, что требует ответа.\n  Коротко, списком, важное — первым.\nhitl:\n  enabled: true\n  ask: changes_and_send\nguardrails:\n  enabled: true\n  rules:\n    - maskPii\n    - maxSteps: 5\n    - forbiddenTopic: политика\nmcp:\n  - name: Моя почта\n    access: read\nagents:\n  - Ответы на письма\napi: []`;
+    return `
+      <div class="mbg" id="agentWin">
+        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle">
+          <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
+          <h2 class="mtitle" id="awTitle" style="margin-bottom:14px">${isNew ? 'Новый агент' : name}</h2>
+          <div class="mtabs" role="tablist">${tab('gen', 'Общее', undefined, true)}${tab('grd', 'Политики', guards.length)}${tab('agt', 'Субагенты', agents.length)}${tab('mcp', 'MCP', mcp.length)}${tab('api', 'API', 0)}${tab('yaml', 'YAML')}</div>
+
+          <div class="apanel" data-apanel="gen">
+            <div class="psec">
+              ${sw('Агент включён', true)}
+              <div class="hint" style="margin:6px 0 14px">Выключенный агент не запускается: ни из чата, ни другими агентами, ни вручную.</div>
+              <div class="field"><label>Название</label><input value="${name}" placeholder="например, Сводка почты"></div>
+              <div class="field"><label>Модель</label><select class="f"><option selected>GLM-4 · по умолчанию</option><option>Llama 3.1 (локально)</option></select>
+                <div class="hint">Только ваши подключённые модели (раздел «Модели»). У нового агента сразу стоит модель по умолчанию.</div></div>
+              <div class="field" style="margin-bottom:0"><label>Системная инструкция</label>
+                <textarea rows="5" placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа.">${instr}</textarea>
+                <div class="hint">Первая строка — описание агента в списке.</div></div>
+            </div>
+          </div>
+
+          <div class="apanel" data-apanel="grd" hidden>
+            <div class="psec">
+              ${sw('Человек в контуре (HITL)', true)}
+              <div class="hint" style="margin:6px 0 10px">Агент спрашивает вас перед действием и показывает, что именно сделает: кому письмо, какой текст. Чтение не подтверждается.</div>
+              <select class="f" aria-label="Когда спрашивать"><option selected>Спрашивать перед изменением и отправкой</option><option>Спрашивать только перед отправкой</option></select>
+            </div>
+            <div class="psec">
+              ${sw('Гардрейлы', true)}
+              <div class="hint" style="margin:6px 0 10px">Правила, которые агент не может нарушить, что бы ни было в задаче.</div>
+              <div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" placeholder="Поиск…"></label><button type="button" class="btn dashed">+ Фильтр</button><button type="button" class="btn primary spacer">Добавить</button></div>
+              <div class="tpart"><table><thead><tr><th>Гардрейл</th><th>Описание</th><th></th></tr></thead><tbody>${guardRows}</tbody></table></div>
+            </div>
+          </div>
+
+          <div class="apanel" data-apanel="agt" hidden>
+            <div class="hint" style="margin:0 0 10px">Субагенты — агенты, которых этот агент может запускать сам. Их действия подтверждаются по их собственным политикам.</div>
+            ${tpart(agents)}
+          </div>
+          <div class="apanel" data-apanel="mcp" hidden>
+            <div class="hint" style="margin:0 0 10px">Подключения из раздела MCP. В «Доступе» — что агенту можно с этим подключением: только читать, изменять, отправлять.</div>
+            ${tpart(mcp, '', true)}
+          </div>
+          <div class="apanel" data-apanel="api" hidden>${tpart([], 'API портала пока нет.')}</div>
+
+          <div class="apanel" data-apanel="yaml" hidden>
+            <div class="hint" style="margin:0 0 10px">Весь агент текстом: правка здесь сразу меняет форму. Модель, подключения и агенты — по названию; пароли и токены сюда не попадают.</div>
+            <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" spellcheck="false" aria-label="YAML агента"># AI Portal — агент.\n${yaml}</textarea></div>
+            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn primary">Скачать .yaml</button><button type="button" class="btn primary">Загрузить .yaml</button></div>
+          </div>
+
+          <div class="mfoot"><button class="btn ghost">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-toast="${isNew ? 'Агент создан' : 'Сохранено'}">Сохранить</button></div>
+        </div>
+      </div>`;
+  }
   function appShell(inner) { return `<div class="main">${inner}</div>`; }
   function courseCard(e,t,d,done,total,pct) {
     return `<div class="course" data-go="course"><span class="emoji">${e}</span><h3>${t}</h3><p class="desc">${d}</p>
@@ -774,6 +848,8 @@ api: []</textarea>
   function chip(t){ return `<button class="btn ghost sm" style="border-radius:20px">${t}</button>`; }
   function aiTabs(active){ const t=[['agents','Агенты'],['mcp','MCP'],['settings','Модели']]; return `<div class="tabs" style="margin:-4px 0 18px">${t.map(([k,l])=>`<button class="${active===k?'on':''}" data-go="${k}">${l}</button>`).join('')}</div>`; }
   const IC = {
+    download: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>',
+    upload: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/></svg>',
     edit: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
     del: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
     run: '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>',
@@ -823,7 +899,7 @@ api: []</textarea>
     nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.go === current || a.dataset.key === navKeyFor(current) || (!!a.dataset.sec && a.dataset.sec === sec)));
   }
   // screens without their own menu item belong to their parent's item
-  const SCREEN_KEY = { agent: 'agents', agentwin: 'agents', constructor: 'agents', course: 'learn', lesson: 'learn' };
+  const SCREEN_KEY = { agent: 'agents', agentnew: 'agents', agentwin: 'agents', assistantwin: 'agents', constructor: 'agents', course: 'learn', lesson: 'learn' };
   const PIN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4v2H6v-2l4-4z"/></svg>';
   function navKeyFor(screen) { return Object.keys(NAV).find(k => NAV[k].go === screen) || SCREEN_KEY[screen]; }
   function renderNav() {
@@ -884,7 +960,7 @@ api: []</textarea>
     if (dragFrom !== 'nav' || !dragKey || pins.length <= 1) return;
     pins = pins.filter(k => k !== dragKey); savePins(); renderNav();
   });
-  const navSection = { chat:'chat', agents:'agents', agent:'agents', agentwin:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
+  const navSection = { chat:'chat', agents:'agents', agent:'agents', agentnew:'agents', agentwin:'agents', assistantwin:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
 
   function render(name) {
     if (!SCREENS[name]) name = 'chat';
@@ -946,7 +1022,37 @@ api: []</textarea>
     const ta = view.querySelector('.ccomp textarea');
     ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
   }
+  // YAML → highlighted HTML: keys, strings, numbers/booleans, comments
+  function hlYaml(text) {
+    const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const val = (v) => {
+      const t = v.trim();
+      if (!t) return esc(v);
+      if (/^(true|false|null|-?\d+(\.\d+)?)$/.test(t)) return v.replace(t, `<span class="y-lit">${esc(t)}</span>`);
+      if (/^[|>][-+]?$/.test(t) || /^\[\]$|^\{\}$/.test(t)) return v.replace(t, `<span class="y-pun">${esc(t)}</span>`);
+      return v.replace(t, `<span class="y-str">${esc(t)}</span>`);
+    };
+    let block = -1; // indent of the key that opened a «|» / «>» block: deeper lines are plain text
+    return text.split('\n').map((line) => {
+      let m;
+      const indent = line.match(/^\s*/)[0].length;
+      if (block >= 0 && (!line.trim() || indent > block)) return `<span class="y-str">${esc(line)}</span>`;
+      block = -1;
+      if (/^\s*(- )?[^:#\s][^:#]*?:\s*[|>][-+]?\s*$/.test(line)) block = indent;
+      if ((m = line.match(/^(\s*)(#.*)$/))) return m[1] + `<span class="y-com">${esc(m[2])}</span>`;
+      if ((m = line.match(/^(\s*)(- )?([^:#\s][^:#]*?)(:)(\s.*|)$/))) return m[1] + (m[2] ? '<span class="y-pun">- </span>' : '') + `<span class="y-key">${esc(m[3])}</span><span class="y-pun">:</span>` + val(m[5]);
+      if ((m = line.match(/^(\s*)(- )(.*)$/))) return m[1] + '<span class="y-pun">- </span>' + val(m[3]);
+      return /^\s+\S/.test(line) ? `<span class="y-str">${esc(line)}</span>` : esc(line);
+    }).join('\n') + '\n';
+  }
   function wireAgentWin() {
+    view.querySelectorAll('.yamlwrap').forEach((w) => {
+      const ta = w.querySelector('textarea'), pre = w.querySelector('pre');
+      const paint = () => { pre.innerHTML = hlYaml(ta.value); pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; };
+      ta.addEventListener('input', paint);
+      ta.addEventListener('scroll', () => { pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft; });
+      paint();
+    });
     view.querySelectorAll('[data-atab]').forEach((b) => b.addEventListener('click', () => {
       view.querySelectorAll('[data-atab]').forEach((x) => x.classList.toggle('on', x === b));
       view.querySelectorAll('[data-apanel]').forEach((pn) => { pn.hidden = pn.dataset.apanel !== b.dataset.atab; });

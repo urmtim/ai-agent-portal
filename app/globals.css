@@ -224,6 +224,9 @@ tbody tr.clk:hover { background: var(--soft); }
 label { font-size: 12.5px; font-weight: 600; color: var(--ink); display: block; margin-bottom: 6px; }
 input, select, textarea { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink);
   border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--card); }
+select { appearance: none; -webkit-appearance: none; padding-right: 40px; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8799' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 12px; }
+select:disabled { cursor: default; opacity: .7; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
 .field { margin-bottom: 16px; }
@@ -336,8 +339,8 @@ tr.off td { opacity: .55; }
 
 /* ---------- modal + toast ---------- */
 /* top edge pinned: the window does not jump when its tabs change height */
-.mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: start center; padding: 7vh 16px 16px; }
-.modal { position: relative; width: min(520px, 100%); max-height: calc(93vh - 16px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
+.mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: start center; padding: 12vh 16px 16px; }
+.modal { position: relative; width: min(520px, 100%); max-height: calc(88vh - 16px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
 .mtitle { font-size: 18px; font-weight: 700; margin: 0 0 6px; padding-right: 36px; }
 .msub { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0 0 18px; }
 .mclose { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
@@ -487,50 +490,69 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 .addpop .sub { display: block; }
 .mpanel[hidden] { display: none; }
 
-/* agent window: YAML tab */
-.yaml-edit { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; line-height: 1.5; min-height: 300px; resize: vertical; white-space: pre; tab-size: 2; }
-.yaml-warn { margin: 10px 0 0; font-size: 13px; }
-
-/* agent editor window: constant size, only the tab body scrolls (mockup «Агент — окно») */
-.modal.editor { width: min(820px, 100%); height: min(700px, calc(93vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
+/* agent window (mockup «Агент — окно»): constant size, only the tab body scrolls */
+.modal.editor { width: min(820px, 100%); height: min(720px, calc(88vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
 .modal.editor > form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .modal.editor .mtabs { margin-top: 0; }
 .modal.editor .mfoot { margin-top: 12px; }
-.apanel { flex: 1; min-height: 0; overflow: auto; padding-right: 2px; }
+.apanel { flex: 1; min-height: 0; overflow: auto; padding: 2px 4px 2px 2px; }
 .apanel[hidden] { display: none; }
-.ed { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
-.ed textarea { min-height: 360px; resize: vertical; font-size: 13.5px; line-height: 1.55; }
-.ed .builtin { border: 1px dashed var(--line); border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
-.nlabel { font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 0 7px; display: block; }
-.asec { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 7px; margin-bottom: 10px; background: var(--card); }
-.asec.pair { display: grid; grid-template-columns: 1fr auto; gap: 14px; }
-.chips { display: flex; flex-wrap: wrap; align-items: center; }
-.npill { display: inline-flex; align-items: center; white-space: nowrap; font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; margin: 0 5px 5px 0; color: var(--ink); background: var(--soft); line-height: 1.3; }
-.npill.off { color: var(--muted); text-decoration: line-through; }
-.npill.mcp { color: var(--primary-dark); background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
-.npill.on { color: var(--ok); background: var(--okbg); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
-button.npill { cursor: pointer; }
-.npill.add { background: transparent; border-style: dashed; color: var(--primary-dark); }
-.npill.add:hover { border-color: var(--primary); }
-.npill .x { border: 0; background: none; padding: 0 0 0 6px; font: inherit; font-weight: 700; color: var(--muted); cursor: pointer; line-height: 1; }
-.npill .x:hover { color: var(--err); }
-select.npill { width: auto; padding-right: 22px; }
-.chiphint { margin: 0 0 5px; }
-.chipadd { flex-basis: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 4px; margin: 0 0 6px; max-height: 190px; overflow: auto; background: var(--card); }
-.chipadd button { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--ink); background: none; border: 0; border-radius: 8px; padding: 6px 9px; cursor: pointer; }
-.chipadd button:hover { background: var(--soft); }
-.chipadd .sub { display: block; }
-.chipinput { width: 160px; font-size: 12.5px; padding: 4px 8px; margin: 0 5px 5px 0; border-radius: 7px; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 5px; }
-.seg button { font: inherit; font-size: 12.5px; font-weight: 600; border: 0; background: var(--card); color: var(--muted); padding: 6px 11px; cursor: pointer; white-space: nowrap; }
-.seg button + button { border-left: 1px solid var(--line); }
-.seg button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary-dark); }
-@media (max-width: 760px) {
-  .ed { grid-template-columns: 1fr; }
-  .ed textarea { min-height: 200px; }
-  .modal.editor { height: calc(93vh - 16px); }
-}
+.apanel .tpartwrap .tbar { margin-bottom: 10px; }
+.psec { margin-bottom: 24px; }
+.psec:last-child { margin-bottom: 0; }
+.psec > .hint { margin: 6px 0 10px; }
+.apanel .field:last-child { margin-bottom: 0; }
+.tpart select.sm { width: auto; min-width: 170px; font-size: 13px; padding: 6px 34px 6px 10px; border-radius: 8px; background-position: right 11px center; }
+.yaml-warn { margin: 10px 0 0; font-size: 13px; }
+@media (max-width: 760px) { .modal.editor { height: calc(88vh - 16px); } }
+
+/* switch: a knob sliding along an oval; the checkbox stays for keyboard and screen readers */
+.switch { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; font-weight: 600; margin: 0; position: relative; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; padding: 0; border: 0; }
+.switch .track { flex: 0 0 auto; width: 44px; height: 26px; border-radius: 13px; background: var(--line); position: relative; transition: background .2s; }
+.switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(20,16,40,.3); transition: transform .2s; }
+.switch input:checked + .track { background: var(--primary); }
+.switch input:checked + .track::after { transform: translateX(18px); }
+.switch input:focus-visible + .track { outline: 2px solid var(--primary); outline-offset: 2px; }
+.switch input:disabled + .track { opacity: .5; }
+@media (prefers-reduced-motion: reduce) { .switch .track, .switch .track::after { transition: none; } }
+
+/* YAML editor: a highlighted <pre> under a transparent textarea */
+.yamlwrap { position: relative; height: 400px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); overflow: hidden; }
+.yamlwrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+.yamlwrap pre, .yamlwrap textarea { position: absolute; inset: 0; margin: 0; padding: 14px 16px; border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 14px; line-height: 1.65; white-space: pre; tab-size: 2; overflow: auto; }
+.yamlwrap pre { pointer-events: none; color: var(--ink); }
+.yamlwrap textarea { color: transparent; caret-color: var(--ink); resize: none; width: 100%; height: 100%; }
+.yamlwrap textarea:focus { box-shadow: none; }
+.yamlwrap textarea::selection { background: color-mix(in srgb, var(--primary) 25%, transparent); }
+.y-key { color: var(--primary-dark); font-weight: 600; }
+.y-str { color: var(--ok); }
+.y-lit { color: var(--warn); }
+.y-com { color: var(--muted); font-style: italic; }
+.y-pun { color: var(--muted); }
 
 /* long chat: messages above are given to the model only as a retelling */
 .csumline { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 4px 0; }
 .csumline::before, .csumline::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }
+
+/* «Добавить» in the guardrails table: rules with a value take it right in the list */
+.gadd { min-width: 320px; }
+.gadd .grow { padding: 8px 10px; border-radius: 8px; font-size: 13.5px; }
+.gadd .grow .sub { display: block; }
+.gadd .gin { display: flex; gap: 8px; margin-top: 8px; }
+.gadd .gin input { padding: 7px 10px; font-size: 13.5px; border-radius: 8px; }
+.gadd .gin input[type="number"] { width: 90px; }
+
+/* tabs in a modal: one line; on a narrow screen the bar scrolls sideways instead of widening the window */
+.mtabs { overflow-x: auto; scrollbar-width: none; }
+.mtabs::-webkit-scrollbar { display: none; }
+.mtabs button { white-space: nowrap; flex: 0 0 auto; }
+
+/* YAML tab: the editor takes the height left, so the buttons under it stay visible */
+.apanel.yamlpanel:not([hidden]) { display: flex; flex-direction: column; }
+.apanel.yamlpanel .yamlwrap { flex: 1; height: auto; min-height: 220px; }
+
+/* a <label> styled as a button (file pickers) looks exactly like one */
+label.btn { font-size: 13.5px; margin-bottom: 0; }
+label.btn.sm { font-size: 12.5px; }

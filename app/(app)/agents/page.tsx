@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { ownConnections } from "@/lib/connections";
 import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
 import { envModelName, llmAvailable } from "@/lib/llm";
-import { AGENT_TYPES, agentDesc } from "@/lib/agents/types";
+import { agentDesc } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
 import { ListTable, type ListRow } from "@/components/ui/ListTable";
 import { AgentActions, NewAgentButton } from "./AgentModals";
@@ -34,11 +34,7 @@ export default async function AgentsPage() {
   });
 
   const conns = await ownConnections(user.id);
-  const mailIds = conns.filter((c) => c.kind === "mail").map((c) => c.id);
   const connNames = (a: (typeof agents)[number]) => agentEditData(a).mcpIds.map((id) => conns.find((c) => c.id === id)?.name).filter(Boolean).join(", ");
-  // agents that read mail but have no «Почта» connection on their MCP tab
-  const noMail = agents.filter((a) => AGENT_TYPES[a.type].mcp.includes("Почта") && !agentEditData(a).mcpIds.some((id) => mailIds.includes(id)));
-  const mailOk = noMail.length === 0;
   const llmOk = await llmAvailable(user.id);
   const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
@@ -75,14 +71,13 @@ export default async function AgentsPage() {
   };
 
   const rows: ListRow[] = agents.map((a, i) => {
-    const t = AGENT_TYPES[a.type];
     const desc = agentDesc(a);
     const last = a.runs[0];
     const rs = last ? RUN_ST[last.status] : null;
     const status = a.enabled ? "включён" : "выключен";
     return {
       key: a.id,
-      search: `${a.name} ${desc} ${t.mcp.join(" ")}`,
+      search: `${a.name} ${desc} ${connNames(a)}`,
       facets: { status },
       cells: [
         <span key="id" className="muted">#{i + 2}</span>, // #1 is the base assistant
@@ -117,19 +112,12 @@ export default async function AgentsPage() {
       </div>
       <AiTabs active="/agents" />
 
-      {(!mailOk || !llmOk) && (
+      {!llmOk && (
         <div className="callout warn" style={{ margin: "0 0 18px" }}>
           <span className="ic">⚠️</span>
           <div style={{ fontSize: 13.5, lineHeight: 1.55 }}>
-            {!mailOk && (
-              <p style={{ margin: 0 }}>
-                <b>Агенту нужна почта.</b> {noMail.map((a) => `«${a.name}»`).join(", ")} читает письма в вашем ящике и находит в них чеки.
-                Подключите ящик в разделе <Link href="/mcp" className="b link">MCP</Link> и добавьте его агенту на вкладке MCP.
-                Без этого запуск агента закончится ошибкой.
-              </p>
-            )}
             {!llmOk && (
-              <p style={{ margin: !mailOk ? "8px 0 0" : 0 }}>
+              <p style={{ margin: 0 }}>
                 <b>Нет модели.</b> Агентам нужна LLM — добавьте её в разделе <Link href="/models" className="b link">«Модели»</Link>.
               </p>
             )}

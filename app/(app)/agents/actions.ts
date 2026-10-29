@@ -8,7 +8,7 @@ import { runAgent } from "@/lib/agents/runner";
 import { AGENT_TYPES } from "@/lib/agents/types";
 import { audit } from "@/lib/audit";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
-import { parseGuardrails } from "@/lib/agents/guardrails";
+import { parseGuardPolicy, parseHitl, parseMcpAccess } from "@/lib/agents/policy";
 
 /** id — the saved agent, for «▶ Тест-запуск» right after saving. */
 export type FormState = { error?: string; ok?: string; id?: string } | undefined;
@@ -24,14 +24,10 @@ function revalidateAgent(agentId: string) {
   revalidatePath(`/agents/${agentId}`);
 }
 
-const clamp = (v: FormDataEntryValue | null, min: number, max: number, def: number) => {
-  const n = Math.round(Number(v));
-  return Number.isFinite(n) && n >= min ? Math.min(n, max) : def;
-};
-
 /**
- * The agent window (create when there is no agentId, edit otherwise): «Общее» fields, instruction, HITL and guardrails,
- * plus the agents, MCP servers and APIs it may use. Foreign or unknown ids are dropped; an agent can't list itself.
+ * The agent window (create when there is no agentId, edit otherwise): «Общее», policies (HITL, guardrails),
+ * subagents, MCP connections with access, APIs. Foreign or unknown ids are dropped; an agent can't list itself.
+ * New agents are «Свои» (CUSTOM): built-in types are no longer offered.
  */
 export async function saveAgent(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
@@ -39,11 +35,7 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   const existing = agentId ? await prisma.agent.findUnique({ where: { id: agentId } }) : null;
   if (agentId && (!existing || existing.ownerId !== user.id)) return { error: "Агент не найден" };
 
-  const type = existing?.type ?? String(formData.get("type") ?? "");
-  if (!Object.prototype.hasOwnProperty.call(AGENT_TYPES, type)) return { error: "Выберите тип агента" };
-  const t = AGENT_TYPES[type as keyof typeof AGENT_TYPES];
-
-  const name = (String(formData.get("name") ?? "").trim() || t.label).slice(0, 80);
+  const name = (String(formData.get("name") ?? "").trim() || AGENT_TYPES.CUSTOM.label).slice(0, 80);
   const modelId = String(formData.get("modelId") ?? "") || null;
   if (modelId && !(await prisma.llmModel.findFirst({ where: { id: modelId, ownerId: user.id } }))) return { error: "Такой модели нет — обновите страницу" };
 
@@ -51,32 +43,27 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   const agentIds = formData.getAll("agent").map(String).filter((id) => id !== agentId && own.some((a) => a.id === id));
   const apis = formData.getAll("api").map(String).filter((k) => Object.prototype.hasOwnProperty.call(ASSISTANT_APIS, k));
   const conns = await prisma.mcpConnection.findMany({ where: { ownerId: user.id }, select: { id: true } });
-  const mcpIds = formData.getAll("mcp").map(String).filter((id) => conns.some((c) => c.id === id));
-  const config = {
-    sinceDays: clamp(formData.get("sinceDays"), 1, 365, 30),
-    fromFilter: String(formData.get("fromFilter") ?? "").trim(),
-    max: clamp(formData.get("max"), 1, 200, 40),
-  };
-  const guardrails = type !== "CUSTOM" ? parseGuardrails(existing?.guardrails ?? "") : parseGuardrails({
-    maskPii: formData.get("maskPii") === "on",
-    maxSteps: Number(formData.get("maxSteps")),
-    forbiddenTopics: String(formData.get("topics") ?? "").split(/[\n,]/),
-  });
+  const mcpIds = [...new Set(formData.getAll("mcp").map(String).filter((id) => conns.some((c) => c.id === id)))];
+  const access = parseMcpAccess(String(formData.get("mcpAccess") ?? "{}"));
+  const hitl = parseHitl(String(formData.get("hitl") ?? ""));
+  const guardrails = parseGuardPolicy(String(formData.get("guardrails") ?? ""));
   const data = {
-    name, modelId, enabled: formData.get("enabled") === "on", config: JSON.stringify(config),
+    name, modelId, enabled: formData.get("enabled") === "on",
     instruction: String(formData.get("instruction") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 8000), // forms send \r\n
-    hitl: formData.get("hitl") === "none" ? "none" : "confirm",
+    hitl: JSON.stringify(hitl),
     guardrails: JSON.stringify(guardrails),
-    agentIds: JSON.stringify([...new Set(agentIds)]), mcpIds: JSON.stringify([...new Set(mcpIds)]), apis: JSON.stringify([...new Set(apis)]),
+    agentIds: JSON.stringify([...new Set(agentIds)]), mcpIds: JSON.stringify(mcpIds), apis: JSON.stringify([...new Set(apis)]),
+    mcpAccess: JSON.stringify(Object.fromEntries(mcpIds.map((id) => [id, access[id] ?? "read"]))),
   };
 
   const saved = existing
     ? await prisma.agent.update({ where: { id: existing.id }, data })
-    : await prisma.agent.create({ data: { ownerId: user.id, type: type as keyof typeof AGENT_TYPES, ...data } });
-  const extra = agentIds.length ? `; агенты: ${agentIds.length}` : "";
+    : await prisma.agent.create({ data: { ownerId: user.id, type: "CUSTOM", ...data } });
+  const extra = agentIds.length ? `; субагенты: ${agentIds.length}` : "";
+  const pol = `HITL ${hitl.enabled ? "вкл." : "выкл."}, гардрейлы ${guardrails.enabled ? `вкл. (${guardrails.rules.length})` : "выкл."}`;
   await audit("agent", existing
-    ? `Сохранены настройки агента «${saved.name}»${saved.enabled ? "" : " (выключен)"}${extra}`
-    : `Создан агент «${saved.name}» (${t.label})${extra}`, user);
+    ? `Сохранены настройки агента «${saved.name}»${saved.enabled ? "" : " (выключен)"}: ${pol}${extra}`
+    : `Создан агент «${saved.name}»: ${pol}${extra}`, user);
   revalidateAgent(saved.id);
   return { ok: existing ? "Сохранено" : "Агент создан", id: saved.id };
 }

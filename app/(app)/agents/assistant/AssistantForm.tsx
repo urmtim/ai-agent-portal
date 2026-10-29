@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { FormTabs, TablePart, type PartItem } from "@/components/ui/TablePart";
 import { useFormAction } from "@/components/ui/useFormAction";
 import { ASSISTANT_APIS, type AssistantConfig } from "@/lib/assistant-config";
+import { MCP_ACCESS_LABELS, type McpAccess } from "@/lib/agents/policy";
 import { saveAssistant } from "./actions";
 
 type Props = {
@@ -29,11 +30,13 @@ function AssistantForm({ cfg, models, defaultModelId, agents, connections, onDon
   const [tab, setTab] = useState<Tab>("general");
   const [picked, setPicked] = useState({ agents: cfg.agentIds, mcp: cfg.mcpIds, apis: cfg.apis as string[] });
   const set = (key: keyof typeof picked) => (ids: string[]) => setPicked((p) => ({ ...p, [key]: ids }));
+  const [access, setAccess] = useState<Record<string, McpAccess>>(cfg.mcpAccess);
   const agentItems: PartItem[] = agents.map((a) => ({ id: a.id, name: a.name, desc: a.desc, note: a.enabled ? undefined : OFF, facet: a.enabled ? ON : OFF }));
   const apiItems: PartItem[] = Object.entries(ASSISTANT_APIS).map(([k, v]) => ({ id: k, name: v.label, desc: v.desc }));
 
   return (
     <form onSubmit={onSubmit}>
+      <input type="hidden" name="mcpAccess" value={JSON.stringify(access)} />
       <FormTabs active={tab} onChange={setTab} tabs={[
         { key: "general", label: "Общее" },
         { key: "agents", label: "Агенты", count: picked.agents.length },
@@ -41,27 +44,33 @@ function AssistantForm({ cfg, models, defaultModelId, agents, connections, onDon
         { key: "apis", label: "API", count: picked.apis.length },
       ]} />
 
-      <div className="mpanel" hidden={tab !== "general"}>
+      <div className="apanel" hidden={tab !== "general"}>
         <div className="field">
           <label htmlFor="as-model">Модель</label>
           <select id="as-model" name="modelId" defaultValue={cfg.modelId ?? defaultModelId} disabled={models.length === 0}>
             {models.length === 0 && <option value="">Моделей нет — добавьте в разделе «Модели»</option>}
-            {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            {models.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === defaultModelId ? " · по умолчанию" : ""}</option>)}
           </select>
-          <div className="hint">На ней ассистент отвечает во всех чатах.</div>
+          <div className="hint">На этой модели работает чат. Только ваши подключённые модели (раздел «Модели»).</div>
         </div>
       </div>
-      <div className="mpanel" hidden={tab !== "agents"}>
-        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>Каких агентов ассистент может запускать. Запуск — всегда с вашего подтверждения в чате.</div>
+      <div className="apanel" hidden={tab !== "agents"}>
+        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>Каких агентов ассистент может запускать из чата. Их действия подтверждаются по их собственным политикам.</div>
         <TablePart items={agentItems} picked={picked.agents} onChange={set("agents")} filter={{ label: "Состояние", options: [ON, OFF] }}
           nothingHint="У вас пока нет агентов — создайте их кнопкой «Новый агент»." />
       </div>
-      <div className="mpanel" hidden={tab !== "mcp"}>
+      <div className="apanel" hidden={tab !== "mcp"}>
         <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>Подключения из раздела MCP, которыми ассистент пользуется в чате. С «Почтой» он ищет и читает письма по вашей просьбе.</div>
         <TablePart items={connections.map((c) => ({ id: c.id, name: c.name, desc: c.desc }))} picked={picked.mcp} onChange={set("mcp")}
-          nothingHint="Подключений пока нет — добавьте их в разделе MCP." />
+          nothingHint="Подключений пока нет — добавьте их в разделе MCP."
+          column={{
+            label: "Доступ",
+            options: (Object.keys(MCP_ACCESS_LABELS) as McpAccess[]).map((k) => ({ value: k, label: MCP_ACCESS_LABELS[k] })),
+            value: (id) => access[id] ?? "read",
+            onChange: (id, v) => setAccess((p) => ({ ...p, [id]: v as McpAccess })),
+          }} />
       </div>
-      <div className="mpanel" hidden={tab !== "apis"}>
+      <div className="apanel" hidden={tab !== "apis"}>
         <TablePart items={apiItems} picked={picked.apis} onChange={set("apis")} nothingHint="API портала пока нет." />
       </div>
 
@@ -85,7 +94,7 @@ export function AssistantActions(props: Props) {
   return (
     <>
       <IconButton icon="edit" title="Изменить" data-row-open onClick={() => setOpen(true)} />
-      <Modal open={open} onClose={() => setOpen(false)} title="Ассистент" sub="С ним вы говорите в чате. Он обращается только к тому, что вы здесь добавили." wide>
+      <Modal open={open} onClose={() => setOpen(false)} title="Ассистент" editor>
         {open && <AssistantForm {...props} onDone={() => setOpen(false)} />}
       </Modal>
     </>

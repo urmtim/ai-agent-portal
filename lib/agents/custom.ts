@@ -6,12 +6,13 @@ import { prisma } from "@/lib/db";
 import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
 import { firstMailConnection } from "@/lib/connections";
-import { guardrailInstructions, maskPii, parseGuardrails } from "./guardrails";
+import { guardrailInstructions, maskPii } from "./guardrails";
+import { agentGuardrails, parseHitl } from "./policy";
 import { agentDesc } from "./types";
 import type { RunBy } from "./runner";
 
 // «Свой агент»: its instruction + guardrails, its own tools (mail from its MCP tab, the agents on its «Агенты» tab).
-// Runs to the end without a human — only agents with hitl "none" can be called from inside, and only one level deep.
+// Runs to the end without a human — only subagents with HITL switched off can be called from inside, and only one level deep.
 
 const ids = (raw: string): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
 const short = (v: unknown, n: number) => { const s = typeof v === "string" ? v : JSON.stringify(v); return s.length > n ? s.slice(0, n) + "…" : s; };
@@ -24,7 +25,7 @@ export type RunNested = (agentId: string, task: string) => Promise<{ status: "ok
 export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunBy; depth: number; runNested: RunNested }): Promise<CustomResult> {
   const llm = await chatModel(agent.ownerId, agent.modelId);
   if (!llm) throw new Error(NO_MODEL_MESSAGE);
-  const g = parseGuardrails(agent.guardrails);
+  const g = agentGuardrails(agent.guardrails);
 
   const conn = await firstMailConnection(agent.ownerId, ids(agent.mcpIds));
   const tools: ToolSet = conn
@@ -32,10 +33,10 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
     : {};
 
   // agents it may call: enabled, without confirmation, not itself; nested agents don't call further
-  const subs = ctx.depth > 0 ? [] : await prisma.agent.findMany({
-    where: { ownerId: agent.ownerId, enabled: true, hitl: "none", id: { in: ids(agent.agentIds).filter((x) => x !== agent.id) } },
+  const subs = ctx.depth > 0 ? [] : (await prisma.agent.findMany({
+    where: { ownerId: agent.ownerId, enabled: true, id: { in: ids(agent.agentIds).filter((x) => x !== agent.id) } },
     orderBy: { createdAt: "asc" },
-  });
+  })).filter((a) => !parseHitl(a.hitl).enabled);
   if (subs.length) {
     tools.run_agent = tool({
       description: "Запустить другого агента и получить его итог. Агенты:\n" + subs.map((a) => `- ${a.id}: «${a.name}» — ${agentDesc(a)}`).join("\n"),

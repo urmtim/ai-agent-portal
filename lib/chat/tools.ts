@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
 import { agentDesc } from "@/lib/agents/types";
+import { parseHitl } from "@/lib/agents/policy";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
 import { firstMailConnection } from "@/lib/connections";
@@ -53,7 +54,7 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
         const agent = agents.find((a) => a.id === agentId);
         if (!agent) return { error: "Такого агента нет" };
         // for agents that need confirmation execute only runs after a verified approval, so this is where it is journaled
-        if (agent.hitl !== "none") await audit("approval", `Подтверждён запуск агента «${agent.name}»`, user, "чат");
+        if (parseHitl(agent.hitl).enabled) await audit("approval", `Подтверждён запуск агента «${agent.name}»`, user, "чат");
         const runId = await runAgent(agent.id, { actor: user, channel: "чат" }, task ?? "");
         const run = await prisma.agentRun.findUniqueOrThrow({ where: { id: runId } });
         return {
@@ -70,9 +71,10 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
 
   // every tool stays defined so stored history validates; the model is offered only the allowed ones
   const activeTools = allowedTools(cfg, agents.map((a) => a.id), mailConn ? [mailConn.id] : []) as (keyof typeof tools)[];
-  // HITL per agent: «без подтверждения» runs at once; everything else (and unknown ids) waits for the user
+  // HITL per agent: switched off → runs at once; on (and unknown ids) → waits for the user.
+  // Until approvals move to the agent's own actions, «on» means: confirm the launch.
   const approval = {
-    run_agent: ({ agentId }: { agentId: string }) => (agents.find((a) => a.id === agentId)?.hitl === "none" ? undefined : ("user-approval" as const)),
+    run_agent: ({ agentId }: { agentId: string }) => { const a = agents.find((x) => x.id === agentId); return a && !parseHitl(a.hitl).enabled ? undefined : ("user-approval" as const); },
   };
   return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null };
 }

@@ -141,10 +141,11 @@ model Agent {
   config    String    @default("{}") // JSON: filters, lookback days, etc.
   agentIds  String    @default("[]") // JSON: other agents this agent may call (not used by the receipts agent yet)
   mcpIds    String    @default("[]") // JSON: MCP servers it may use
+  mcpAccess String    @default("{}") // JSON {connectionId: "read" | "send"}: what it may do with each (lib/agents/policy.ts)
   apis      String    @default("[]") // JSON: portal APIs it may call
   instruction String  @default("") // system instruction («Свой агент»)
-  hitl      String    @default("confirm") // confirm | none — ask before the assistant runs it
-  guardrails String   @default("{}") // JSON: maskPii, maxSteps, forbiddenTopics (lib/agents/guardrails.ts)
+  hitl      String    @default("confirm") // JSON {enabled, ask}; old "confirm" / "none" still read (lib/agents/policy.ts)
+  guardrails String   @default("{}") // JSON {enabled, rules}; the old {maskPii, maxSteps, forbiddenTopics} still read
   modelId   String? // null → the default model
   model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   createdAt DateTime  @default(now())
@@ -234,6 +235,7 @@ model Assistant {
   model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   agentIds  String    @default("[]") // JSON: agents it may run; nothing allowed until chosen
   mcpIds    String    @default("[]") // JSON: MCP servers it may use (none exist yet)
+  mcpAccess String    @default("{}") // JSON {connectionId: "read" | "send"} (lib/agents/policy.ts)
   apis      String    @default("[]") // JSON: portal APIs it may call, keys of ASSISTANT_APIS
   updatedAt DateTime  @updatedAt
 }
