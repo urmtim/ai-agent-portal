@@ -32,7 +32,7 @@ function approvalSecret(): Uint8Array {
 function instructions(userName: string, agents: { id: string; name: string }[]): string {
   const today = new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "long" }).format(new Date());
   return [
-    "Ты — ассистент семейного портала. Отвечай по-русски, коротко и по делу; можно Markdown.",
+    "Ты — ассистент портала AI Portal. Отвечай по-русски, коротко и по делу; можно Markdown.",
     `Сегодня ${today}. Пользователь: ${userName}.`,
     "Про траты пользователя спрашивай инструмент get_spending, не выдумывай цифры. Суммы — в рублях.",
     agents.length

@@ -11,8 +11,8 @@ export default function LoginPage() {
       <div className="authcard">
         <div className="authhead">
           <div className="brand" style={{ justifyContent: "center", fontSize: 18 }}>
-            <span className="logo">С</span>
-            Семейный портал
+            <span className="logo">AI</span>
+            AI Portal
           </div>
           <p className="lead" style={{ marginTop: 10 }}>
             Войдите, чтобы продолжить обучение

@@ -9,7 +9,7 @@ const plex = IBM_Plex_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Семейный портал",
+  title: "AI Portal",
   description: "Семейный хаб: обучение, траты, ИИ-агенты",
 };
 

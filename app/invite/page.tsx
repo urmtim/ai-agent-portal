@@ -15,8 +15,8 @@ export default async function InvitePage({
       <div className="authcard">
         <div className="authhead">
           <div className="brand" style={{ justifyContent: "center", fontSize: 18 }}>
-            <span className="logo">С</span>
-            Семейный портал
+            <span className="logo">AI</span>
+            AI Portal
           </div>
           <h1 className="title" style={{ fontSize: 20, marginTop: 14 }}>
             Активация аккаунта
