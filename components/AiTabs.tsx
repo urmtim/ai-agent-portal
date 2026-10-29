@@ -1,9 +1,10 @@
 import Link from "next/link";
 
 const TABS = [
+  { href: "/models", label: "Модели" },
   { href: "/agents", label: "Агенты" },
   { href: "/mcp", label: "MCP" },
-  { href: "/models", label: "Модели" },
+  { href: "/api-access", label: "API" },
 ] as const;
 
 /** Tabs under the page title of the AI section pages. */

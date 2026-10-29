@@ -2,7 +2,7 @@
 // No React here, so it can be unit-tested (see nav.test.ts).
 
 export type NavKey =
-  | "chat" | "agents" | "mcp" | "models"
+  | "chat" | "models" | "agents" | "mcp" | "api"
   | "learn" | "stats" | "me"
   | "users" | "access" | "log";
 
@@ -26,9 +26,10 @@ export type NavGroup = {
 
 export const NAV: Record<NavKey, NavItem> = {
   chat: { key: "chat", label: "Чат", href: "/chat" },
+  models: { key: "models", label: "Модели", href: "/models" },
   agents: { key: "agents", label: "Агенты", href: "/agents" },
   mcp: { key: "mcp", label: "MCP", href: "/mcp" },
-  models: { key: "models", label: "Модели", href: "/models" },
+  api: { key: "api", label: "API", href: "/api-access" },
   learn: { key: "learn", label: "Обучение", href: "/", match: ["/courses"] },
   stats: { key: "stats", label: "Траты", href: "/stats" },
   me: { key: "me", label: "Прогресс", href: "/me" },
@@ -39,12 +40,15 @@ export const NAV: Record<NavKey, NavItem> = {
 
 export const NAV_GROUPS: NavGroup[] = [
   { title: "Основное", items: ["chat"] },
-  { title: "AI", items: ["agents", "mcp", "models"] },
+  { title: "AI", items: ["models", "agents", "mcp", "api"] },
   { title: "Семья", note: "(скрыто)", dim: true, items: ["learn", "stats", "me"] },
   { title: "Админ", adminOnly: true, items: ["users", "access", "log"] },
 ];
 
-export const DEFAULT_PINS: NavKey[] = ["chat", "agents", "mcp", "models"];
+export const DEFAULT_PINS: NavKey[] = ["chat", "models", "agents", "mcp", "api"];
+
+/** Earlier default menus: a browser still holding one exactly gets the current default. */
+const OLD_DEFAULT_PINS: NavKey[][] = [["chat", "agents", "mcp", "models"]];
 
 export const PINS_STORAGE_KEY = "portal.nav.pins.v1";
 
@@ -59,6 +63,7 @@ export function parsePins(raw: string | null | undefined): NavKey[] {
   try { data = JSON.parse(raw); } catch { return DEFAULT_PINS.slice(); }
   if (!Array.isArray(data)) return DEFAULT_PINS.slice();
   const pins = [...new Set(data.filter(isNavKey))];
+  if (OLD_DEFAULT_PINS.some((old) => old.length === pins.length && old.every((k, i) => k === pins[i]))) return DEFAULT_PINS.slice();
   return pins.length ? pins : DEFAULT_PINS.slice();
 }
 
