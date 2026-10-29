@@ -10,6 +10,7 @@ export function Modal({
   title,
   sub,
   wide,
+  editor,
   children,
 }: {
   open: boolean;
@@ -18,6 +19,8 @@ export function Modal({
   sub?: React.ReactNode;
   /** Wider dialog for forms with tabs and tables (agent, assistant). */
   wide?: boolean;
+  /** Editor window (agent): wide and of constant size; header, tabs and footer stay, the tab body scrolls. */
+  editor?: boolean;
   children: React.ReactNode;
 }) {
   const titleId = useId();
@@ -39,7 +42,7 @@ export function Modal({
   // portal: opened from a table row, it must not inherit the cell's layout (td.acts is right-aligned)
   return createPortal(
     <div className="mbg">
-      <div ref={ref} className={wide ? "modal wide" : "modal"} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div ref={ref} className={editor ? "modal wide editor" : wide ? "modal wide" : "modal"} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <button type="button" className="mclose" aria-label="Закрыть" onClick={onClose}>×</button>
         <h2 className="mtitle" id={titleId} style={sub ? undefined : { marginBottom: 18 }}>{title}</h2>
         {sub && <p className="msub">{sub}</p>}

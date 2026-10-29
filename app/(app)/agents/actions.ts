@@ -10,7 +10,8 @@ import { audit } from "@/lib/audit";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
 import { parseGuardrails } from "@/lib/agents/guardrails";
 
-export type FormState = { error?: string; ok?: string } | undefined;
+/** id — the saved agent, for «▶ Тест-запуск» right after saving. */
+export type FormState = { error?: string; ok?: string; id?: string } | undefined;
 
 async function ownAgentOrThrow(agentId: string, userId: string) {
   const agent = await prisma.agent.findUnique({ where: { id: agentId } });
@@ -63,7 +64,7 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   });
   const data = {
     name, modelId, enabled: formData.get("enabled") === "on", config: JSON.stringify(config),
-    instruction: String(formData.get("instruction") ?? "").trim().slice(0, 8000),
+    instruction: String(formData.get("instruction") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 8000), // forms send \r\n
     hitl: formData.get("hitl") === "none" ? "none" : "confirm",
     guardrails: JSON.stringify(guardrails),
     agentIds: JSON.stringify([...new Set(agentIds)]), mcpIds: JSON.stringify([...new Set(mcpIds)]), apis: JSON.stringify([...new Set(apis)]),
@@ -77,7 +78,7 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
     ? `Сохранены настройки агента «${saved.name}»${saved.enabled ? "" : " (выключен)"}${extra}`
     : `Создан агент «${saved.name}» (${t.label})${extra}`, user);
   revalidateAgent(saved.id);
-  return { ok: existing ? "Сохранено" : "Агент создан" };
+  return { ok: existing ? "Сохранено" : "Агент создан", id: saved.id };
 }
 
 /** Run an agent now (with a task for «Свой агент»); returns the run summary for a toast. */

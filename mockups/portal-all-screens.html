@@ -204,6 +204,27 @@
   .ntext { font-size: 12.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 9px; background: var(--card); line-height: 1.5; }
   .arrow { align-self: center; color: var(--muted); font-size: 22px; flex: 0 0 auto; }
 
+  /* agent window (no graph) */
+  .modal.wide { width: min(820px, 100%); height: min(700px, calc(93vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
+  .modal.wide .mfoot { margin-top: 12px; }
+  .mtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 0 0 16px; }
+  .mtabs button { font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 8px 13px; cursor: pointer; }
+  .mtabs button.on { color: var(--primary-dark); border-bottom-color: var(--primary); }
+  .apanel { flex: 1; min-height: 0; overflow: auto; padding-right: 2px; } .apanel[hidden] { display: none; }
+  .ed { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+  .ed textarea { width: 100%; min-height: 420px; resize: vertical; font-family: inherit; font-size: 13.5px; line-height: 1.55; }
+  .asec { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 7px; margin-bottom: 10px; background: var(--card); }
+  .asec .nlabel { margin: 0 0 7px; display: flex; align-items: center; gap: 6px; } .asec .nlabel .n { color: var(--ink); }
+  .npill .x { margin-left: 6px; color: var(--muted); cursor: pointer; font-weight: 700; } .npill .x:hover { color: var(--err); }
+  .npill.add { background: transparent; border-style: dashed; color: var(--primary-dark); cursor: pointer; } .npill.add:hover { border-color: var(--primary); }
+  .npill.on { color: var(--ok); background: var(--okbg); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 5px; }
+  .seg button { font-family: inherit; font-size: 12.5px; font-weight: 600; border: 0; background: var(--card); color: var(--muted); padding: 6px 11px; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); } .seg button.on { background: var(--primary-soft); color: var(--primary-dark); }
+  .yaml { width: 100%; min-height: 380px; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.5; white-space: pre; resize: vertical; }
+  .asec.pair { display: grid; grid-template-columns: 1fr auto; gap: 14px; } .asec .seg button, .asec .npill { white-space: nowrap; }
+  @media (max-width: 760px) { .ed { grid-template-columns: 1fr; } .ed textarea { min-height: 200px; } .modal.wide { height: calc(93vh - 16px); } }
+
   /* chat thread */
   .thread { display: flex; flex-direction: column; gap: 10px; }
   .msg { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; }
@@ -285,9 +306,9 @@
     .cwrap { grid-template-columns: 1fr; }
     .hist { display: none; position: absolute; top: 0; bottom: 0; left: 0; width: min(300px, 86vw); z-index: 5; box-shadow: var(--shadow-pop); } .hist.open { display: block; }
   }
-  .mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 16px; }
+  .mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: start center; padding: 7vh 16px 16px; }
   .mbg[hidden] { display: none; }
-  .modal { position: relative; width: min(520px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
+  .modal { position: relative; width: min(520px, 100%); max-height: calc(93vh - 16px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
   .mtitle { font-size: 18px; font-weight: 700; margin: 0 0 6px; padding-right: 36px; } .msub { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0 0 18px; }
   .mclose { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
   .mclose:hover { background: var(--soft); color: var(--ink); }
@@ -307,6 +328,7 @@
       <optgroup label="Приложение">
         <option value="chat" selected>Чат с агентом</option>
         <option value="agents">Агенты — список</option>
+        <option value="agentwin">Агент — окно (редактор, без графа)</option>
         <option value="constructor">Конструктор агента (граф)</option>
         <option value="agent">Агент — история</option>
         <option value="mcp">MCP</option>
@@ -489,6 +511,74 @@
         ${agentRow(3,'Документы по политике','Проверяет документ по регламенту','GLM-4',['Документы'],'черновик','mut','—')}
         ${agentRow(4,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['1С'],'не настроен','wait','—')}
       </tbody></table></div>`),
+
+    agentwin: () => SCREENS.agents().replace('</tbody></table></div>', `</tbody></table></div>
+      <div class="mbg" id="agentWin">
+        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle">
+          <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
+          <h2 class="mtitle" id="awTitle" style="margin-bottom:14px">Изменить агента · Сводка почты</h2>
+          <div class="mtabs" role="tablist"><button class="on" data-atab="ed">Редактор</button><button data-atab="yaml">YAML</button><button data-atab="set">Настройки</button></div>
+
+          <div class="apanel" data-apanel="ed">
+            <div class="ed">
+              <div>
+                <div class="nlabel">Системная инструкция</div>
+                <textarea>Составь сводку новых писем: от кого, о чём, что требует ответа.
+Коротко, списком, важное — первым.</textarea>
+              </div>
+              <div>
+                <div class="asec pair">
+                  <div><div class="nlabel">HITL · запуск из чата</div><div class="seg" data-seg><button>Подтверждать</button><button class="on">Сразу</button></div></div>
+                  <div><div class="nlabel">Модель</div><span class="npill">🧠 GLM-4 ▾</span></div></div>
+                <div class="asec"><div class="nlabel">MCP-инструменты</div>
+                  <span class="npill mcp">📧 Моя почта<span class="x" title="Убрать">×</span></span><span class="npill add">+ Добавить</span></div>
+                <div class="asec"><div class="nlabel">Агенты · может запускать</div>
+                  <span class="npill">Чеки из почты<span class="x" title="Убрать">×</span></span><span class="npill add">+ Добавить</span></div>
+                <div class="asec"><div class="nlabel">API</div><span class="npill off">нет</span><span class="npill add">+ Добавить</span></div>
+                <div class="asec"><div class="nlabel">Гардрейлы</div>
+                  <span class="npill on" data-tgl>✓ Маскирование ПДн</span><span class="npill">Лимит шагов: 5 ▾</span>
+                  <div style="margin-top:2px"><span class="npill">⛔ политика<span class="x" title="Убрать">×</span></span><span class="npill add">+ Тема</span></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="apanel" data-apanel="yaml" hidden>
+            <textarea class="yaml" spellcheck="false" style="min-height:440px"># AI Portal — агент. Модель, подключения и агенты — по названию; пароли и токены сюда не попадают.
+version: 1
+name: Сводка почты
+type: custom
+enabled: true
+model: GLM-4
+instruction: |-
+  Составь сводку новых писем: от кого, о чём, что требует ответа.
+  Коротко, списком, важное — первым.
+guardrails:
+  maskPii: true
+  maxSteps: 5
+  forbiddenTopics:
+    - политика
+hitl: none
+mcp:
+  - Моя почта
+agents:
+  - Чеки из почты
+api: []</textarea>
+            <div class="wrapgap" style="margin-top:10px"><button class="btn ghost sm">Скачать .yaml</button><button class="btn ghost sm">Загрузить файл</button>
+              <span class="hint" style="margin:0;align-self:center">Правка здесь сразу меняет «Редактор» и «Настройки».</span></div>
+          </div>
+
+          <div class="apanel" data-apanel="set" hidden>
+            <div class="grid c2">
+              <div class="field"><label>Название</label><input value="Сводка почты"></div>
+              <div class="field"><label>Тип агента</label><input value="Свой агент" disabled><div class="hint">Работает по вашей инструкции с выбранными инструментами</div></div>
+            </div>
+            <label class="toggle"><input type="checkbox" checked> <span>Агент включён</span></label>
+            <div class="hint" style="margin-top:18px">У «Чеков из почты» здесь же: за сколько дней смотреть, макс. писем за прогон, фильтр по отправителю.</div>
+          </div>
+
+          <div class="mfoot"><button class="btn ghost" data-go="agent">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-toast="Сохранено">Сохранить</button></div>
+        </div>
+      </div>`),
 
     agent: () => appShell(`
       <div class="narrow">
@@ -697,7 +787,7 @@
   };
   function ibtn(icon, title, extra) { return `<button type="button" class="ibtn ${icon === 'del' ? 'del' : ''}" title="${title}" aria-label="${title}" ${extra || ''}>${IC[icon]}</button>`; }
   function tbar(ph) { return `<div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" data-search placeholder="${ph || 'Поиск по названию…'}"></label><button type="button" class="btn dashed">+ Фильтр</button></div>`; }
-  function agentRow(id,name,desc,model,mcp,status,cls,run){ return `<tr><td>#${id}</td><td><div class="b link" data-go="agent">${name}</div><div class="sub">${desc}</div></td><td style="white-space:nowrap">${model}</td><td>${mcp.join(', ')}</td><td><span class="st ${cls}">${status}</span></td><td class="muted">${run}</td><td class="acts">${ibtn('run','Запустить')}${ibtn('edit','Конструктор','data-go="constructor"')}${ibtn('del','Удалить')}</td></tr>`; }
+  function agentRow(id,name,desc,model,mcp,status,cls,run){ return `<tr><td>#${id}</td><td><div class="b link" data-go="agent">${name}</div><div class="sub">${desc}</div></td><td style="white-space:nowrap">${model}</td><td>${mcp.join(', ')}</td><td><span class="st ${cls}">${status}</span></td><td class="muted">${run}</td><td class="acts">${ibtn('run','Запустить')}${ibtn('edit','Изменить','data-go="agentwin"')}${ibtn('del','Удалить')}</td></tr>`; }
   function modelRow(id,name,url,agents,def){ return `<tr><td>#${id}</td><td><span class="b">${name}</span>${def ? '<span class="st info" style="margin-left:8px">по умолчанию</span>' : ''}</td><td class="muted">${url}</td><td>${agents}</td><td class="stcell"><span class="st ok">подключена</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Изменить')}${ibtn('del','Удалить', def ? 'disabled' : '')}</td></tr>`; }
   function mcpRow(id,name,desc,tools,agents,status,cls){ return `<tr><td>#${id}</td><td><div class="b">${name}</div><div class="sub">${desc}</div></td><td><span title="${tools.join(', ')}">${tools.length}</span></td><td>${agents}</td><td class="stcell"><span class="st ${cls}">${status}</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Настроить')}${ibtn('del','Удалить')}</td></tr>`; }
   function histGroup(title, items) { return `<div class="hgroup"><button type="button" class="hhead" data-hgroup aria-expanded="true">${title}<span class="chev">▾</span></button><div class="hitems">${items.map(([t, on]) => `<button type="button" class="hitem ${on ? 'on' : ''}" data-hitem>${t}</button>`).join('')}</div></div>`; }
@@ -733,7 +823,7 @@
     nav.querySelectorAll('a').forEach(a => a.classList.toggle('on', a.dataset.go === current || a.dataset.key === navKeyFor(current) || (!!a.dataset.sec && a.dataset.sec === sec)));
   }
   // screens without their own menu item belong to their parent's item
-  const SCREEN_KEY = { agent: 'agents', constructor: 'agents', course: 'learn', lesson: 'learn' };
+  const SCREEN_KEY = { agent: 'agents', agentwin: 'agents', constructor: 'agents', course: 'learn', lesson: 'learn' };
   const PIN = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"/><path d="M9 3h6l-1 6 4 4v2H6v-2l4-4z"/></svg>';
   function navKeyFor(screen) { return Object.keys(NAV).find(k => NAV[k].go === screen) || SCREEN_KEY[screen]; }
   function renderNav() {
@@ -794,7 +884,7 @@
     if (dragFrom !== 'nav' || !dragKey || pins.length <= 1) return;
     pins = pins.filter(k => k !== dragKey); savePins(); renderNav();
   });
-  const navSection = { chat:'chat', agents:'agents', agent:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
+  const navSection = { chat:'chat', agents:'agents', agent:'agents', agentwin:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
 
   function render(name) {
     if (!SCREENS[name]) name = 'chat';
@@ -856,11 +946,19 @@
     const ta = view.querySelector('.ccomp textarea');
     ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
   }
+  function wireAgentWin() {
+    view.querySelectorAll('[data-atab]').forEach((b) => b.addEventListener('click', () => {
+      view.querySelectorAll('[data-atab]').forEach((x) => x.classList.toggle('on', x === b));
+      view.querySelectorAll('[data-apanel]').forEach((pn) => { pn.hidden = pn.dataset.apanel !== b.dataset.atab; });
+    }));
+    view.querySelectorAll('[data-seg] button').forEach((b) => b.addEventListener('click', () => b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b))));
+    view.querySelectorAll('[data-tgl]').forEach((b) => b.addEventListener('click', () => { const on = b.classList.toggle('on'); b.classList.toggle('off', !on); b.textContent = (on ? '✓ ' : '') + 'Маскирование ПДн'; }));
+  }
   function wireTables() {
+    wireAgentWin();
     view.querySelectorAll('[data-open]').forEach((btn) => btn.addEventListener('click', () => {
       const m = document.getElementById(btn.dataset.open); m.hidden = false; const i = m.querySelector('input'); if (i) i.focus();
     }));
-    view.querySelectorAll('.mbg').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m) m.hidden = true; }));
     view.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { b.closest('.mbg').hidden = true; }));
     view.querySelectorAll('[data-toast]').forEach((b) => b.addEventListener('click', () => showSaved(b.dataset.toast)));
     view.querySelectorAll('[data-search]').forEach((inp) => inp.addEventListener('input', () => {

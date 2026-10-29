@@ -335,8 +335,9 @@ tr.off td { opacity: .55; }
 .tabs a.on { color: var(--primary-dark); border-bottom-color: var(--primary); }
 
 /* ---------- modal + toast ---------- */
-.mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 16px; }
-.modal { position: relative; width: min(520px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
+/* top edge pinned: the window does not jump when its tabs change height */
+.mbg { position: fixed; inset: 0; z-index: 40; background: rgba(20,16,40,.38); backdrop-filter: blur(3px); display: grid; place-items: start center; padding: 7vh 16px 16px; }
+.modal { position: relative; width: min(520px, 100%); max-height: calc(93vh - 16px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
 .mtitle { font-size: 18px; font-weight: 700; margin: 0 0 6px; padding-right: 36px; }
 .msub { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0 0 18px; }
 .mclose { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
@@ -489,3 +490,43 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 /* agent window: YAML tab */
 .yaml-edit { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; line-height: 1.5; min-height: 300px; resize: vertical; white-space: pre; tab-size: 2; }
 .yaml-warn { margin: 10px 0 0; font-size: 13px; }
+
+/* agent editor window: constant size, only the tab body scrolls (mockup «Агент — окно») */
+.modal.editor { width: min(820px, 100%); height: min(700px, calc(93vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
+.modal.editor > form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.modal.editor .mtabs { margin-top: 0; }
+.modal.editor .mfoot { margin-top: 12px; }
+.apanel { flex: 1; min-height: 0; overflow: auto; padding-right: 2px; }
+.apanel[hidden] { display: none; }
+.ed { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+.ed textarea { min-height: 360px; resize: vertical; font-size: 13.5px; line-height: 1.55; }
+.ed .builtin { border: 1px dashed var(--line); border-radius: 12px; padding: 14px; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.nlabel { font-size: 10px; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 0 7px; display: block; }
+.asec { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 7px; margin-bottom: 10px; background: var(--card); }
+.asec.pair { display: grid; grid-template-columns: 1fr auto; gap: 14px; }
+.chips { display: flex; flex-wrap: wrap; align-items: center; }
+.npill { display: inline-flex; align-items: center; white-space: nowrap; font: inherit; font-size: 12px; font-weight: 600; border: 1px solid var(--line); border-radius: 7px; padding: 4px 8px; margin: 0 5px 5px 0; color: var(--ink); background: var(--soft); line-height: 1.3; }
+.npill.off { color: var(--muted); text-decoration: line-through; }
+.npill.mcp { color: var(--primary-dark); background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 30%, transparent); }
+.npill.on { color: var(--ok); background: var(--okbg); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+button.npill { cursor: pointer; }
+.npill.add { background: transparent; border-style: dashed; color: var(--primary-dark); }
+.npill.add:hover { border-color: var(--primary); }
+.npill .x { border: 0; background: none; padding: 0 0 0 6px; font: inherit; font-weight: 700; color: var(--muted); cursor: pointer; line-height: 1; }
+.npill .x:hover { color: var(--err); }
+select.npill { width: auto; padding-right: 22px; }
+.chiphint { margin: 0 0 5px; }
+.chipadd { flex-basis: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 4px; margin: 0 0 6px; max-height: 190px; overflow: auto; background: var(--card); }
+.chipadd button { display: block; width: 100%; text-align: left; font: inherit; font-size: 13px; color: var(--ink); background: none; border: 0; border-radius: 8px; padding: 6px 9px; cursor: pointer; }
+.chipadd button:hover { background: var(--soft); }
+.chipadd .sub { display: block; }
+.chipinput { width: 160px; font-size: 12.5px; padding: 4px 8px; margin: 0 5px 5px 0; border-radius: 7px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-bottom: 5px; }
+.seg button { font: inherit; font-size: 12.5px; font-weight: 600; border: 0; background: var(--card); color: var(--muted); padding: 6px 11px; cursor: pointer; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary-dark); }
+@media (max-width: 760px) {
+  .ed { grid-template-columns: 1fr; }
+  .ed textarea { min-height: 200px; }
+  .modal.editor { height: calc(93vh - 16px); }
+}
