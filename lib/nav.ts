@@ -41,7 +41,7 @@ export const NAV: Record<NavKey, NavItem> = {
 export const NAV_GROUPS: NavGroup[] = [
   { title: "Основное", items: ["chat"] },
   { title: "AI", items: ["agents", "models", "mcp", "api"] },
-  { title: "Семья", note: "(скрыто)", dim: true, items: ["learn", "stats", "me"] },
+  { title: "Личное", note: "(скрыто)", dim: true, items: ["learn", "stats", "me"] },
   { title: "Админ", adminOnly: true, items: ["users", "access", "log"] },
 ];
 

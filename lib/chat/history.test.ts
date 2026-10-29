@@ -37,7 +37,7 @@ test("newest first inside a group", () => {
 test("fallbackTitle: short text as is, long text cut on a word with an ellipsis", () => {
   assert.equal(fallbackTitle("  Собери   чеки\nза октябрь "), "Собери чеки за октябрь");
   assert.equal(fallbackTitle(""), "Новый чат");
-  const long = fallbackTitle("Помоги составить план покупок на неделю для семьи из четырёх человек с учётом бюджета");
+  const long = fallbackTitle("Помоги составить план покупок на неделю для четырёх человек с учётом бюджета");
   assert.ok(long.length <= 60, long);
   assert.ok(long.endsWith("…"));
   assert.ok(!long.includes("бюджета"));

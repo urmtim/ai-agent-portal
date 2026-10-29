@@ -10,7 +10,7 @@ const plex = IBM_Plex_Sans({
 
 export const metadata: Metadata = {
   title: "AI Portal",
-  description: "Семейный хаб: обучение, траты, ИИ-агенты",
+  description: "AI Portal: ассистент, агенты, обучение",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
