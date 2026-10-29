@@ -1,9 +1,7 @@
-import NextAuth from "next-auth";
-import { authConfig } from "./auth.config";
+// Next.js 16 "proxy" convention (formerly middleware). It runs on Node.js, so it uses the full
+// auth from auth.ts: the session is re-checked against the DB and the /admin gate sees the current role.
+import { auth } from "./auth";
 
-const { auth } = NextAuth(authConfig);
-
-// Next.js 16 "proxy" convention (formerly middleware).
 export default auth;
 
 export const config = {

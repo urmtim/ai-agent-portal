@@ -12,6 +12,7 @@ services:
       DATABASE_URL: file:/data/portal.db
       APP_URL: http://localhost:3080
       AUTH_TRUST_HOST: "true"
+      AUTH_SESSION_COOKIE: portal-docker.session-token # not shared with npm run dev on the same host
     volumes:
       - portal-data:/data
 

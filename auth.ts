@@ -12,6 +12,20 @@ const credentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    // Server-side only (needs Prisma): every session read re-checks the user in this DB.
+    // Deleted / disabled / unknown here (e.g. a cookie from another portal on the same host) → no session;
+    // the role is taken fresh, so changes apply without signing in again.
+    async jwt(params) {
+      const token = authConfig.callbacks.jwt(params);
+      if (params.user) return token;
+      const user = token.id ? await prisma.user.findUnique({ where: { id: token.id as string }, select: { status: true, role: true } }) : null;
+      if (!user || user.status !== "ACTIVE") return null;
+      token.role = user.role;
+      return token;
+    },
+  },
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },

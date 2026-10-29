@@ -8,6 +8,16 @@ export const authConfig = {
     signIn: "/login",
   },
   session: { strategy: "jwt" },
+  // Own cookie name per instance (AUTH_SESSION_COOKIE): browsers share cookies across ports,
+  // so the Docker copy on :3080 and `npm run dev` on :3000 would otherwise overwrite each other.
+  ...(process.env.AUTH_SESSION_COOKIE && {
+    cookies: {
+      sessionToken: {
+        name: process.env.AUTH_SESSION_COOKIE,
+        options: { httpOnly: true, sameSite: "lax" as const, path: "/", secure: process.env.APP_URL?.startsWith("https://") ?? false },
+      },
+    },
+  }),
   callbacks: {
     // Runs in the middleware for every protected route.
     authorized({ auth, request: { nextUrl } }) {
