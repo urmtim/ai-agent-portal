@@ -13,6 +13,7 @@ type Props = {
   cfg: AssistantConfig;
   models: { id: string; name: string }[];
   defaultModel: string;
+  defaultModelId: string;
   agents: { id: string; name: string; desc: string; enabled: boolean }[];
   connections: { id: string; name: string; desc: string }[];
 };
@@ -20,7 +21,7 @@ type Props = {
 const ON = "включён", OFF = "выключен";
 type Tab = "general" | "agents" | "mcp" | "apis";
 
-function AssistantForm({ cfg, models, defaultModel, agents, connections, onDone }: Props & { onDone: () => void }) {
+function AssistantForm({ cfg, models, defaultModelId, agents, connections, onDone }: Props & { onDone: () => void }) {
   const toast = useToast();
   const [state, onSubmit, pending] = useFormAction(saveAssistant, undefined);
   useEffect(() => { if (state?.ok) { toast(state.ok); onDone(); } }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -43,8 +44,8 @@ function AssistantForm({ cfg, models, defaultModel, agents, connections, onDone 
       <div className="mpanel" hidden={tab !== "general"}>
         <div className="field">
           <label htmlFor="as-model">Модель</label>
-          <select id="as-model" name="modelId" defaultValue={cfg.modelId ?? ""}>
-            <option value="">По умолчанию — {defaultModel}</option>
+          <select id="as-model" name="modelId" defaultValue={cfg.modelId ?? defaultModelId} disabled={models.length === 0}>
+            {models.length === 0 && <option value="">Моделей нет — добавьте в разделе «Модели»</option>}
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
           <div className="hint">На ней ассистент отвечает во всех чатах.</div>

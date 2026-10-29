@@ -14,6 +14,7 @@ type ChatOptions = {
   temperature?: number;
   json?: boolean; // ask the endpoint for a JSON object (best-effort)
   modelId?: string | null; // agent's model; null/undefined → default
+  ownerId: string; // models are personal: only this user's models are considered
 };
 
 type Endpoint = { baseUrl: string; model: string; token?: string };
@@ -23,15 +24,15 @@ function envModel(): ModelChoice | null {
   return baseUrl && model ? { source: "env", name: model, baseUrl, model, token: process.env.LLM_API_KEY || undefined } : null;
 }
 
-/** The model a call should use, or null when no LLM is configured anywhere. */
-export async function resolveModel(agentModelId?: string | null): Promise<ModelChoice | null> {
-  const rows = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" } });
+/** The model a call should use among the owner's models (then .env), or null when there is none. */
+export async function resolveModel(ownerId: string, agentModelId?: string | null): Promise<ModelChoice | null> {
+  const rows = await prisma.llmModel.findMany({ where: { ownerId }, orderBy: { createdAt: "asc" } });
   return pickModel(rows, agentModelId ?? null, envModel());
 }
 
-/** Is any LLM available (registry or .env)? */
-export async function llmAvailable(): Promise<boolean> {
-  return !!(await resolveModel());
+/** Does this user have any LLM (own models or .env)? */
+export async function llmAvailable(ownerId: string): Promise<boolean> {
+  return !!(await resolveModel(ownerId));
 }
 
 /** Name of the model in .env when it is the one in use (registry empty), for the Models page. */
@@ -60,7 +61,7 @@ async function chatCompletions(ep: Endpoint, body: object, signal?: AbortSignal)
 }
 
 export async function llmChat(opts: ChatOptions): Promise<string> {
-  const choice = await resolveModel(opts.modelId);
+  const choice = await resolveModel(opts.ownerId, opts.modelId);
   if (!choice) throw new Error("LLM не настроена: добавьте модель в разделе «Модели» или задайте LLM_BASE_URL и LLM_MODEL в .env");
   const ep = await endpointFor(choice);
 

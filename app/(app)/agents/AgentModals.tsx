@@ -20,6 +20,8 @@ export type AgentEditData = {
 export type AgentChoices = {
   models: { id: string; name: string }[];
   defaultModel: string;
+  /** The owner's default model, preselected when nothing was chosen yet. */
+  defaultModelId: string;
   agents: { id: string; name: string; desc: string; enabled: boolean }[];
   /** The user's MCP connections (section MCP). */
   connections: { id: string; name: string; desc: string }[];
@@ -29,7 +31,7 @@ const ON = "включён", OFF = "выключен";
 type Tab = "general" | "agents" | "mcp" | "apis";
 
 /** The agent window: «Общее · Агенты · MCP · API». Creates when `a` is missing. */
-function AgentForm({ a, models, defaultModel, agents, connections, onDone }: { a?: AgentEditData; onDone: () => void } & AgentChoices) {
+function AgentForm({ a, models, defaultModelId, agents, connections, onDone }: { a?: AgentEditData; onDone: () => void } & AgentChoices) {
   const toast = useToast();
   const [state, onSubmit, pending] = useFormAction(saveAgent, undefined);
   useEffect(() => { if (state?.ok) { toast(state.ok); onDone(); } }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -70,8 +72,8 @@ function AgentForm({ a, models, defaultModel, agents, connections, onDone }: { a
         </div>
         <div className="field">
           <label htmlFor="ag-model">Модель</label>
-          <select id="ag-model" name="modelId" defaultValue={a?.modelId ?? ""}>
-            <option value="">По умолчанию — {defaultModel}</option>
+          <select id="ag-model" name="modelId" defaultValue={a?.modelId ?? defaultModelId} disabled={models.length === 0}>
+            {models.length === 0 && <option value="">Моделей нет — добавьте в разделе «Модели»</option>}
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         </div>

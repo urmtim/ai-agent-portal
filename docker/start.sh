@@ -7,4 +7,5 @@ fresh=0
 # adds new tables/columns; refuses changes that would drop data
 node_modules/.bin/prisma db push --skip-generate
 if [ "$fresh" = 1 ]; then node_modules/.bin/tsx prisma/seed.ts; fi
+node_modules/.bin/tsx prisma/fix-data.ts
 exec node_modules/.bin/next start -p 3000

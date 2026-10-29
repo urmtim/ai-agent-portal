@@ -6,10 +6,10 @@ export const NO_MODEL_MESSAGE = "LLM не настроена: добавьте �
 
 /**
  * The chat's model as an AI SDK language model (any OpenAI-compatible endpoint).
- * Same choice as the rest of the portal: chat's own → default → .env. Null when none.
+ * Same choice as the rest of the portal, among the owner's models: given → owner's default → .env. Null when none.
  */
-export async function chatModel(modelId?: string | null) {
-  const choice = await resolveModel(modelId);
+export async function chatModel(ownerId: string, modelId?: string | null) {
+  const choice = await resolveModel(ownerId, modelId);
   if (!choice) return null;
   const ep = await endpointFor(choice);
   const provider = createOpenAICompatible({ name: "portal", baseURL: ep.baseUrl.replace(/\/$/, ""), apiKey: ep.token });

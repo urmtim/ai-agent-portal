@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   const assistant = await loadAssistant(user.id);
   let llm: Awaited<ReturnType<typeof chatModel>>;
   try {
-    llm = await chatModel(assistant.modelId); // the chat is the assistant: its model, else the default
+    llm = await chatModel(user.id, assistant.modelId); // the chat is the assistant: its model, else the default
   } catch (e) {
     return plain(errorText(e), 400);
   }

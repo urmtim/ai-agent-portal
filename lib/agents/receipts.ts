@@ -74,6 +74,7 @@ export async function runReceiptsAgent(
     let data: Extracted;
     try {
       data = await llmJson<Extracted>({
+        ownerId,
         modelId,
         system: SYSTEM,
         user: [

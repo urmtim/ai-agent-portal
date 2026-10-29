@@ -41,6 +41,7 @@ model User {
   auditLogs   AuditLog[]
   assistant   Assistant?
   connections McpConnection[]
+  models      LlmModel[]
 }
 
 // One-time invite / password-set link sent by email.
@@ -110,6 +111,8 @@ enum AgentRunStatus {
 // An OpenAI-compatible LLM endpoint. Exactly one is the default (kept by code).
 model LlmModel {
   id        String    @id @default(cuid())
+  ownerId   String? // personal model; models made before this had none and go to the first admin (prisma/fix-data.ts)
+  owner     User?     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
   baseUrl   String // up to /v1
   model     String // model id sent to the endpoint

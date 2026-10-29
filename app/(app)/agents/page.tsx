@@ -39,12 +39,13 @@ export default async function AgentsPage() {
   // agents that read mail but have no «Почта» connection on their MCP tab
   const noMail = agents.filter((a) => AGENT_TYPES[a.type].mcp.includes("Почта") && !agentEditData(a).mcpIds.some((id) => mailIds.includes(id)));
   const mailOk = noMail.length === 0;
-  const llmOk = await llmAvailable();
-  const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
+  const llmOk = await llmAvailable(user.id);
+  const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
   const choices = {
     models: models.map(({ id, name }) => ({ id, name })),
     defaultModel: model,
+    defaultModelId: (models.find((m) => m.isDefault) ?? models[0])?.id ?? "",
     agents: agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc, enabled: a.enabled })),
     connections: conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind })),
   };
