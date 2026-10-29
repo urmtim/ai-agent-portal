@@ -17,6 +17,7 @@ const fields = z.object({
   baseUrl: z.string().trim().regex(/^https?:\/\/\S+$/i, "Адрес должен начинаться с http:// или https://"),
   model: z.string().trim().min(1, "Укажите модель").max(120),
   token: z.string().trim().max(4000),
+  contextTokens: z.coerce.number().int("Контекст — от 2 000 до 2 000 000 токенов").min(2000, "Контекст — от 2 000 до 2 000 000 токенов").max(2000000, "Контекст — от 2 000 до 2 000 000 токенов"),
 });
 
 function parse(formData: FormData) {
@@ -26,6 +27,7 @@ function parse(formData: FormData) {
     baseUrl: formData.get("baseUrl") ?? "",
     model: formData.get("model") ?? "",
     token: formData.get("token") ?? "",
+    contextTokens: formData.get("contextTokens") || 32000, // «Проверить» and old forms may not send it
   });
 }
 
@@ -39,11 +41,11 @@ export async function saveModel(_prev: FormState, formData: FormData): Promise<F
   const user = await requireUser();
   const p = parse(formData);
   if (!p.success) return { error: p.error.issues[0]?.message ?? "Проверьте поля" };
-  const { id, name, baseUrl, model, token } = p.data;
+  const { id, name, baseUrl, model, token, contextTokens } = p.data;
   const makeDefault = formData.get("isDefault") === "on";
 
   const tokenEnc = token ? encryptSecret(token) : undefined; // undefined → unchanged
-  const data = { name: name || model, baseUrl: baseUrl.replace(/\/$/, ""), model, ...(tokenEnc !== undefined ? { tokenEnc } : {}) };
+  const data = { name: name || model, baseUrl: baseUrl.replace(/\/$/, ""), model, contextTokens, ...(tokenEnc !== undefined ? { tokenEnc } : {}) };
 
   // models are personal: only the owner edits, and «по умолчанию» is per owner
   if (id && !(await prisma.llmModel.findFirst({ where: { id, ownerId: user.id } }))) return { error: "Такой модели нет — обновите страницу" };

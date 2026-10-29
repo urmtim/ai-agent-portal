@@ -13,7 +13,7 @@ export async function chatModel(ownerId: string, modelId?: string | null) {
   if (!choice) return null;
   const ep = await endpointFor(choice);
   const provider = createOpenAICompatible({ name: "portal", baseURL: ep.baseUrl.replace(/\/$/, ""), apiKey: ep.token });
-  return { model: provider.chatModel(ep.model), token: ep.token };
+  return { model: provider.chatModel(ep.model), token: ep.token, contextTokens: choice.contextTokens };
 }
 
 /** Error text for the browser, with the model token cut out. */

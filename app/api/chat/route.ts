@@ -16,6 +16,8 @@ import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
 import { chatTools } from "@/lib/chat/tools";
 import { loadAssistant } from "@/lib/assistant";
 import { audit } from "@/lib/audit";
+import { estimateTokens, lastUserIndex, planSummary, summaryInput, trimToolResults } from "@/lib/chat/context";
+import { summarizeChat } from "@/lib/chat/summarize";
 
 // One chat turn: the browser sends the whole history (useChat), we check it,
 // save it, stream the model's answer with tools and save again with the answer.
@@ -96,10 +98,30 @@ export async function POST(req: Request) {
     }
   }
 
+  // ---- long chats: old tool results in short form; the start retold once the history nears the context ----
+  const base = instructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null);
+  let summary = chat?.summary ?? "", upto = chat?.summaryUpto ?? 0;
+  if (upto > 0 && (upto > messages.length || messages[upto - 1]?.id !== chat?.summaryLastId)) { summary = ""; upto = 0; } // history edited
+  const trimmed = trimToolResults(messages, lastUserIndex(messages));
+  const fixedTokens = estimateTokens(base + summary) + activeTools.reduce((n, k) => n + estimateTokens(tools[k].description ?? "") + 150, 0);
+  const cut = planSummary({ messages: trimmed, summaryUpto: upto, budget: llm.contextTokens, fixedTokens });
+  if (cut > upto) {
+    try {
+      summary = await summarizeChat(llm.model, summary, summaryInput(trimmed.slice(upto, cut)));
+      upto = cut;
+      await audit("chat", `История чата сжата: пересказано сообщений — ${cut}`, user, "чат");
+    } catch (e) {
+      console.error("chat summary failed:", errorText(e, llm.token)); // answer anyway, with the old summary
+    }
+  }
+  if (summary !== (chat?.summary ?? "") || upto !== (chat?.summaryUpto ?? 0)) { // the row exists: saved above
+    await prisma.chat.update({ where: { id }, data: { summary, summaryUpto: upto, summaryLastId: upto ? messages[upto - 1].id : "" } });
+  }
+
   const result = streamText({
     model: llm.model,
-    instructions: instructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null),
-    messages: await convertToModelMessages(messages, { tools }),
+    instructions: summary ? `${base}\n\nКраткое содержание начала разговора (старые сообщения скрыты):\n${summary}` : base,
+    messages: await convertToModelMessages(trimmed.slice(upto), { tools }),
     tools,
     activeTools,
     toolApproval: approval,

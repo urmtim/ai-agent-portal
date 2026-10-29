@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithApprovalResponses, type UIMessage } from "ai";
 import { ICONS, IconButton } from "@/components/ui/icons";
@@ -19,10 +19,12 @@ function suggestions(a: ChatScreenData["assistant"]): string[] {
   return out.length ? out : ["Что ты умеешь?", "Помоги составить план на неделю"];
 }
 
-export function ChatThread({ chatId, title, initialMessages, models, envModel, agents, assistant, histHidden, onToggleHist, onSaved }: {
+export function ChatThread({ chatId, title, initialMessages, summaryAfter, models, envModel, agents, assistant, histHidden, onToggleHist, onSaved }: {
   chatId: string;
   title: string;
   initialMessages: UIMessage[];
+  /** Id of the last message the model gets only as a retelling (long chats); a line is drawn after it. */
+  summaryAfter?: string;
   models: ModelOption[];
   envModel: string | null;
   agents: AgentInfo[];
@@ -121,12 +123,13 @@ export function ChatThread({ chatId, title, initialMessages, models, envModel, a
           </div>
         ) : (
           <div className="cthread">
-            {messages.map((m) => {
+            {messages.map((m, idx) => {
               const text = messageText(m);
               if (m.role === "user") {
+                const line = summaryAfter && idx > 0 && messages[idx - 1].id === summaryAfter && <div className="csumline">Выше — пересказано для модели</div>;
                 if (editing?.id === m.id) {
                   return (
-                    <div className="cmsg u" key={m.id}>
+                    <Fragment key={m.id}>{line}<div className="cmsg u">
                       <div className="cedit">
                         <textarea aria-label="Изменить сообщение" value={editing.text} autoFocus
                           onChange={(e) => setEditing({ id: m.id, text: e.target.value })}
@@ -139,17 +142,17 @@ export function ChatThread({ chatId, title, initialMessages, models, envModel, a
                           <button type="button" className="btn primary sm" onClick={saveEdit}>Отправить</button>
                         </div>
                       </div>
-                    </div>
+                    </div></Fragment>
                   );
                 }
                 return (
-                  <div className="cmsg u" key={m.id}>
+                  <Fragment key={m.id}>{line}<div className="cmsg u">
                     <div className="cub">{text}</div>
                     <div className="macts">
                       <IconButton icon="copy" title="Копировать" onClick={() => copy(text)} />
                       <IconButton icon="edit" title="Изменить" disabled={busy} onClick={() => setEditing({ id: m.id, text })} />
                     </div>
-                  </div>
+                  </div></Fragment>
                 );
               }
               const isLast = m.id === lastAssistant?.id;

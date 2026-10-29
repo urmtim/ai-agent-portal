@@ -26,8 +26,8 @@ function setHistShown(shown: boolean) {
 }
 
 /** The chat page from the mockup: history on the left, the thread on the right. */
-export function ChatScreen({ chats: initialChats, models, envModel, agents, assistant, chatId, saved, title: initialTitle, initialMessages }:
-  ChatScreenData & { chatId: string; saved: boolean; title: string; initialMessages: UIMessage[] }) {
+export function ChatScreen({ chats: initialChats, models, envModel, agents, assistant, chatId, saved, title: initialTitle, initialMessages, summaryAfter }:
+  ChatScreenData & { chatId: string; saved: boolean; title: string; initialMessages: UIMessage[]; summaryAfter?: string }) {
   const router = useRouter();
   const toast = useToast();
   const [chats, setChats] = useState(initialChats);
@@ -76,7 +76,7 @@ export function ChatScreen({ chats: initialChats, models, envModel, agents, assi
           toast("Чат удалён");
           if (id === chatId) router.push("/chat");
         }} />
-      <ChatThread chatId={chatId} title={title} initialMessages={initialMessages}
+      <ChatThread chatId={chatId} title={title} initialMessages={initialMessages} summaryAfter={summaryAfter}
         models={models} envModel={envModel} agents={agents} assistant={assistant} histHidden={histHidden} onSaved={onSaved}
         onToggleHist={() => {
           if (window.matchMedia("(max-width: 760px)").matches) setHistOpen((o) => !o);

@@ -119,6 +119,7 @@ model LlmModel {
   model     String // model id sent to the endpoint
   tokenEnc  String? // AES-GCM encrypted API token (lib/secret.ts); never sent to the browser
   isDefault Boolean   @default(false)
+  contextTokens Int   @default(32000) // how much the model keeps in mind; long chats get summarized at 70 % (lib/chat/context.ts)
   checkedAt DateTime?
   checkOk   Boolean?
   checkMsg  String    @default("")
@@ -199,6 +200,9 @@ model Chat {
   pinned    Boolean   @default(false)
   archived  Boolean   @default(false)
   messages  String    @default("[]") // JSON UIMessage[] (AI SDK)
+  summary   String    @default("") // the model's retelling of the first summaryUpto messages (long chats)
+  summaryUpto Int     @default(0)
+  summaryLastId String @default("") // id of the last retold message: when it moves, the summary is stale
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

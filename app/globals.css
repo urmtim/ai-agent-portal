@@ -530,3 +530,7 @@ select.npill { width: auto; padding-right: 22px; }
   .ed textarea { min-height: 200px; }
   .modal.editor { height: calc(93vh - 16px); }
 }
+
+/* long chat: messages above are given to the model only as a retelling */
+.csumline { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 4px 0; }
+.csumline::before, .csumline::after { content: ""; flex: 1; border-top: 1px dashed var(--line); }

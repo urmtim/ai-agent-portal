@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { pickModel, type ModelChoice, type RegistryModel } from "./llm-pick";
 
-const glm: RegistryModel = { id: "g", name: "GLM-4", baseUrl: "https://glm/v1", model: "glm-4", tokenEnc: "v1:x", isDefault: true };
-const llama: RegistryModel = { id: "l", name: "Llama", baseUrl: "http://localhost:11434/v1", model: "llama3.1", tokenEnc: null, isDefault: false };
-const env: ModelChoice = { source: "env", name: "qwen", baseUrl: "http://env/v1", model: "qwen" };
+const glm: RegistryModel = { id: "g", name: "GLM-4", baseUrl: "https://glm/v1", model: "glm-4", tokenEnc: "v1:x", isDefault: true, contextTokens: 128000 };
+const llama: RegistryModel = { id: "l", name: "Llama", baseUrl: "http://localhost:11434/v1", model: "llama3.1", tokenEnc: null, isDefault: false, contextTokens: 8000 };
+const env: ModelChoice = { source: "env", name: "qwen", baseUrl: "http://env/v1", model: "qwen", contextTokens: 32000 };
 
 test("agent's own model wins", () => {
   assert.equal(pickModel([glm, llama], "l", env)?.name, "Llama");

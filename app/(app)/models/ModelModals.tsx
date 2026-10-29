@@ -8,7 +8,7 @@ import { useFormAction } from "@/components/ui/useFormAction";
 import { checkSavedModel, deleteModel, saveModel, testModel, type FormState, type TestState } from "./actions";
 
 /** What the browser knows about a model — never the token itself. */
-export type ModelRowData = { id: string; name: string; baseUrl: string; model: string; isDefault: boolean; hasToken: boolean };
+export type ModelRowData = { id: string; name: string; baseUrl: string; model: string; isDefault: boolean; hasToken: boolean; contextTokens: number };
 
 function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   const toast = useToast();
@@ -56,6 +56,11 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
         </div>
       </div>
       {m?.hasToken && <div className="hint">Токен сохранён. Чтобы заменить — впишите новый; пустое поле оставит прежний.</div>}
+      <div className="field" style={{ marginTop: 14 }}>
+        <label htmlFor="md-ctx">Контекст, токенов</label>
+        <input id="md-ctx" name="contextTokens" type="number" min={2000} max={2000000} step={1000} defaultValue={m?.contextTokens ?? 32000} />
+        <div className="hint">Сколько модель держит в памяти. Длинный чат пересказывается, когда история подходит к 70 %.</div>
+      </div>
       <div className="wrap-gap" style={{ marginTop: 16, gap: 18 }}>
         <label className="toggle">
           <input type="checkbox" name="isDefault" defaultChecked={m?.isDefault} disabled={m?.isDefault} />

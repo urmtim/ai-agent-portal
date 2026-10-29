@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/secret";
-import { pickModel, type ModelChoice } from "@/lib/llm-pick";
+import { DEFAULT_CONTEXT_TOKENS, pickModel, type ModelChoice } from "@/lib/llm-pick";
 
 // Minimal OpenAI-compatible chat client. Works with any endpoint that speaks
 // the OpenAI /chat/completions format (Ollama, GLM/Zhipu, OpenRouter, ...).
@@ -21,7 +21,10 @@ type Endpoint = { baseUrl: string; model: string; token?: string };
 
 function envModel(): ModelChoice | null {
   const baseUrl = process.env.LLM_BASE_URL, model = process.env.LLM_MODEL;
-  return baseUrl && model ? { source: "env", name: model, baseUrl, model, token: process.env.LLM_API_KEY || undefined } : null;
+  return baseUrl && model ? {
+    source: "env", name: model, baseUrl, model, token: process.env.LLM_API_KEY || undefined,
+    contextTokens: Number(process.env.LLM_CONTEXT_TOKENS) || DEFAULT_CONTEXT_TOKENS,
+  } : null;
 }
 
 /** The model a call should use among the owner's models (then .env), or null when there is none. */

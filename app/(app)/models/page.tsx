@@ -33,7 +33,7 @@ export default async function ModelsPage() {
       <code key="m" className="muted" style={{ wordBreak: "break-all" }}>{m.model}</code>,
       m._count.agents + (m.id === defaultId ? unassigned : 0),
       status(m),
-      <ModelActions key="a" m={{ id: m.id, name: m.name, baseUrl: m.baseUrl, model: m.model, isDefault: m.id === defaultId, hasToken: !!m.tokenEnc }} />,
+      <ModelActions key="a" m={{ id: m.id, name: m.name, baseUrl: m.baseUrl, model: m.model, isDefault: m.id === defaultId, hasToken: !!m.tokenEnc, contextTokens: m.contextTokens }} />,
     ],
   }));
 
