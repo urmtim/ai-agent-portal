@@ -37,7 +37,6 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
       <div className="field">
         <label htmlFor="md-url">Адрес API <span className="req">*</span></label>
         <input id="md-url" name="baseUrl" defaultValue={m?.baseUrl} placeholder="http://localhost:11434/v1" required />
-        <div className="hint">Адрес до <code>/v1</code> — Ollama, GLM или другой OpenAI-совместимый.</div>
       </div>
       <div className="grid cols2" style={{ gap: 14 }}>
         <div>

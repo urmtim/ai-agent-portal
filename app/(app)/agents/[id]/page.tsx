@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { runAgentNow, saveAgentConfig, deleteAgent } from "../actions";
+import { runAgentNow, deleteAgent } from "../actions";
+import { AgentEditButton } from "../AgentModals";
+import { envModelName } from "@/lib/llm";
 
 const RUN_ST: Record<string, { label: string; cls: string }> = {
   RUNNING: { label: "идёт", cls: "info" },
@@ -25,7 +27,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   });
   if (!agent || agent.ownerId !== user.id) notFound();
   const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
-  const defaultName = (models.find((m) => m.isDefault) ?? models[0])?.name;
+  const defaultName = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
 
   const config = JSON.parse(agent.config || "{}") as {
     sinceDays?: number; fromFilter?: string; max?: number;
@@ -40,57 +42,12 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
           <h1 className="title">{agent.name}</h1>
           <p className="lead">Собирает чеки из почты и пишет их в «Траты»</p>
         </div>
-        <form action={runAgentNow} className="spacer">
+        <div className="spacer" />
+        <AgentEditButton models={models.map(({ id, name }) => ({ id, name }))} defaultModel={defaultName}
+          a={{ id: agent.id, name: agent.name, enabled: agent.enabled, modelId: agent.modelId, sinceDays: config.sinceDays ?? 30, max: config.max ?? 40, fromFilter: config.fromFilter ?? "" }} />
+        <form action={runAgentNow}>
           <input type="hidden" name="agentId" value={agent.id} />
           <button className="btn primary" type="submit">▶ Запустить сейчас</button>
-        </form>
-      </div>
-
-      <div className="card pad" style={{ marginBottom: 24 }}>
-        <h2 className="title" style={{ fontSize: 16, marginBottom: 14 }}>Настройки</h2>
-        <form action={saveAgentConfig}>
-          <input type="hidden" name="agentId" value={agent.id} />
-
-          <div className="grid cols2" style={{ gap: 14, marginBottom: 16 }}>
-            <div>
-              <label htmlFor="name">Название</label>
-              <input id="name" name="name" defaultValue={agent.name} />
-            </div>
-            <div>
-              <label htmlFor="modelId">Модель</label>
-              <select id="modelId" name="modelId" defaultValue={agent.modelId ?? ""}>
-                <option value="">По умолчанию{defaultName ? ` (${defaultName})` : ""}</option>
-                {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid cols3" style={{ gap: 14 }}>
-            <div>
-              <label htmlFor="sinceDays">За сколько дней смотреть</label>
-              <input id="sinceDays" name="sinceDays" type="number" min={1} max={365}
-                defaultValue={config.sinceDays ?? 30} />
-            </div>
-            <div>
-              <label htmlFor="max">Макс. писем за прогон</label>
-              <input id="max" name="max" type="number" min={1} max={200}
-                defaultValue={config.max ?? 40} />
-            </div>
-            <div>
-              <label htmlFor="fromFilter">Фильтр по отправителю</label>
-              <input id="fromFilter" name="fromFilter" placeholder="например, pyaterochka"
-                defaultValue={config.fromFilter ?? ""} />
-            </div>
-          </div>
-
-          <label className="toggle" style={{ margin: "14px 0 18px" }}>
-            <input type="checkbox" name="enabled" defaultChecked={agent.enabled} style={{ width: "auto" }} />
-            <span>Агент включён</span>
-          </label>
-
-          <div className="wrap-gap">
-            <button className="btn primary" type="submit">Сохранить</button>
-          </div>
         </form>
       </div>
 

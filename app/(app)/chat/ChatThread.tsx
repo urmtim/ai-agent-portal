@@ -128,7 +128,7 @@ export function ChatThread({ chatId, title, initialMessages, initialModelId, mod
               Спросите что угодно.{" "}
               {assistant.spending || assistant.agentNames.length
                 ? <>{assistant.spending && "Про траты отвечу по вашим чекам. "}{assistant.agentNames.length > 0 && "Агента запущу с вашего подтверждения."}</>
-                : <>Траты и агентов можно разрешить в <Link href="/agents/assistant" className="link">настройках ассистента</Link>.</>}
+                : <>Траты и агентов можно разрешить в <Link href="/agents" className="link">«Агенты» → «Базовый ассистент»</Link>.</>}
             </p>
             <div className="row" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
               {suggestions(assistant).map((s) => (

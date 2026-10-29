@@ -7,9 +7,9 @@ import { AGENT_TYPES } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
 import { ListTable, type ListRow } from "@/components/ui/ListTable";
 import { AgentActions, NewAgentButton } from "./AgentModals";
-import { ICONS } from "@/components/ui/icons";
 import { loadAssistant } from "@/lib/assistant";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
+import { AssistantActions } from "./assistant/AssistantForm";
 
 const RUN_ST: Record<string, { label: string; cls: string }> = {
   RUNNING: { label: "идёт", cls: "info" },
@@ -22,6 +22,8 @@ function fmt(d: Date): string {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
   }).format(d);
 }
+
+const cfgOf = (a: { config: string }) => JSON.parse(a.config || "{}") as { sinceDays?: number; max?: number; fromFilter?: string };
 
 export default async function AgentsPage() {
   const user = await requireUser();
@@ -36,8 +38,9 @@ export default async function AgentsPage() {
   const llmOk = await llmAvailable();
   const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
+  const choices = { models: models.map(({ id, name }) => ({ id, name })), defaultModel: model };
 
-  // the chat's own agent: model and what it may use come from /agents/assistant
+  // the chat's own agent: model and what it may use come from its modal (assistant/AssistantForm.tsx)
   const cfg = await loadAssistant(user.id);
   const allowed = [
     cfg.agentIds.length && `агенты: ${agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name).join(", ")}`,
@@ -49,14 +52,15 @@ export default async function AgentsPage() {
     cells: [
       <span key="id" className="muted">—</span>,
       <div key="n">
-        <Link href="/agents/assistant" className="b link">Базовый ассистент</Link>
+        <div className="b">Базовый ассистент</div>
         <div className="sub">Отвечает в чате · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
       </div>,
       <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? model}</span>,
       <span key="m" className="muted">{cfg.mcpIds.length ? cfg.mcpIds.length : "—"}</span>,
       <span key="st" className="st info">встроенный</span>,
       <span key="r" className="muted">—</span>,
-      <Link key="a" href="/agents/assistant" className="ibtn" title="Настроить" aria-label="Настроить" data-row-open>{ICONS.edit}</Link>,
+      <AssistantActions key="a" cfg={cfg} {...choices}
+        agents={agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc, enabled: a.enabled }))} />,
     ],
   };
 
@@ -87,7 +91,8 @@ export default async function AgentsPage() {
         ) : (
           <span key="r" className="muted">—</span>
         ),
-        <AgentActions key="a" id={a.id} name={a.name} />,
+        <AgentActions key="a" {...choices} a={{ id: a.id, name: a.name, enabled: a.enabled, modelId: a.modelId,
+          sinceDays: cfgOf(a).sinceDays ?? 30, max: cfgOf(a).max ?? 40, fromFilter: cfgOf(a).fromFilter ?? "" }} />,
       ],
     };
   });

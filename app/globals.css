@@ -454,8 +454,8 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 .tcard tbody tr:has([data-row-open]):hover td { background: var(--soft); }
 
 /* ─── Base assistant settings ─── */
-.asec { margin-bottom: 16px; }
-.asec h2.title { font-size: 16px; margin: 0 0 12px; }
+.asec { margin-bottom: 18px; }
+.asec .alabel { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
 .acheck { align-items: flex-start; margin: 8px 0; }
 .acheck .sub { display: block; font-weight: 400; }
 .asec > .muted { font-size: 13.5px; }

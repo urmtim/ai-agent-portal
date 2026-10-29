@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { ConfirmModal, Modal } from "@/components/ui/Modal";
-import { ICONS, IconButton } from "@/components/ui/icons";
+import { IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
 import { useFormAction } from "@/components/ui/useFormAction";
-import { createAgent, deleteAgentById, runAgentById } from "./actions";
+import { createAgent, deleteAgentById, runAgentById, updateAgent } from "./actions";
 
 const TYPES = [{ value: "RECEIPTS", label: "Чеки из почты", desc: "Читает письма → пишет в «Траты»" }];
 
@@ -50,7 +49,69 @@ export function NewAgentButton() {
   );
 }
 
-export function AgentActions({ id, name }: { id: string; name: string }) {
+/** What the «Изменить агента» modal edits; built on the server from the Agent row. */
+export type AgentEditData = { id: string; name: string; enabled: boolean; modelId: string | null; sinceDays: number; max: number; fromFilter: string };
+export type ModelChoices = { models: { id: string; name: string }[]; defaultModel: string };
+
+function AgentEditForm({ a, models, defaultModel, onDone }: { a: AgentEditData; onDone: () => void } & ModelChoices) {
+  const toast = useToast();
+  const [state, onSubmit, pending] = useFormAction(updateAgent, undefined);
+  useEffect(() => { if (state?.ok) { toast(state.ok); onDone(); } }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <form onSubmit={onSubmit}>
+      <input type="hidden" name="agentId" value={a.id} />
+      <div className="field">
+        <label htmlFor="ag-ename">Название</label>
+        <input id="ag-ename" name="name" defaultValue={a.name} required maxLength={80} />
+      </div>
+      <div className="field">
+        <label htmlFor="ag-model">Модель</label>
+        <select id="ag-model" name="modelId" defaultValue={a.modelId ?? ""}>
+          <option value="">По умолчанию — {defaultModel}</option>
+          {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      </div>
+      <div className="grid cols2" style={{ gap: 14 }}>
+        <div>
+          <label htmlFor="ag-days">За сколько дней смотреть</label>
+          <input id="ag-days" name="sinceDays" type="number" min={1} max={365} defaultValue={a.sinceDays} />
+        </div>
+        <div>
+          <label htmlFor="ag-max">Макс. писем за прогон</label>
+          <input id="ag-max" name="max" type="number" min={1} max={200} defaultValue={a.max} />
+        </div>
+      </div>
+      <div className="field" style={{ marginTop: 14 }}>
+        <label htmlFor="ag-from">Фильтр по отправителю</label>
+        <input id="ag-from" name="fromFilter" placeholder="например, pyaterochka" defaultValue={a.fromFilter} />
+      </div>
+      <label className="toggle"><input type="checkbox" name="enabled" defaultChecked={a.enabled} /><span>Агент включён</span></label>
+      {state?.error && <div className="formerr" style={{ marginTop: 14 }}>{state.error}</div>}
+      <div className="mfoot">
+        <span className="spacer" />
+        <button className="btn primary" type="submit" disabled={pending}>{pending ? "Сохраняем…" : "Сохранить"}</button>
+      </div>
+    </form>
+  );
+}
+
+/** «Изменить» button for the agent page; opens the same modal as the table row. */
+export function AgentEditButton({ a, ...choices }: { a: AgentEditData } & ModelChoices) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="btn ghost" onClick={() => setOpen(true)}>Изменить</button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Изменить агента">
+        {open && <AgentEditForm a={a} {...choices} onDone={() => setOpen(false)} />}
+      </Modal>
+    </>
+  );
+}
+
+export function AgentActions({ a, ...choices }: { a: AgentEditData } & ModelChoices) {
+  const { id, name } = a;
+  const [edit, setEdit] = useState(false);
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const [running, startRun] = useTransition();
@@ -73,11 +134,14 @@ export function AgentActions({ id, name }: { id: string; name: string }) {
   return (
     <>
       <IconButton icon="run" title={running ? "Выполняется…" : "Запустить"} disabled={running} onClick={run} />
-      <Link href={`/agents/${id}`} className="ibtn" title="Настроить" aria-label="Настроить" data-row-open>{ICONS.edit}</Link>
+      <IconButton icon="edit" title="Изменить" data-row-open onClick={() => setEdit(true)} />
       <IconButton icon="del" title="Удалить" onClick={() => setConfirm(true)} />
       <ConfirmModal open={confirm} onClose={() => setConfirm(false)} title="Удалить агента?" pending={deleting}
         text={<>«{name}» и история его прогонов будут удалены. Собранные чеки останутся в «Тратах».</>}
         onConfirm={remove} />
+      <Modal open={edit} onClose={() => setEdit(false)} title="Изменить агента">
+        {edit && <AgentEditForm a={a} {...choices} onDone={() => setEdit(false)} />}
+      </Modal>
     </>
   );
 }

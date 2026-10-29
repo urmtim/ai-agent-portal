@@ -13,7 +13,7 @@ export type ChatScreenData = {
   models: ModelOption[];
   envModel: string | null; // used when the registry is empty
   agents: AgentInfo[];
-  /** What the base assistant is set up with (/agents/assistant). */
+  /** What the base assistant is set up with («Агенты» → «Базовый ассистент»). */
   assistant: { modelName: string | null; spending: boolean; agentNames: string[] };
 };
 
