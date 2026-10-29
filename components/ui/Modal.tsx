@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 
-/** Centered dialog over a blurred backdrop; closes on Esc, backdrop click and the × button. */
+/** Centered dialog over a blurred backdrop. Closes only by × or its own buttons — a stray click or Esc must not lose what was typed. */
 export function Modal({
   open,
   onClose,
@@ -22,14 +22,11 @@ export function Modal({
   useEffect(() => {
     if (!open) return;
     ref.current?.querySelector<HTMLElement>("input:not([type=hidden]), select, textarea")?.focus();
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (
-    <div className="mbg" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="mbg">
       <div ref={ref} className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <button type="button" className="mclose" aria-label="Закрыть" onClick={onClose}>×</button>
         <h2 className="mtitle" id={titleId} style={sub ? undefined : { marginBottom: 18 }}>{title}</h2>
