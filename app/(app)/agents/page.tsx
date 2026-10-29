@@ -7,6 +7,7 @@ import { AGENT_TYPES } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
 import { ListTable, type ListRow } from "@/components/ui/ListTable";
 import { AgentActions, NewAgentButton } from "./AgentModals";
+import { agentEditData } from "@/lib/agents/edit-data";
 import { loadAssistant } from "@/lib/assistant";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
 import { AssistantActions } from "./assistant/AssistantForm";
@@ -23,8 +24,6 @@ function fmt(d: Date): string {
   }).format(d);
 }
 
-const cfgOf = (a: { config: string }) => JSON.parse(a.config || "{}") as { sinceDays?: number; max?: number; fromFilter?: string };
-
 export default async function AgentsPage() {
   const user = await requireUser();
   const agents = await prisma.agent.findMany({
@@ -38,7 +37,11 @@ export default async function AgentsPage() {
   const llmOk = await llmAvailable();
   const models = await prisma.llmModel.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
   const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
-  const choices = { models: models.map(({ id, name }) => ({ id, name })), defaultModel: model };
+  const choices = {
+    models: models.map(({ id, name }) => ({ id, name })),
+    defaultModel: model,
+    agents: agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc, enabled: a.enabled })),
+  };
 
   // the chat's own agent: model and what it may use come from its modal (assistant/AssistantForm.tsx)
   const cfg = await loadAssistant(user.id);
@@ -59,8 +62,7 @@ export default async function AgentsPage() {
       <span key="m" className="muted">{cfg.mcpIds.length ? cfg.mcpIds.length : "—"}</span>,
       <span key="st" className="st info">встроенный</span>,
       <span key="r" className="muted">—</span>,
-      <AssistantActions key="a" cfg={cfg} {...choices}
-        agents={agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc, enabled: a.enabled }))} />,
+      <AssistantActions key="a" cfg={cfg} {...choices} />,
     ],
   };
 
@@ -91,8 +93,7 @@ export default async function AgentsPage() {
         ) : (
           <span key="r" className="muted">—</span>
         ),
-        <AgentActions key="a" {...choices} a={{ id: a.id, name: a.name, enabled: a.enabled, modelId: a.modelId,
-          sinceDays: cfgOf(a).sinceDays ?? 30, max: cfgOf(a).max ?? 40, fromFilter: cfgOf(a).fromFilter ?? "" }} />,
+        <AgentActions key="a" {...choices} a={agentEditData(a)} />,
       ],
     };
   });
@@ -129,7 +130,7 @@ export default async function AgentsPage() {
       )}
 
       <ListTable
-        action={<NewAgentButton />}
+        action={<NewAgentButton {...choices} />}
         columns={["ID", "Название", "Модель", "MCP", "Статус", "Последний прогон", ""]}
         rows={[base, ...rows]}
         minWidth={820}
