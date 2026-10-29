@@ -14,7 +14,7 @@ export type ChatScreenData = {
   envModel: string | null; // used when the registry is empty
   agents: AgentInfo[];
   /** What the base assistant is set up with («Агенты» → «Базовый ассистент»). */
-  assistant: { modelName: string | null; spending: boolean; agentNames: string[] };
+  assistant: { modelName: string | null; agentNames: string[] };
 };
 
 export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
@@ -35,7 +35,6 @@ export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
     agents: agents.map((a) => ({ id: a.id, name: a.name, desc: AGENT_TYPES[a.type].desc })),
     assistant: {
       modelName: models.find((m) => m.id === cfg.modelId)?.name ?? null,
-      spending: cfg.apis.includes("spending"),
       agentNames: agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name),
     },
   };

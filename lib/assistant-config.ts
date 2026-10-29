@@ -1,10 +1,8 @@
 // Base assistant settings: what the chat assistant may use. Pure (no DB), unit-tested.
 // Rule: nothing is allowed until the user ticks it.
 
-/** Portal APIs the assistant can be given, and the chat tool each one unlocks. */
-export const ASSISTANT_APIS = {
-  spending: { label: "Траты", desc: "Сводка трат по вашим чекам: итог, категории, магазины", tool: "get_spending" },
-} as const;
+/** Portal APIs the assistant can be given, and the chat tool each one unlocks. None yet («Траты» was removed). */
+export const ASSISTANT_APIS: Record<string, { label: string; desc: string; tool: string }> = {};
 
 export type AssistantApi = keyof typeof ASSISTANT_APIS;
 

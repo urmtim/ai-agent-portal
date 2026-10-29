@@ -10,6 +10,7 @@ import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
 // Tools the chat assistant can call — always scoped to one user's data.
 // run_agent acts (reads mail, writes receipts), so the route requires approval for it.
 
+/** Output of the removed «Траты» tool — still rendered in old chats. */
 export type SpendingResult = {
   days: number;
   total: number;
@@ -22,36 +23,17 @@ export type RunAgentResult =
   | { agent: string; status: "ok" | "error"; summary: string; processed: number; created: number; log: string }
   | { error: string };
 
-async function spending(userId: string, days: number): Promise<SpendingResult> {
-  const since = new Date(Date.now() - days * 86_400_000);
-  const rows = await prisma.receipt.findMany({ where: { ownerId: userId, purchasedAt: { gte: since } } });
-  const sum = (key: "category" | "merchant") => {
-    const m = new Map<string, number>();
-    for (const r of rows) m.set(r[key], (m.get(r[key]) ?? 0) + r.total);
-    return [...m].sort((a, b) => b[1] - a[1]).map(([k, total]) => ({ k, total: Math.round(total) }));
-  };
-  return {
-    days,
-    total: Math.round(rows.reduce((s, r) => s + r.total, 0)),
-    count: rows.length,
-    categories: sum("category").map(({ k, total }) => ({ category: k, total })),
-    topMerchants: sum("merchant").slice(0, 5).map(({ k, total }) => ({ merchant: k, total })),
-  };
-}
-
 export async function chatTools(user: { id: string; name?: string | null }, cfg: AssistantConfig) {
   const userId = user.id;
   // only the agents the base assistant is allowed to run (settings: «Агенты» → «Базовый ассистент»), and only enabled ones
   const agents = await prisma.agent.findMany({ where: { ownerId: userId, enabled: true, id: { in: cfg.agentIds } }, orderBy: { createdAt: "asc" } });
 
   const tools = {
+    // removed «Траты» tool: kept only so chats that called it still validate; never in activeTools
     get_spending: tool({
-      description: "Траты пользователя за последние N дней: итог в рублях, число чеков, разбивка по категориям и крупнейшие магазины.",
-      inputSchema: z.object({ days: z.number().int().min(1).max(365).describe("За сколько последних дней, обычно 30") }),
-      execute: async ({ days }): Promise<SpendingResult> => {
-        await audit("tool", `Ассистент посмотрел траты за ${days} дн.`, user, "чат");
-        return spending(userId, days);
-      },
+      description: "Устарело: не используется.",
+      inputSchema: z.object({ days: z.number().int().min(1).max(365) }),
+      execute: async (): Promise<{ error: string }> => ({ error: "Инструмент «Траты» убран" }),
     }),
     run_agent: tool({
       description: "Запустить агента пользователя (перед запуском пользователь подтверждает). Агенты:\n" +

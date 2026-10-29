@@ -31,14 +31,12 @@ function approvalSecret(): Uint8Array {
   return createHash("sha256").update(`chat-tool-approval:${process.env.AUTH_SECRET ?? ""}`).digest();
 }
 
-function instructions(userName: string, agents: { id: string; name: string }[], spending: boolean): string {
+function instructions(userName: string, agents: { id: string; name: string }[]): string {
   const today = new Intl.DateTimeFormat("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "long" }).format(new Date());
   return [
     "Ты — ассистент портала AI Portal. Отвечай по-русски, коротко и по делу; можно Markdown.",
     `Сегодня ${today}. Пользователь: ${userName}.`,
-    spending
-      ? "Про траты пользователя спрашивай инструмент get_spending, не выдумывай цифры. Суммы — в рублях."
-      : "Доступа к тратам пользователя у тебя нет: он не разрешён в настройках ассистента. О тратах цифр не называй.",
+    "Данных о тратах и других данных портала у тебя нет — цифр не выдумывай.",
     agents.length
       ? `Тебе разрешено запускать агентов инструментом run_agent (пользователь подтверждает запуск): ${agents.map((a) => `«${a.name}»`).join(", ")}.`
       : "Запускать агентов тебе не разрешено.",
@@ -100,7 +98,7 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model: llm.model,
-    instructions: instructions(user.name ?? "", agents, activeTools.includes("get_spending")),
+    instructions: instructions(user.name ?? "", agents),
     messages: await convertToModelMessages(messages, { tools }),
     tools,
     activeTools,
