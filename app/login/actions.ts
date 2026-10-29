@@ -13,7 +13,7 @@ export async function authenticate(
     await signIn("credentials", {
       email: formData.get("email"),
       password: formData.get("password"),
-      redirectTo: "/",
+      redirectTo: "/chat/latest", // the chat the user stopped in
     });
     return undefined;
   } catch (error) {

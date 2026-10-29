@@ -97,12 +97,20 @@ export default async function AgentsPage() {
       {(!mailOk || !llmOk) && (
         <div className="callout warn" style={{ margin: "0 0 18px" }}>
           <span className="ic">⚠️</span>
-          <div style={{ fontSize: 13.5 }}>
-            Чтобы агенты работали,{" "}
-            {!mailOk && <>задайте в <code>.env</code> <b>IMAP_HOST / IMAP_USER / IMAP_PASSWORD</b></>}
-            {!mailOk && !llmOk && " и "}
-            {!llmOk && <>добавьте модель в разделе <Link href="/models" className="b link">«Модели»</Link></>}. Запустить можно и сейчас — прогон
-            просто завершится с ошибкой и покажет, чего не хватает.
+          <div style={{ fontSize: 13.5, lineHeight: 1.55 }}>
+            {!mailOk && (
+              <p style={{ margin: 0 }}>
+                <b>Почта не подключена.</b> Агент «Чеки из почты» читает письма в вашем ящике и находит в них чеки — для этого ему нужен
+                доступ к ящику: адрес почтового сервера, логин и пароль приложения (в Mail.ru — «Пароли для внешних приложений»).
+                Пока их задают в файле <code>.env</code> на сервере: <code>IMAP_HOST</code>, <code>IMAP_USER</code>, <code>IMAP_PASSWORD</code>.
+                Без этого запуск агента закончится ошибкой «Почта не настроена».
+              </p>
+            )}
+            {!llmOk && (
+              <p style={{ margin: !mailOk ? "8px 0 0" : 0 }}>
+                <b>Нет модели.</b> Агентам нужна LLM — добавьте её в разделе <Link href="/models" className="b link">«Модели»</Link>.
+              </p>
+            )}
           </div>
         </div>
       )}
