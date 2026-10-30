@@ -1,10 +1,10 @@
 // Agent ↔ YAML for import/export (pure, unit-tested in spec.test.ts).
-// Models, MCP connections, agents and guardrail documents travel by name; secrets and document texts never appear here.
-// Versions 1 and 2 are still read.
+// Models, connectors, agents and guardrail documents travel by name; secrets and document texts never appear here.
+// Versions 1–3 are still read: their «mcp:» items were mailboxes, so they become connectors; «api:» is dropped.
 import { parse, stringify } from "yaml";
 import {
   DEFAULT_GUARD_RULES, DEFAULT_HITL, parseGuardRules, parseHitl, parseRules, rulesToYaml,
-  type GuardRule, type HitlChoice, type McpAccess,
+  type GuardRule, type HitlChoice,
 } from "./policy";
 
 export type AgentSpec = {
@@ -15,22 +15,21 @@ export type AgentSpec = {
   instruction: string;
   hitl: HitlChoice;
   guardrails: GuardRule[]; // documents by id
-  mcp: { name: string; access: McpAccess }[]; // connection names
   agents: string[]; // subagent names
-  api: string[]; // portal API keys
+  connectors: string[]; // connector names (section «Коннекторы»)
 };
 
 export const EMPTY_SPEC: AgentSpec = {
-  name: "", description: "", enabled: true, model: null, instruction: "", hitl: DEFAULT_HITL, guardrails: [...DEFAULT_GUARD_RULES], mcp: [], agents: [], api: [],
+  name: "", description: "", enabled: true, model: null, instruction: "", hitl: DEFAULT_HITL, guardrails: [...DEFAULT_GUARD_RULES], agents: [], connectors: [],
 };
 
 /** What exists for this user, by name; documents are {id, name}. */
-export type Known = { models: string[]; connections: string[]; agents: string[]; apis: string[]; documents: { id: string; name: string }[] };
+export type Known = { models: string[]; connectors: string[]; agents: string[]; documents: { id: string; name: string }[] };
 
 /** The YAML text of an agent. */
 export function specToYaml(s: AgentSpec, documents: { id: string; name: string }[]): string {
   const doc = {
-    version: 3,
+    version: 4,
     name: s.name,
     description: s.description,
     enabled: s.enabled,
@@ -38,26 +37,21 @@ export function specToYaml(s: AgentSpec, documents: { id: string; name: string }
     instruction: s.instruction,
     hitl: s.hitl,
     guardrails: rulesToYaml(s.guardrails, (id) => documents.find((d) => d.id === id)?.name),
-    mcp: s.mcp.map((m) => ({ name: m.name, access: m.access })),
     agents: s.agents,
-    api: s.api,
+    connectors: s.connectors,
   };
   return "# AI Portal — агент. Пароли и токены сюда не попадают.\n" + stringify(doc, { lineWidth: 0 });
 }
 
 const names = (v: unknown): string[] => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean))] : []);
 
-/** mcp items: "Моя почта" (version 1) or {name, access}. */
-function mcpItems(v: unknown): { name: string; access: McpAccess }[] {
+/** Old «mcp:» items: "Моя почта" (version 1) or {name, access} (versions 2–3) — their names. */
+function mcpNames(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
-  const out: { name: string; access: McpAccess }[] = [];
-  for (const x of v) {
-    const o = x && typeof x === "object" ? (x as { name?: unknown; access?: unknown }) : null;
-    const name = typeof x === "string" ? x.trim() : typeof o?.name === "string" ? o.name.trim() : "";
-    const access: McpAccess = o?.access === "send" ? "send" : "read";
-    if (name && !out.some((m) => m.name === name)) out.push({ name, access });
-  }
-  return out;
+  return v.flatMap((x) => {
+    const name = typeof x === "string" ? x : x && typeof x === "object" ? (x as { name?: unknown }).name : null;
+    return typeof name === "string" && name.trim() ? [name.trim()] : [];
+  });
 }
 
 /**
@@ -99,12 +93,6 @@ export function yamlToSpec(text: string, known: Known): { spec: AgentSpec; warni
     }
   }
 
-  const mcp = mcpItems(o.mcp).filter((m) => {
-    if (known.connections.includes(m.name)) return true;
-    warnings.push(`Подключение «${m.name}» не найдено — пропущено`);
-    return false;
-  });
-
   const spec: AgentSpec = {
     name: typeof o.name === "string" ? o.name.trim().slice(0, 80) : "",
     description: typeof o.description === "string" ? o.description.trim().slice(0, 300) : "",
@@ -113,9 +101,8 @@ export function yamlToSpec(text: string, known: Known): { spec: AgentSpec; warni
     instruction: typeof o.instruction === "string" ? o.instruction.trim() : "",
     hitl: parseHitl(o.hitl ?? null),
     guardrails,
-    mcp,
     agents: keep(names(o.agents), known.agents, (n) => `Агент «${n}» не найден — пропущен`),
-    api: keep(names(o.api), known.apis, (n) => `API «${n}» не найдено — пропущено`),
+    connectors: keep(names([...names(o.connectors), ...mcpNames(o.mcp)]), known.connectors, (n) => `Коннектор «${n}» не найден — пропущен`),
   };
   return { spec, warnings };
 }

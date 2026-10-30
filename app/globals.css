@@ -580,6 +580,9 @@ input.bad, textarea.bad, select.bad { border-color: var(--err); }
 /* ---- «Проверить» with its result next to it ---- */
 .checkrow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: -4px 0 18px; }
 .checkrow .status { margin-top: 0; display: inline-flex; }
+/* a tab with many fields (connector mail): tighter rows so it fits the window with an error line */
+.apanel.tight .field { margin-bottom: 12px; }
+.apanel.tight .checkrow { margin: -8px 0 0; }
 .status.warn { background: var(--warnbg); color: var(--warn); }
 
 /* ---- the eye of a token / password field ---- */
@@ -604,7 +607,7 @@ input.pick { padding-right: 40px; background-image: url("data:image/svg+xml,%3Cs
 .apanel.fill .field.grow textarea { flex: 1; min-height: 100px; resize: none; }
 /* …or a fixed half of that (model description) */
 .apanel.fill .field.grow.half { flex: 0 0 auto; min-height: 0; }
-.apanel.fill .field.grow.half textarea { flex: none; height: 150px; }
+.apanel.fill .field.grow.half textarea { flex: none; height: 200px; } /* «Описание»: the same in the model, agent and connector windows */
 
 /* list tables: the line under a name stays one line, so rows are the same height on every page */
 .tcard td .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }

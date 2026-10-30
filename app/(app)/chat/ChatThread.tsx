@@ -113,7 +113,7 @@ export function ChatThread({ chatId, title, initialMessages, summaryAfter, model
               Спросите что угодно.{" "}
               {assistant.agentNames.length || assistant.mail
                 ? <>{assistant.mail && "Разберу почту по вашей просьбе. "}{assistant.agentNames.length > 0 && "Агента запущу с вашего подтверждения."}</>
-                : <>Агентов можно разрешить в <Link href="/agents" className="link">«Агенты» → «Ассистент»</Link>, почту — подключить в разделе MCP.</>}
+                : <>Агентов можно разрешить в <Link href="/agents" className="link">«Агенты» → «Ассистент»</Link>, почту — добавить в разделе <Link href="/connectors" className="link">«Коннекторы»</Link>.</>}
             </p>
             <div className="row" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
               {suggestions(assistant).map((s) => (

@@ -1,12 +1,9 @@
-// MCP connector catalog and the pure parts of connection settings (unit-tested in connectors.test.ts).
-// A connector is a kind of outside service; a connection is one user's configured instance of it.
+// Connector types and the pure parts of connector settings (unit-tested in connectors.test.ts).
+// A connector only keeps where to connect and how to log in: a mailbox (IMAP or POP3, plus SMTP) or an HTTP API.
 
 export const CONNECTORS = {
-  mail: {
-    label: "Почта",
-    desc: "Почтовый ящик по IMAP: искать и читать письма",
-    tools: ["Искать письма", "Прочитать письмо"],
-  },
+  mail: { label: "Почта", tools: ["Искать письма", "Прочитать письмо"] },
+  api: { label: "API", tools: [] as string[] },
 } as const;
 
 export type ConnectorKind = keyof typeof CONNECTORS;
@@ -15,45 +12,95 @@ export function isConnectorKind(k: string): k is ConnectorKind {
   return Object.prototype.hasOwnProperty.call(CONNECTORS, k);
 }
 
-/** Mail services with known IMAP settings; «other» means the user types the server. */
-export const MAIL_PRESETS = {
-  mailru: { label: "Mail.ru", host: "imap.mail.ru", port: 993 },
-  yandex: { label: "Яндекс", host: "imap.yandex.ru", port: 993 },
-  gmail: { label: "Gmail", host: "imap.gmail.com", port: 993 },
-  other: { label: "Другой", host: "", port: 993 },
-} as const;
+export type MailProtocol = "imap" | "pop3";
 
-export type MailPreset = keyof typeof MAIL_PRESETS;
+/** The usual SSL ports; changing IMAP ↔ POP3 in the window switches to the other one. */
+export const MAIL_PORTS = { imap: 993, pop3: 995, smtp: 465 } as const;
 
-export type MailConfig = { host: string; port: number; secure: boolean; user: string };
+/** SSL is on for the SSL ports (993, 995, 465) and off for the rest (143, 110, 587, test servers…). */
+export const sslPort = (port: number) => port === 993 || port === 995 || port === 465;
 
-/** Which preset a saved server belongs to (for the edit form). */
-export function presetFor(host: string): MailPreset {
-  const found = (Object.keys(MAIL_PRESETS) as MailPreset[]).find((k) => k !== "other" && MAIL_PRESETS[k].host === host.trim().toLowerCase());
-  return found ?? "other";
-}
+export type MailConfig = {
+  protocol: MailProtocol; host: string; port: number; secure: boolean; user: string;
+  /** Sending (SMTP), "" when not set; only checked for now. */
+  smtpHost: string; smtpPort: number; smtpSecure: boolean;
+};
+export type ApiConfig = { url: string };
 
-/** Stored JSON → mail settings, or null when unusable. */
+const isHost = (h: string) => /^[a-z0-9.-]+\.[a-z]{2,}$|^localhost$|^\d{1,3}(\.\d{1,3}){3}$/.test(h);
+const isPort = (p: number) => Number.isInteger(p) && p >= 1 && p <= 65535;
+
+/** Stored JSON → mail settings, or null when unusable. Rows from the «MCP» days ({host, port, secure, user}) read as IMAP. */
 export function parseMailConfig(raw: string | null | undefined): MailConfig | null {
   let v: unknown;
   try { v = JSON.parse(raw || "{}"); } catch { return null; }
   if (!v || typeof v !== "object") return null;
   const o = v as Record<string, unknown>;
-  const host = typeof o.host === "string" ? o.host.trim() : "";
-  const user = typeof o.user === "string" ? o.user.trim() : "";
-  const port = Number(o.port);
-  if (!host || !user || !Number.isInteger(port) || port < 1 || port > 65535) return null;
-  return { host, user, port, secure: o.secure !== false };
+  const str = (x: unknown) => (typeof x === "string" ? x.trim() : "");
+  const host = str(o.host), user = str(o.user), port = Number(o.port);
+  if (!host || !user || !isPort(port)) return null;
+  const smtpHost = str(o.smtpHost), smtpPort = Number(o.smtpPort) || MAIL_PORTS.smtp;
+  return {
+    protocol: o.protocol === "pop3" ? "pop3" : "imap", host, port, user,
+    secure: typeof o.secure === "boolean" ? o.secure : sslPort(port),
+    smtpHost, smtpPort, smtpSecure: typeof o.smtpSecure === "boolean" ? o.smtpSecure : sslPort(smtpPort),
+  };
 }
 
-/** Form fields → mail settings: a preset fills the server, «other» takes it from the form. Returns an error text when invalid. */
-export function mailConfigFromForm(f: { preset: string; host: string; port: string; secure: boolean; user: string }): MailConfig | string {
-  const preset = (Object.prototype.hasOwnProperty.call(MAIL_PRESETS, f.preset) ? f.preset : "other") as MailPreset;
-  const host = (preset === "other" ? f.host : MAIL_PRESETS[preset].host).trim().toLowerCase();
-  const port = preset === "other" ? Number(f.port) : MAIL_PRESETS[preset].port;
-  const user = f.user.trim();
-  if (!/^[a-z0-9.-]+\.[a-z]{2,}$|^localhost$|^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return "Укажите адрес почтового сервера, например imap.mail.ru";
-  if (!Number.isInteger(port) || port < 1 || port > 65535) return "Порт — число от 1 до 65535";
-  if (!user) return "Укажите логин — обычно это адрес почты";
-  return { host, port, user, secure: preset === "other" ? f.secure : true };
+export function parseApiConfig(raw: string | null | undefined): ApiConfig | null {
+  try {
+    const o = JSON.parse(raw || "{}") as Record<string, unknown>;
+    return typeof o.url === "string" && o.url.trim() ? { url: o.url.trim() } : null;
+  } catch { return null; }
+}
+
+/** Which window field a problem belongs to. */
+export type ConnectorField = "name" | "host" | "port" | "smtpHost" | "smtpPort" | "user" | "password" | "url" | "token";
+export type FieldError = { field: ConnectorField; error: string };
+
+/** Window fields → mail settings; the first problem from top to bottom otherwise. */
+export function mailConfigFromForm(f: { protocol: string; host: string; port: string; smtpHost: string; smtpPort: string; user: string }): MailConfig | FieldError {
+  const host = f.host.trim().toLowerCase(), smtpHost = f.smtpHost.trim().toLowerCase(), user = f.user.trim();
+  const port = Number(f.port), smtpPort = f.smtpPort.trim() ? Number(f.smtpPort) : MAIL_PORTS.smtp;
+  if (!host) return { field: "host", error: "Укажите сервер входящей почты" };
+  if (!isHost(host)) return { field: "host", error: "Укажите адрес сервера, например imap.mail.ru" };
+  if (!f.port.trim()) return { field: "port", error: "Укажите порт" };
+  if (!isPort(port)) return { field: "port", error: "Порт — число от 1 до 65535" };
+  if (smtpHost && !isHost(smtpHost)) return { field: "smtpHost", error: "Укажите адрес сервера, например smtp.mail.ru" };
+  if (!isPort(smtpPort)) return { field: "smtpPort", error: "Порт — число от 1 до 65535" };
+  if (!user) return { field: "user", error: "Укажите логин" };
+  return {
+    protocol: f.protocol === "pop3" ? "pop3" : "imap", host, port, secure: sslPort(port), user,
+    smtpHost, smtpPort, smtpSecure: sslPort(smtpPort),
+  };
+}
+
+/** Window fields → API settings. */
+export function apiConfigFromForm(f: { url: string }): ApiConfig | FieldError {
+  const url = f.url.trim();
+  if (!url) return { field: "url", error: "Укажите адрес API" };
+  if (!/^https?:\/\/[^\s/]+/i.test(url)) return { field: "url", error: "Адрес должен начинаться с http:// или https://" };
+  return { url };
+}
+
+/** IMAP ↔ POP3 in the window: the usual port, and imap.… ↔ pop.… when the server follows that pattern. */
+export function switchProtocol(host: string, to: MailProtocol): { host: string; port: number } {
+  const h = to === "pop3" ? host.replace(/^imap\./i, "pop.") : host.replace(/^pop3?\./i, "imap.");
+  return { host: h, port: MAIL_PORTS[to] };
+}
+
+/** A connector's line under its name: its description, else what it is («Почта, me@mail.ru»). */
+export function connectorDesc(c: { kind: string; description: string; config: string }): string {
+  if (c.description.trim()) return c.description.trim();
+  if (c.kind === "mail") { const m = parseMailConfig(c.config); return m ? `Почта, ${m.user}` : "Почта"; }
+  if (c.kind === "api") { const a = parseApiConfig(c.config); return a ? `API, ${a.url.replace(/^https?:\/\//, "")}` : "API"; }
+  return c.kind;
+}
+
+/** «Проверить» on an API connector: its answer in the window's words. */
+export function apiCheckMessage(status: number | null): { ok: boolean; message: string } {
+  if (status === null) return { ok: false, message: "✕ Сервер не отвечает" };
+  if (status === 401 || status === 403) return { ok: false, message: "✕ Неверный токен" };
+  if (status >= 200 && status < 400) return { ok: true, message: "✓ Подключено" };
+  return { ok: false, message: `✕ Сервер ответил ${status}` };
 }

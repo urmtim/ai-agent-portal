@@ -238,6 +238,8 @@
   .tpart { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; } .tpart table { width: 100%; }
   .tpart th { padding: 8px 12px; font-size: 11px; } .tpart td { padding: 8px 12px; vertical-align: middle; } .tpart td.tempty { text-align: center; padding: 16px 12px; }
   .apanel .tbar { margin-bottom: 10px; }
+  .field textarea.desc { height: 200px; resize: vertical; }
+  input.tchk { width: 17px; height: 17px; padding: 0; margin: 0; display: block; accent-color: var(--primary); cursor: pointer; }
   .psec { margin-bottom: 24px; } .psec:last-child { margin-bottom: 0; } .tpart .sub { font-size: 12px; margin-top: 2px; font-weight: 400; }
   .apanel { flex: 1; min-height: 0; overflow: auto; padding-right: 2px; } .apanel[hidden] { display: none; }
   .ed { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
@@ -385,6 +387,7 @@
         <option value="constructor">Конструктор агента (граф)</option>
         <option value="agent">Агент — история</option>
         <option value="mcp">MCP</option>
+        <option value="connectors">Коннекторы</option>
         <option value="settings">Модели</option>
       </optgroup>
       <optgroup label="Скрыто (не в меню)">
@@ -424,6 +427,7 @@
           <div class="tg"><div class="lgroup">AI</div>
             <div class="titem" draggable="true" tabindex="0" data-key="agents" data-go="agents">Агенты</div>
             <div class="titem" draggable="true" tabindex="0" data-key="mcp" data-go="mcp">MCP</div>
+            <div class="titem" draggable="true" tabindex="0" data-key="connectors" data-go="connectors">Коннекторы</div>
             <div class="titem" draggable="true" tabindex="0" data-key="settings" data-go="settings">Модели</div>
           </div>
           <div class="tg"><div class="lgroup">Личное <span class="note">(скрыто)</span></div>
@@ -557,12 +561,12 @@
         <button class="btn primary spacer" data-go="agentnew">Новый агент</button></div>
       ${aiTabs('agents')}
       ${tbar()}
-      <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>MCP</th><th>Статус</th><th>Последний прогон</th><th></th></tr></thead><tbody>
-        <tr><td>#1</td><td><div class="b link" data-go="assistantwin">Ассистент</div><div class="sub">С ним вы говорите в чате, агенты — его исполнители · разрешено — агенты: Сводка почты · MCP: Моя почта</div></td><td>GLM-4</td><td>Моя почта</td><td><span class="st info">встроенный</span></td><td class="muted">—</td><td class="acts">${ibtn('edit','Изменить','data-go="assistantwin"')}</td></tr>
-        ${agentRow(2,'Сводка почты','Составь сводку новых писем: от кого, о чём, что требует ответа.','Ollama Cloud',['Почта'],'включён','ok','23 окт · сводка по 12 письмам')}
-        ${agentRow(3,'Разбор писем','Разбирает входящие и готовит ответы','Ollama Cloud',['Почта','Документы'],'включён','ok','22 окт')}
-        ${agentRow(4,'Документы по политике','Проверяет документ по регламенту','Ollama Cloud',['Документы'],'черновик','mut','—')}
-        ${agentRow(5,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['1С'],'не настроен','wait','—')}
+      <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>Подключения</th><th>Статус</th><th>Последний прогон</th><th></th></tr></thead><tbody>
+        <tr><td>#1</td><td><div class="b link" data-go="assistantwin">Ассистент</div><div class="sub">С ним вы говорите в чате. Разрешено: агенты Сводка почты; MCP Портал; коннекторы Моя почта</div></td><td>Ollama Cloud</td><td>Портал, Моя почта</td><td><span class="st info">встроенный</span></td><td class="muted">—</td><td class="acts">${ibtn('edit','Изменить','data-go="assistantwin"')}</td></tr>
+        ${agentRow(2,'Сводка почты','Составь сводку новых писем: от кого, о чём, что требует ответа.','Ollama Cloud',['Портал','Моя почта'],'включён','ok','23 окт, сводка по 12 письмам')}
+        ${agentRow(3,'Разбор писем','Разбирает входящие и готовит ответы','Ollama Cloud',['Моя почта','GitHub'],'включён','ok','22 окт')}
+        ${agentRow(4,'Документы по политике','Проверяет документ по регламенту','Ollama Cloud',['Браузер'],'черновик','mut','—')}
+        ${agentRow(5,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['API 1С'],'не настроен','wait','—')}
       </tbody></table></div>`),
 
     assistantwin: () => SCREENS.agents().replace('</tbody></table></div>', '</tbody></table></div>' + agentWin('assistant')),
@@ -616,7 +620,7 @@
           <div class="mtabs" role="tablist"><button class="on" data-atab="mgen">Общее</button><button data-atab="mpar">Параметры</button><button data-atab="myaml">YAML</button></div>
           <div class="apanel" data-apanel="mgen">
             <div class="field"><label>Название <span class="req">*</span></label><input id="mName" placeholder="например, Ollama Cloud"><div class="ferr" id="mNameErr" hidden></div></div>
-            <div class="field"><label>Описание</label><textarea rows="4" id="mDesc" placeholder="Для чего эта модель"></textarea></div>
+            <div class="field"><label>Описание</label><textarea class="desc" id="mDesc" placeholder="Для чего эта модель"></textarea></div>
           </div>
           <div class="apanel" data-apanel="mpar" hidden>
             <div class="field"><label>Адрес API <span class="req">*</span></label><input id="mUrl" placeholder="например, https://ollama.com/v1"><div class="ferr" hidden></div></div>
@@ -745,17 +749,22 @@ contextTokens: 32000</textarea></div>
       </div></div>`,
 
     mcp: () => appShell(`
-      <div class="pagehead"><div><h1 class="title">MCP</h1><p class="lead">Инструменты, которые подключаются к агентам. Предметка живёт здесь — ядро не меняем.</p></div><button class="btn primary spacer">+ Добавить сервер</button></div>
+      <div class="pagehead"><div><h1 class="title">MCP</h1><p class="lead">Серверы с инструментами для Ассистента и агентов: встроенные в портал и внешние</p></div></div>
       ${aiTabs('mcp')}
-      ${tbar()}
-      <div class="card tcard"><table style="min-width:760px"><thead><tr><th>ID</th><th>Название</th><th>Инструменты</th><th>Агенты</th><th>Статус</th><th></th></tr></thead><tbody>
-        ${mcpRow(1,'Почта (Mail.ru)','Чтение писем и вложений',['читать письма','скачать вложение'],2,'подключён','ok')}
-        ${mcpRow(2,'Браузер','Действия на сайтах (Playwright)',['открыть url','клик','заполнить форму','скриншот','скачать'],0,'подключён','ok')}
-        ${mcpRow(3,'Таблицы','Excel: расчёты и выгрузки',['прочитать лист','записать ячейки','формула','выгрузить'],0,'подключён','ok')}
-        ${mcpRow(4,'Документы','Word: правка и рецензирование',['вставить правки','рецензия','сравнить версии'],2,'выключен','mut')}
-        ${mcpRow(5,'Python-песочница','Код без доступа в сеть',['выполнить код'],0,'подключён','ok')}
-        ${mcpRow(6,'1С (ЗУП / ERP)','Проведение и выгрузки в 1С',['провести документ','выгрузка OData'],1,'не настроен','wait')}
-      </tbody></table></div>`),
+      ${tbar('', '<button type="button" class="btn primary spacer" data-cadd>Добавить</button>')}
+      <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Тип</th><th>Инструменты</th><th>Используют</th><th>Статус</th><th></th></tr></thead><tbody>
+        ${Object.entries(MCP_DATA).map(([id, d]) => connRow('mcp', id, d)).join('')}
+      </tbody></table></div>
+      ${connWin()}`),
+
+    connectors: () => appShell(`
+      <div class="pagehead"><div><h1 class="title">Коннекторы</h1><p class="lead">Почта и API: куда подключаться и с каким входом</p></div></div>
+      ${aiTabs('connectors')}
+      ${tbar('', '<button type="button" class="btn primary spacer" data-cadd>Добавить</button>')}
+      <div class="card tcard"><table style="min-width:760px"><thead><tr><th>ID</th><th>Название</th><th>Тип</th><th>Используют</th><th>Статус</th><th></th></tr></thead><tbody>
+        ${Object.entries(CONN_DATA).map(([id, d]) => connRow('conn', id, d)).join('')}
+      </tbody></table></div>
+      ${connWin()}`),
 
     constructor: () => appShell(`
       <div class="back" data-go="agents">← Агенты</div>
@@ -782,9 +791,13 @@ contextTokens: 32000</textarea></div>
   function agentWin(mode) {
     const isNew = mode === 'new', builtin = mode === 'assistant';
     const name = isNew ? '' : builtin ? 'Ассистент' : 'Сводка почты';
+    const desc = isNew ? '' : builtin ? 'С ним вы говорите в чате' : 'Коротко пересказывает новые письма';
     const instr = isNew ? '' : 'Составь сводку новых писем: от кого, о чём, что требует ответа.\nКоротко, списком, важное — первым.';
     const agents = isNew ? [] : [['Ответы на письма', 'Готовит черновики ответов на письма']];
-    const mcp = isNew ? [] : [['Моя почта', 'Почта: поиск, чтение и отправка писем', ['только чтение', 'чтение и отправка'], 0]];
+    // MCP servers and connectors are picked the same way, with the same access choice
+    const ACC = ['только чтение', 'чтение и изменение'];
+    const mcp = isNew ? [] : [['Портал', 'Данные портала: траты, курсы, дата и время', ACC, 0]];
+    const conns = isNew ? [] : [['Моя почта', 'Почта Mail.ru, you@mail.ru']];
     const tab = (k, l, n, on) => `<button class="${on ? 'on' : ''}" data-atab="${k}">${l}${n === undefined ? '' : ` <span class="n">${n}</span>`}</button>`;
     // guardrails: [name with its value, kind, what it does]; documents come from the «Гардрейлы» section
     const guards = [
@@ -794,26 +807,26 @@ contextTokens: 32000</textarea></div>
     ];
     const guardRows = guards.map(([n, k, d]) => `<tr><td><b>${n}</b></td><td><span class="st ${k === 'документ' ? 'info' : 'mut'}">${k}</span></td><td class="muted">${d}</td><td class="acts">${ibtn('del', 'Убрать')}</td></tr>`).join('');
     const lock = builtin ? 'disabled' : '';
-    const sw = (label, on) => `<label class="switch"><input type="checkbox" role="switch" ${on ? 'checked' : ''}><span class="track"></span><span>${label}</span></label>`;
+    const swTitle = builtin ? 'Ассистент всегда включён' : 'Агент включён';
     const yaml = isNew
-      ? `version: 3\nname: ""\nenabled: true\nmodel: Ollama Cloud\ninstruction: ""\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\nmcp: []\nagents: []\napi: []`
-      : `version: 3\nname: Сводка почты\nenabled: true\nmodel: Ollama Cloud\ninstruction: |-\n  Составь сводку новых писем: от кого, о чём, что требует ответа.\n  Коротко, списком, важное — первым.\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\n  - document: Регламент работы с почтой\nmcp:\n  - name: Моя почта\n    access: read\nagents:\n  - Ответы на письма\napi: []`;
+      ? `version: 3\nname: ""\ndescription: ""\nenabled: true\nmodel: Ollama Cloud\ninstruction: ""\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\nagents: []\nmcp: []\nconnectors: []`
+      : `version: 3\nname: ${name}\ndescription: ${desc}\nenabled: true\nmodel: Ollama Cloud\ninstruction: |-\n  Составь сводку новых писем: от кого, о чём, что требует ответа.\n  Коротко, списком, важное — первым.\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\n  - document: Регламент работы с почтой\nagents:\n  - Ответы на письма\nmcp:\n  - name: Портал\n    access: read\nconnectors:\n  - Моя почта`;
     return `
       <div class="mbg" id="agentWin">
-        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle" ${isNew ? 'data-new' : ''}>
+        <div class="modal wide compact" role="dialog" aria-modal="true" aria-labelledby="awTitle" ${isNew ? 'data-new' : ''}>
           <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
           <div class="mhead"><h2 class="mtitle" id="awTitle">${isNew ? 'Новый агент' : name}</h2>
-            ${sw('Включён', true).replace('role="switch"', `role="switch" ${lock}`)}</div>
-          <div class="mtabs" role="tablist">${tab('gen', 'Общее', undefined, true)}${tab('grd', 'Политики', guards.length)}${tab('agt', 'Субагенты', agents.length)}${tab('mcp', 'MCP', mcp.length)}${tab('api', 'API', 0)}${tab('yaml', 'YAML')}</div>
+            <label class="switch" title="${swTitle}"><input type="checkbox" role="switch" checked ${lock} aria-label="${swTitle}"><span class="track"></span></label></div>
+          <div class="mtabs" role="tablist">${tab('gen', 'Общее', undefined, true)}${tab('mdl', 'Модель')}${tab('grd', 'Политики', guards.length)}${tab('agt', 'Субагенты', agents.length)}${tab('mcp', 'MCP', mcp.length)}${tab('con', 'Коннекторы', conns.length)}${tab('yaml', 'YAML')}</div>
 
           <div class="apanel" data-apanel="gen">
-            <div class="psec">
-              <div class="field"><label>Название</label><input value="${name}" placeholder="например, Сводка почты" ${lock}></div>
-              <div class="field"><label>Модель</label><select class="f"><option selected>Ollama Cloud</option><option>Llama 3.1 (локально)</option></select></div>
-              <div class="field" style="margin-bottom:0"><label>Системная инструкция</label>
-                <textarea rows="5" placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа.">${instr}</textarea>
-                <div class="hint">Первая строка — описание агента в списке.</div></div>
-            </div>
+            <div class="field"><label>Название <span class="req">*</span></label><input value="${name}" placeholder="например, Сводка почты" ${lock}></div>
+            <div class="field"><label>Описание</label><textarea class="desc" placeholder="Что делает агент" ${lock}>${desc}</textarea></div>
+          </div>
+          <div class="apanel" data-apanel="mdl" hidden>
+            <div class="field"><label>Модель <span class="req">*</span></label><select class="f"><option selected>Ollama Cloud</option><option>Llama 3.1 (локально)</option></select></div>
+            <div class="field" style="margin-bottom:0"><label>Системная инструкция</label>
+              <textarea rows="9" placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа.">${instr}</textarea></div>
           </div>
 
           <div class="apanel" data-apanel="grd" hidden>
@@ -834,16 +847,18 @@ contextTokens: 32000</textarea></div>
             ${tpart(agents)}
           </div>
           <div class="apanel" data-apanel="mcp" hidden>
-            ${tpart(mcp, '', true)}
+            ${tpart(mcp, 'Серверы из раздела «MCP»: встроенные в портал и внешние.', true)}
           </div>
-          <div class="apanel" data-apanel="api" hidden>${tpart([])}</div>
+          <div class="apanel" data-apanel="con" hidden>
+            ${tpart(conns, 'Подключения из раздела «Коннекторы»: почта и API.')}
+          </div>
 
           <div class="apanel" data-apanel="yaml" hidden>
-            <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" spellcheck="false" aria-label="YAML агента"># AI Portal — агент.\n${yaml}</textarea></div>
-            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn ghost">Скачать</button><button type="button" class="btn ghost" data-yup>Загрузить</button></div>
+            <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" spellcheck="false" aria-label="YAML агента" ${builtin ? 'readonly' : ''}># AI Portal — агент.\n${yaml}</textarea></div>
+            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn ghost" ${lock}>Скачать</button><button type="button" class="btn ghost" data-yup ${lock}>Загрузить</button></div>
           </div>
 
-          <div class="mfoot"><button class="btn ghost" ${lock} title="${builtin ? 'Встроенный агент проверяют прямо в чате' : 'Сохранить и сразу запустить агента'}">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-save data-toast="${isNew ? 'Агент создан' : 'Сохранено'}">Сохранить</button></div>
+          <div class="mfoot"><span class="spacer"></span><button class="btn primary" data-close data-save data-toast="${isNew ? 'Агент создан' : 'Сохранено'}">Сохранить</button></div>
         </div>
       </div>`;
   }
@@ -861,7 +876,7 @@ contextTokens: 32000</textarea></div>
   function accessRow(n,e,on){ const cell=(v)=>`<td style="text-align:center"><button class="btn sm" style="min-width:44px;${v?'background:var(--primary);color:#fff;border-color:transparent':'background:var(--card);border:1px solid var(--line);color:var(--muted)'}">${v?'✓':'+'}</button></td>`; return `<tr><td><div class="b">${n}</div><div class="sub">${e}</div></td>${cell(on[0])}${cell(on[1])}${cell(on[2])}</tr>`; }
 
   function chip(t){ return `<button class="btn ghost sm" style="border-radius:20px">${t}</button>`; }
-  function aiTabs(active){ const t=[['agents','Агенты'],['settings','Модели'],['mcp','MCP'],['guardrails','Гардрейлы']]; return `<div class="tabs" style="margin:-4px 0 18px">${t.map(([k,l])=>`<button class="${active===k?'on':''}" data-go="${k}">${l}</button>`).join('')}</div>`; }
+  function aiTabs(active){ const t=[['agents','Агенты'],['settings','Модели'],['mcp','MCP'],['connectors','Коннекторы'],['guardrails','Гардрейлы']]; return `<div class="tabs" style="margin:-4px 0 18px">${t.map(([k,l])=>`<button class="${active===k?'on':''}" data-go="${k}">${l}</button>`).join('')}</div>`; }
   const IC = {
     download: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>',
     upload: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/></svg>',
@@ -877,10 +892,47 @@ contextTokens: 32000</textarea></div>
     search: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   };
   function ibtn(icon, title, extra) { return `<button type="button" class="ibtn ${icon === 'del' ? 'del' : ''}" title="${title}" aria-label="${title}" ${extra || ''}>${IC[icon]}</button>`; }
-  function tbar(ph) { return `<div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" data-search placeholder="${ph || 'Поиск по названию…'}"></label><button type="button" class="btn dashed">+ Фильтр</button></div>`; }
+  function tbar(ph, action) { return `<div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" data-search placeholder="${ph || 'Поиск по названию…'}"></label><button type="button" class="btn dashed">+ Фильтр</button>${action || ''}</div>`; }
   function agentRow(id,name,desc,model,mcp,status,cls,run){ return `<tr><td>#${id}</td><td><div class="b link" data-go="agent">${name}</div><div class="sub">${desc}</div></td><td style="white-space:nowrap">${model}</td><td>${mcp.join(', ')}</td><td><span class="st ${cls}">${status}</span></td><td class="muted">${run}</td><td class="acts">${ibtn('run','Запустить')}${ibtn('edit','Изменить','data-go="agentwin"')}${ibtn('del','Удалить')}</td></tr>`; }
   function modelRow(id,name,desc,url,agents){ return `<tr><td>#${id}</td><td><span class="b">${name}</span><div class="sub">${desc}</div></td><td class="muted">${url}</td><td>${agents}</td><td class="stcell"><span class="st ok">подключена</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Изменить',`data-medit="${id}"`)}${ibtn('del','Удалить',`data-mdel="${id}"`)}</td></tr>`; }
-  function mcpRow(id,name,desc,tools,agents,status,cls){ return `<tr><td>#${id}</td><td><div class="b">${name}</div><div class="sub">${desc}</div></td><td><span title="${tools.join(', ')}">${tools.length}</span></td><td>${agents}</td><td class="stcell"><span class="st ${cls}">${status}</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Настроить')}${ibtn('del','Удалить')}</td></tr>`; }
+  // ---- MCP servers and connectors: the same list and the same window ----
+  // MCP speaks the MCP protocol: built into the portal or an outside server by address.
+  // A connector only keeps where to connect and how to log in: a mailbox over IMAP or an HTTP API.
+  // tools: [name, what it does, 'r' read | 'w' change, false = switched off]
+  const MCP_DATA = {
+    1: { builtin: true, name: 'Портал', desc: 'Данные портала: траты, курсы, дата и время', usedBy: ['Ассистент', 'Чеки из почты'],
+      tools: [['Дата и время', 'Сегодняшняя дата и время', 'r'], ['Траты за период', 'Покупки и суммы из раздела «Траты»', 'r'], ['Записать трату', 'Добавить покупку в «Траты»', 'w'], ['Мои курсы', 'Курсы и прогресс обучения', 'r']] },
+    2: { builtin: true, name: 'Браузер', desc: 'Открывает сайты и читает страницы', usedBy: [],
+      tools: [['Открыть страницу', 'Загрузить страницу по адресу', 'r'], ['Текст страницы', 'Прочитать, что на странице', 'r'], ['Снимок страницы', 'Скриншот для модели', 'r'], ['Заполнить форму', 'Ввести данные и нажать кнопку', 'w', false]] },
+    3: { name: 'GitHub', desc: 'Репозитории, задачи и pull request', url: 'https://api.githubcopilot.com/mcp/', auth: 'token', st: 'ok', usedBy: ['Разбор писем'],
+      tools: [['search_repositories', 'Найти репозитории', 'r'], ['get_file_contents', 'Содержимое файла', 'r'], ['list_issues', 'Список задач', 'r'], ['create_issue', 'Создать задачу', 'w'], ['create_pull_request', 'Создать pull request', 'w', false]] },
+    4: { name: 'Context7', desc: 'Свежая документация библиотек', url: 'https://mcp.context7.com/mcp', auth: 'none', st: 'new', usedBy: [],
+      tools: [['resolve-library-id', 'Найти библиотеку по названию', 'r'], ['get-library-docs', 'Документация библиотеки', 'r']] },
+  };
+  const CTYPES = {
+    mail: { label: 'Почта', about: 'Почтовый ящик по IMAP', ph: 'например, Моя почта' },
+    api: { label: 'API', about: 'Любой HTTP API: адрес и вход', ph: 'например, Курсы валют' },
+  };
+  const CONN_DATA = {
+    1: { type: 'mail', name: 'Моя почта', desc: 'Личный ящик: чеки, счета, рассылки', host: 'imap.mail.ru', smtp: 'smtp.mail.ru', user: 'you@mail.ru', st: 'ok', usedBy: ['Ассистент', 'Сводка почты', 'Чеки из почты'] },
+    2: { type: 'api', name: 'Курсы валют ЦБ', desc: 'Официальные курсы на дату', url: 'https://www.cbr-xml-daily.ru', auth: 'none', st: 'ok', off: true, usedBy: [] },
+  };
+  const toolsOf = (kind, d) => d.tools || [];
+  function connRow(kind, id, d) {
+    const on = toolsOf(kind, d).filter((t) => t[3] !== false);
+    const st = d.builtin ? '<span class="st ok">работает</span>' : d.off ? '<span class="st mut" title="Агенты его не получают">выключен</span>' : d.st === 'new' ? '<span class="st mut">не проверено</span>' : d.st === 'err' ? '<span class="st err" title="Неверный токен">ошибка</span>' : '<span class="st ok">подключено</span>';
+    return `<tr><td>#${id}</td><td><div class="b">${d.name}</div><div class="sub">${d.desc}</div></td><td>${kind === 'mcp' ? (d.builtin ? 'встроенный' : 'внешний') : CTYPES[d.type].label}</td>
+      ${kind === 'mcp' ? `<td><span title="${on.map((t) => t[0]).join(', ')}">${on.length}</span></td>` : ''}<td>${d.usedBy.length ? d.usedBy.join(', ') : '<span class="muted">—</span>'}</td><td class="stcell">${st}</td>
+      <td class="acts">${d.builtin ? '' : ibtn('check', 'Проверить', 'data-rowtest')}${ibtn('edit', 'Изменить', `data-cedit="${id}"`)}${d.builtin ? '' : ibtn('del', 'Удалить', `data-cdel="${id}"`)}</td></tr>`;
+  }
+  function connWin() {
+    return `<div class="mbg" id="connWin" hidden><div class="modal wide compact" role="dialog" aria-modal="true" aria-labelledby="cwTitle">
+      <button type="button" class="mclose" data-cwclose aria-label="Закрыть">×</button>
+      <div class="mhead"><h2 class="mtitle" id="cwTitle"></h2><span id="cwSw"></span></div>
+      <div class="mtabs" role="tablist" id="cwTabs"></div>
+      <div id="cwBody" style="display:contents"></div>
+      <div class="mfoot"><span class="spacer"></span><button type="button" class="btn primary" id="cwSave" data-save>Сохранить</button></div></div></div>`;
+  }
   function histGroup(title, items) { return `<div class="hgroup"><button type="button" class="hhead" data-hgroup aria-expanded="true">${title}<span class="chev">▾</span></button><div class="hitems">${items.map(([t, on]) => `<button type="button" class="hitem ${on ? 'on' : ''}" data-hitem>${t}</button>`).join('')}</div></div>`; }
   function cu(t, file) { return `<div class="cu">${file ? `<div class="cfile"><div class="b">${file}</div><span class="cft">PDF</span></div>` : ''}<div class="cub">${t}</div></div>`; }
   function ca(t) { return `<div class="ca">${t}</div>`; }
@@ -898,7 +950,7 @@ contextTokens: 32000</textarea></div>
   // ---- pinned menu + expanding tray ----
   const NAV = {
     chat: { go: 'chat', label: 'Чат', sec: 'chat' },
-    agents: { go: 'agents', label: 'Агенты', sec: 'agents' }, mcp: { go: 'mcp', label: 'MCP' }, settings: { go: 'settings', label: 'Модели' },
+    agents: { go: 'agents', label: 'Агенты', sec: 'agents' }, mcp: { go: 'mcp', label: 'MCP' }, connectors: { go: 'connectors', label: 'Коннекторы' }, settings: { go: 'settings', label: 'Модели' },
     learn: { go: 'learn', label: 'Обучение' }, stats: { go: 'stats', label: 'Траты' }, me: { go: 'me', label: 'Прогресс' },
     users: { go: 'users', label: 'Пользователи', sec: 'users' }, access: { go: 'access', label: 'Доступы', sec: 'access' },
   };
@@ -978,7 +1030,7 @@ contextTokens: 32000</textarea></div>
     if (dragFrom !== 'nav' || !dragKey || pins.length <= 1) return;
     pins = pins.filter(k => k !== dragKey); savePins(); renderNav();
   });
-  const navSection = { chat:'chat', agents:'agents', agent:'agents', agentnew:'agents', agentwin:'agents', assistantwin:'agents', guardrails:'agents', constructor:'agents', mcp:'mcp', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
+  const navSection = { chat:'chat', agents:'agents', agent:'agents', agentnew:'agents', agentwin:'agents', assistantwin:'agents', guardrails:'agents', constructor:'agents', mcp:'mcp', connectors:'connectors', settings:'settings', users:'users', access:'access', learn:'fam', course:'fam', lesson:'fam', stats:'fam', me:'fam' };
 
   function render(name) {
     if (!SCREENS[name]) name = 'chat';
@@ -992,6 +1044,7 @@ contextTokens: 32000</textarea></div>
     wireTables();
     if (name === 'settings') wireSettings();
     if (name === 'chat') wireChat();
+    if (name === 'mcp' || name === 'connectors') wireConn(name === 'mcp' ? 'mcp' : 'conn');
   }
   function go(name) { location.hash = name; }
 
@@ -1135,6 +1188,171 @@ contextTokens: 32000</textarea></div>
       if (!(Number(document.getElementById('mCtx').value) > 0)) return fieldErr('mCtx', 'mpar', 'Укажите размер контекста');
       form.hidden = true; showSaved(EDIT ? 'Модель сохранена' : 'Модель добавлена');
     });
+  }
+  // ---- MCP / connector window: Общее · Подключение · Инструменты · YAML (a built-in server: Общее · Инструменты) ----
+  const PORTS = { imap: 993, pop3: 995, smtp: 465 };
+  const AUTH = { none: 'Без авторизации', token: 'Токен', header: 'Свой заголовок', basic: 'Логин и пароль' };
+  // what «Проверить» brings back in the mockup for a new MCP server
+  const NEW_MCP_TOOLS = [['search', 'Найти документы', 'r'], ['fetch', 'Получить документ целиком', 'r'], ['create_note', 'Создать заметку', 'w']];
+  function wireConn(kind) {
+    const DATA = kind === 'mcp' ? MCP_DATA : CONN_DATA;
+    const bg = document.getElementById('connWin'), m = bg.querySelector('.modal'), $ = (id) => document.getElementById(id);
+    let D = null, type = 'mail', tools = [];
+    const esc = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const field = (label, req, inner, hint) => `<div class="field"><label>${label}${req ? ' <span class="req">*</span>' : ''}</label>${inner}<div class="ferr" hidden></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
+    const pwd = (id, ph) => `<div class="pwd"><input type="password" id="${id}" placeholder="${ph || ''}" autocomplete="off"><button type="button" data-tg="${id}" aria-label="Показать" title="Показать">${EYE}</button></div>`;
+    const usesUrl = () => kind === 'mcp' || type === 'api';
+
+    function panelGen() {
+      const lock = D?.builtin ? 'disabled' : '';
+      return field('Название', true, `<input id="cwName" value="${esc(D?.name)}" placeholder="${kind === 'mcp' ? 'например, GitHub' : CTYPES[type].ph}" ${lock}>`)
+        + `<div class="field"><label>Описание</label><textarea class="desc" id="cwDesc" placeholder="Для чего это подключение" ${lock}>${esc(D?.desc)}</textarea></div>`
+        + (D?.builtin ? '<div class="hint">Встроенный сервер работает внутри портала: адрес и вход ему не нужны. Лишние инструменты можно выключить.</div>' : '');
+    }
+    function authFields(a) {
+      const saved = D && D.auth === a ? 'сохранён' : '';
+      if (a === 'token') return field('Токен', true, pwd('cwTok', saved && 'Токен сохранён'));
+      if (a === 'header') return `<div class="grid c2" style="gap:14px">${field('Заголовок', true, '<input id="cwHdr" placeholder="X-Api-Key">')}${field('Значение', true, pwd('cwTok', saved && 'Значение сохранено'))}</div>`;
+      if (a === 'basic') return `<div class="grid c2" style="gap:14px">${field('Логин', true, '<input id="cwUser" autocomplete="off">')}${field('Пароль', true, pwd('cwPass', saved && 'Пароль сохранён'))}</div>`;
+      return '';
+    }
+    const authBlock = (opts) => { const a = D?.auth || 'none';
+      return field('Авторизация', false, `<select class="f" id="cwAuth">${opts.map((k) => `<option value="${k}" ${k === a ? 'selected' : ''}>${AUTH[k]}</option>`).join('')}</select>`) + `<div id="cwAuthBox">${authFields(a)}</div>`; };
+    function panelCon() {
+      const check = '<div class="row" style="margin:-6px 0 0;gap:14px;flex-wrap:wrap"><button type="button" class="btn ghost" data-ccheck>Проверить</button><span class="status" id="cwSt" hidden></span></div>';
+      if (kind === 'mcp') return field('Адрес сервера', true, `<input id="cwUrl" value="${esc(D?.url)}" placeholder="например, https://mcp.example.com/mcp">`) + authBlock(['none', 'token', 'header']) + check;
+      const typeSel = field('Тип', true, `<select class="f" id="cwType" ${D ? 'disabled' : ''}>${Object.entries(CTYPES).map(([k, t]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${t.label}</option>`).join('')}</select>`);
+      if (type === 'mail') { const proto = D?.proto || 'imap';
+        const row = 'display:grid;grid-template-columns:130px 1fr 110px;gap:14px';
+        return typeSel
+          + `<div class="mailrow" style="${row}">${field('Получение', false, `<select class="f" id="cwProto"><option value="imap" ${proto === 'imap' ? 'selected' : ''}>IMAP</option><option value="pop3" ${proto === 'pop3' ? 'selected' : ''}>POP3</option></select>`)}`
+          + `${field('Сервер входящей почты', true, `<input id="cwHost" value="${esc(D?.host)}" placeholder="например, imap.mail.ru">`)}${field('Порт', true, `<input id="cwPort" type="number" value="${PORTS[proto]}">`)}</div>`
+          + `<div class="mailrow" style="${row}">${field('Отправка', false, '<input value="SMTP" disabled>')}`
+          + `${field('Сервер исходящей почты', false, `<input id="cwSmtp" value="${esc(D?.smtp)}" placeholder="например, smtp.mail.ru">`)}${field('Порт', false, `<input id="cwSmtpPort" type="number" value="${PORTS.smtp}">`)}</div>`
+          + `<div class="grid c2" style="gap:14px">${field('Логин', true, `<input id="cwUser" value="${esc(D?.user)}" placeholder="you@mail.ru" autocomplete="off">`)}`
+          + `${field('Пароль приложения', true, pwd('cwPass', D ? 'Пароль сохранён' : ''))}</div>`
+          + `<div class="hint" style="margin:-6px 0 14px">Mail.ru, Яндекс и Gmail пускают только по паролю приложения: его создают в настройках безопасности почты.</div>` + check; }
+      return typeSel + field('Адрес API', true, `<input id="cwUrl" value="${esc(D?.url)}" placeholder="например, https://api.example.ru/v1">`)
+        + field('Токен', false, pwd('cwTok', D?.auth === 'token' ? 'Токен сохранён' : ''), 'Если API его просит. Передаётся в заголовке Authorization: Bearer.') + check;
+    }
+    function panelTools() {
+      const rows = !tools.length ? '<tr><td colspan="4" class="muted tempty">Список появится после проверки подключения</td></tr>'
+        : tools.map((t, i) => `<tr><td style="width:44px"><input type="checkbox" class="tchk" data-tool="${i}" ${t[3] === false ? '' : 'checked'} aria-label="Включить «${t[0]}»"></td><td><b>${t[0]}</b></td><td class="muted">${t[1]}</td><td><span class="st ${t[2] === 'w' ? 'wait' : 'mut'}">${t[2] === 'w' ? 'изменение' : 'чтение'}</span></td></tr>`).join('');
+      return `<div class="tpart"><table><thead><tr><th></th><th>Инструмент</th><th>Описание</th><th>Вид</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div class="hint">Выключенный инструмент не получит ни один агент. Изменения агент делает по правилам подтверждения из своих «Политик».</div>`;
+    }
+    const panelYaml = () => `<div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" id="cwYaml" spellcheck="false" aria-label="YAML"></textarea></div>
+      <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn ghost">Скачать</button><button type="button" class="btn ghost" data-yup>Загрузить</button></div>`;
+    function yamlText() {
+      const val = (id, dflt) => { const x = $(id) ? $(id).value : dflt; return x ? x : '""'; };
+      const off = tools.filter((t) => t[3] === false).map((t) => `\n  - ${t[0]}`).join('') || ' []';
+      const head = `version: 1\n${kind === 'conn' ? `type: ${type}\n` : ''}name: ${val('cwName', D?.name)}\ndescription: ${val('cwDesc', D?.desc)}\n${kind === 'conn' ? `enabled: ${$('cwOn') ? $('cwOn').checked : !D?.off}\n` : ''}`;
+      const conn = kind === 'mcp' ? `url: ${val('cwUrl', D?.url)}\nauth: ${val('cwAuth', D?.auth)}\n` : type === 'api' ? `url: ${val('cwUrl', D?.url)}\n`
+        : `incoming:\n  protocol: ${val('cwProto')}\n  host: ${val('cwHost')}\n  port: ${val('cwPort')}\noutgoing:\n  host: ${val('cwSmtp')}\n  port: ${val('cwSmtpPort')}\nuser: ${val('cwUser', D?.user)}\n`;
+      return `# AI Portal — ${kind === 'mcp' ? 'MCP-сервер' : 'коннектор'}. Пароли и токены сюда не попадают.\n${head}${conn}${kind === 'mcp' ? `toolsOff:${off}` : ''}`.trimEnd();
+    }
+    const P = { gen: panelGen, con: panelCon, tls: panelTools, yaml: panelYaml };
+    const tabsFor = () => D?.builtin ? [['gen', 'Общее'], ['tls', 'Инструменты']] : kind === 'conn' ? [['gen', 'Общее'], ['con', 'Подключение'], ['yaml', 'YAML']] : [['gen', 'Общее'], ['con', 'Подключение'], ['tls', 'Инструменты'], ['yaml', 'YAML']];
+    const countTools = () => { const n = m.querySelector('[data-ctab=tls] .n'); if (n) n.textContent = tools.filter((t) => t[3] !== false).length; };
+    function paintYaml() { const ta = $('cwYaml'); if (ta) { ta.value = yamlText(); ta.previousElementSibling.innerHTML = hlYaml(ta.value); } }
+    function fill(k) { const p = m.querySelector(`[data-cpanel=${k}]`); if (!p) return; p.innerHTML = P[k](); if (k === 'yaml') paintYaml(); if (k === 'tls') countTools(); }
+    function showTab(k) {
+      m.querySelectorAll('[data-ctab]').forEach((b) => b.classList.toggle('on', b.dataset.ctab === k));
+      m.querySelectorAll('[data-cpanel]').forEach((p) => { p.hidden = p.dataset.cpanel !== k; });
+      if (k === 'yaml') paintYaml();
+    }
+    function paintAll() {
+      const tabs = tabsFor();
+      $('cwTabs').innerHTML = tabs.map(([k, l]) => `<button type="button" data-ctab="${k}">${l}${k === 'tls' ? ' <span class="n"></span>' : ''}</button>`).join('');
+      $('cwBody').innerHTML = tabs.map(([k]) => `<div class="apanel" data-cpanel="${k}" hidden></div>`).join('');
+      tabs.forEach(([k]) => fill(k)); showTab('gen');
+    }
+    function open(id) {
+      D = id ? DATA[id] : null; type = D?.type || 'mail';
+      tools = (D ? toolsOf(kind, D) : []).map((t) => [...t]);
+      $('cwTitle').textContent = D ? D.name : kind === 'mcp' ? 'Новый MCP-сервер' : 'Новый коннектор';
+      const on = !D?.off, swt = (v) => v ? 'Коннектор включён' : 'Коннектор выключен';
+      $('cwSw').innerHTML = kind === 'conn' ? `<label class="switch" title="${swt(on)}"><input type="checkbox" role="switch" id="cwOn" ${on ? 'checked' : ''} aria-label="${swt(on)}"><span class="track"></span></label>` : '';
+      D ? m.removeAttribute('data-new') : m.setAttribute('data-new', '');
+      paintAll(); bg.hidden = false; track(m); $(D?.builtin ? 'cwDesc' : 'cwName').focus();
+    }
+
+    // checks: top to bottom, the first problem only; a saved secret may stay empty
+    const fErr = (id, t) => { const i = $(id), e = i.closest('.field').querySelector('.ferr');
+      e.textContent = t; e.hidden = false; i.classList.add('bad'); showTab(i.closest('[data-cpanel]').dataset.cpanel); i.focus(); return false; };
+    function needFields() {
+      if (usesUrl() && !$('cwUrl').value.trim()) return fErr('cwUrl', kind === 'mcp' ? 'Укажите адрес сервера' : 'Укажите адрес API');
+      if ($('cwHost') && !$('cwHost').value.trim()) return fErr('cwHost', 'Укажите сервер входящей почты');
+      if ($('cwPort') && !(Number($('cwPort').value) > 0)) return fErr('cwPort', 'Укажите порт');
+      if ($('cwHdr') && !$('cwHdr').value.trim()) return fErr('cwHdr', 'Укажите заголовок');
+      if ($('cwUser') && !$('cwUser').value.trim()) return fErr('cwUser', 'Укажите логин');
+      for (const id of kind === 'conn' && type === 'api' ? [] : ['cwTok', 'cwPass']) { const i = $(id);
+        if (i && !i.value && !i.placeholder) return fErr(id, id === 'cwPass' ? 'Укажите пароль' : $('cwHdr') ? 'Укажите значение' : 'Укажите токен'); }
+      return true;
+    }
+    // mockup: «example» in an address → no answer, the secret «wrong» → refused
+    const outcome = () => /example/.test(($('cwUrl') || $('cwHost') || {}).value || '') ? 'down' : [$('cwTok'), $('cwPass')].some((i) => i && i.value === 'wrong') ? 'denied' : 'ok';
+    const okText = () => kind === 'mcp' ? `✓ Подключено. Инструментов: ${tools.length}` : type === 'mail' ? '✓ Подключено. Писем во входящих: 1240'
+      : '✓ Подключено';
+    const badText = (r) => r === 'down' ? 'Сервер не отвечает' : type === 'mail' && kind === 'conn' ? 'Неверный логин или пароль' : 'Неверный токен';
+    function gotTools() {
+      if (kind === 'mcp' && !D) { tools = NEW_MCP_TOOLS.map((t) => [...t]); fill('tls'); }
+    }
+    function runCheck() {
+      if (!needFields()) return;
+      const st = $('cwSt'), btn = m.querySelector('[data-ccheck]');
+      st.hidden = false; st.className = 'status checking'; st.innerHTML = '<span class="spin"></span> Проверяем…'; btn.disabled = true;
+      setTimeout(() => { const r = outcome(); btn.disabled = false;
+        if (r === 'ok') gotTools();
+        st.className = 'status ' + (r === 'ok' ? 'ok' : 'err'); st.textContent = r === 'ok' ? okText() : '✕ ' + badText(r); }, 900);
+    }
+
+    m.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-ctab]'); if (t) return showTab(t.dataset.ctab);
+      if (e.target.closest('[data-ccheck]')) return runCheck();
+      if (e.target.closest('[data-cwclose]')) return askClose(bg);
+      const eye = e.target.closest('[data-tg]');
+      if (eye) { const i = $(eye.dataset.tg); i.type = i.type === 'password' ? 'text' : 'password'; eye.innerHTML = i.type === 'text' ? EYE_OFF : EYE; eye.title = i.type === 'text' ? 'Скрыть' : 'Показать'; }
+    });
+    m.addEventListener('input', (e) => {
+      if (e.target.classList.contains('bad')) { e.target.classList.remove('bad'); e.target.closest('.field').querySelector('.ferr').hidden = true; }
+      if (e.target.id === 'cwYaml') e.target.previousElementSibling.innerHTML = hlYaml(e.target.value);
+    });
+    m.addEventListener('scroll', (e) => { if (e.target.id === 'cwYaml') { e.target.previousElementSibling.scrollTop = e.target.scrollTop; e.target.previousElementSibling.scrollLeft = e.target.scrollLeft; } }, true);
+    m.addEventListener('change', (e) => {
+      const id = e.target.id;
+      if (id === 'cwType') { type = e.target.value; fill('con'); $('cwType').focus(); $('cwName').placeholder = CTYPES[type].ph; }
+      if (id === 'cwOn') { const t = e.target.checked ? 'Коннектор включён' : 'Коннектор выключен'; e.target.closest('.switch').title = t; e.target.setAttribute('aria-label', t); }
+      if (id === 'cwAuth') $('cwAuthBox').innerHTML = authFields(e.target.value);
+      // IMAP ↔ POP3: the usual port, and imap.… ↔ pop.… when the server follows that pattern
+      if (id === 'cwProto') { const pop = e.target.value === 'pop3', h = $('cwHost');
+        $('cwPort').value = PORTS[e.target.value]; h.value = h.value.replace(pop ? /^imap\./ : /^pop3?\./, pop ? 'pop.' : 'imap.'); }
+      if (e.target.dataset.tool !== undefined) { tools[e.target.dataset.tool][3] = e.target.checked; countTools(); }
+      m._upd?.();
+    });
+    $('cwSave').addEventListener('click', () => {
+      if (!$('cwName').value.trim()) return fErr('cwName', 'Укажите название');
+      if (!D?.builtin) {
+        if (!needFields()) return;
+        // like the model window: «Сохранить» connects once more; the answer goes under its field
+        const r = outcome();
+        if (r !== 'ok') return fErr(r === 'down' ? ($('cwUrl') ? 'cwUrl' : 'cwHost') : ($('cwTok') ? 'cwTok' : 'cwPass'), badText(r));
+      }
+      bg.hidden = true; showSaved(D ? 'Сохранено' : kind === 'mcp' ? 'Сервер добавлен' : 'Коннектор добавлен');
+    });
+    view.querySelector('[data-cadd]').addEventListener('click', () => open(null));
+    view.querySelectorAll('[data-cedit]').forEach((b) => b.addEventListener('click', () => open(b.dataset.cedit)));
+    view.querySelectorAll('[data-cdel]').forEach((b) => b.addEventListener('click', () => {
+      const d = DATA[b.dataset.cdel];
+      document.getElementById('delAsk')?.remove();
+      document.body.insertAdjacentHTML('beforeend', `<div class="mbg" id="delAsk" style="z-index:80"><div class="modal" role="alertdialog" aria-modal="true" style="width:min(460px,100%)">
+        <h2 class="mtitle">Удалить «${d.name}»?</h2>
+        <p style="margin:10px 0 0;font-size:14px;line-height:1.5">${d.usedBy.length ? `Его используют: ${d.usedBy.join(', ')}. У них он пропадёт. ` : ''}Действие нельзя отменить.</p>
+        <div class="mfoot"><span class="spacer"></span><button type="button" class="btn ghost" data-delask-no>Отмена</button><button type="button" class="btn danger" data-delask-ok>Удалить</button></div></div></div>`);
+      const ask = document.getElementById('delAsk');
+      ask.querySelector('[data-delask-no]').addEventListener('click', () => ask.remove());
+      ask.querySelector('[data-delask-ok]').addEventListener('click', () => { ask.remove(); b.closest('tr').remove(); showSaved('Удалено'); });
+    }));
   }
   function fitChat() { const w = document.getElementById('cwrap'); if (w) w.style.height = Math.max(420, window.innerHeight - w.getBoundingClientRect().top - 20) + 'px'; }
   window.addEventListener('resize', fitChat);

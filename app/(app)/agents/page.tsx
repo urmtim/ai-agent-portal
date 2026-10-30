@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
-import { ownConnections } from "@/lib/connections";
-import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
+import { ownConnectors } from "@/lib/connections";
+import { connectorDesc } from "@/lib/connectors";
 import { envModelName, llmAvailable } from "@/lib/llm";
 import { agentDesc } from "@/lib/agents/types";
 import { AiTabs } from "@/components/AiTabs";
@@ -10,7 +10,6 @@ import { ListTable, type ListRow } from "@/components/ui/ListTable";
 import { AgentActions, NewAgentButton } from "./AgentModals";
 import { agentEditData } from "@/lib/agents/edit-data";
 import { loadAssistant } from "@/lib/assistant";
-import { ASSISTANT_APIS } from "@/lib/assistant-config";
 import { AssistantActions } from "./assistant/AssistantForm";
 import { CHAT_INSTRUCTIONS } from "@/lib/chat/instructions";
 
@@ -34,9 +33,9 @@ export default async function AgentsPage() {
     include: { runs: { orderBy: { startedAt: "desc" }, take: 1 }, model: { select: { name: true } } },
   });
 
-  const conns = await ownConnections(user.id);
+  const conns = await ownConnectors(user.id);
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, enabled: true } });
-  const connNames = (a: (typeof agents)[number]) => agentEditData(a).mcpIds.map((id) => conns.find((c) => c.id === id)?.name).filter(Boolean).join(", ");
+  const connNames = (a: (typeof agents)[number]) => agentEditData(a).connectorIds.map((id) => conns.find((c) => c.id === id)?.name).filter(Boolean).join(", ");
   const llmOk = await llmAvailable(user.id);
   const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
   const cfg = await loadAssistant(user.id);
@@ -46,15 +45,14 @@ export default async function AgentsPage() {
     models,
     newModelId: cfg.modelId ?? models[0]?.id ?? "",
     agents: agents.map((a) => ({ id: a.id, name: a.name, desc: agentDesc(a), enabled: a.enabled })),
-    connections: conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind })),
+    connectors: conns.map((c) => ({ id: c.id, name: c.name, desc: connectorDesc(c), enabled: c.enabled })),
     docs: docs.map((d) => ({ id: d.id, name: d.name, desc: d.description, enabled: d.enabled })),
   };
 
   // the chat's own agent: model and what it may use come from its modal (assistant/AssistantForm.tsx)
   const allowed = [
     cfg.agentIds.length && `агенты: ${agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name).join(", ")}`,
-    cfg.mcpIds.length && `MCP: ${conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ")}`,
-    cfg.apis.length && `API: ${cfg.apis.map((k) => ASSISTANT_APIS[k].label).join(", ")}`,
+    cfg.connectorIds.length && `коннекторы: ${conns.filter((c) => cfg.connectorIds.includes(c.id)).map((c) => c.name).join(", ")}`,
   ].filter(Boolean).join("; ");
   const base: ListRow = {
     key: "base",
@@ -66,7 +64,7 @@ export default async function AgentsPage() {
         <div className="sub">С ним вы говорите в чате. {allowed ? `Разрешено: ${allowed}` : "Пока ничего не разрешено"}</div>
       </div>,
       <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? unset}</span>,
-      <span key="m">{conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ") || <span className="muted">—</span>}</span>,
+      <span key="m">{conns.filter((c) => cfg.connectorIds.includes(c.id)).map((c) => c.name).join(", ") || <span className="muted">—</span>}</span>,
       <span key="st" className="st info">встроенный</span>,
       <span key="r" className="muted">—</span>,
       <AssistantActions key="a" cfg={cfg} instruction={CHAT_INSTRUCTIONS} {...choices} />,
@@ -130,7 +128,7 @@ export default async function AgentsPage() {
 
       <ListTable
         action={<NewAgentButton {...choices} />}
-        columns={["ID", "Название", "Модель", "MCP", "Статус", "Последний прогон", ""]}
+        columns={["ID", "Название", "Модель", "Подключения", "Статус", "Последний прогон", ""]}
         rows={[base, ...rows]}
         minWidth={820}
         filters={[{ id: "status", label: "Статус", options: ["включён", "выключен"] }]}

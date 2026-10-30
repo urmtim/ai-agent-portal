@@ -4,7 +4,7 @@ const TABS = [
   { href: "/agents", label: "Агенты" },
   { href: "/models", label: "Модели" },
   { href: "/mcp", label: "MCP" },
-  { href: "/api-access", label: "API" },
+  { href: "/connectors", label: "Коннекторы" },
   { href: "/guardrails", label: "Гардрейлы" },
 ] as const;
 

@@ -40,7 +40,7 @@ model User {
   chats       Chat[]
   auditLogs   AuditLog[]
   assistant   Assistant?
-  connections McpConnection[]
+  connectors Connector[]
   guardrailDocs GuardrailDoc[]
   models      LlmModel[]
 }
@@ -143,9 +143,10 @@ model Agent {
   enabled   Boolean   @default(true)
   config    String    @default("{}") // JSON: filters, lookback days, etc.
   agentIds  String    @default("[]") // JSON: other agents this agent may call (not used by the receipts agent yet)
-  mcpIds    String    @default("[]") // JSON: MCP servers it may use
-  mcpAccess String    @default("{}") // JSON {connectionId: "read" | "send"}: what it may do with each (lib/agents/policy.ts)
-  apis      String    @default("[]") // JSON: portal APIs it may call
+  mcpIds    String    @default("[]") // JSON: MCP servers it may use (none exist yet; connectors moved to connectorIds)
+  mcpAccess String    @default("{}") // JSON {serverId: "read" | "send"} (lib/agents/policy.ts)
+  connectorIds String @default("[]") // JSON: connectors (section «Коннекторы») it may use
+  apis      String    @default("[]") // JSON: no longer used (the «API» tab became «Коннекторы»)
   instruction String  @default("") // system instruction («Свой агент»)
   hitl      String    @default("confirm") // JSON {enabled, ask}; old "confirm" / "none" still read (lib/agents/policy.ts)
   guardrails String   @default("{}") // JSON {enabled, rules}; the old {maskPii, maxSteps, forbiddenTopics} still read
@@ -237,9 +238,10 @@ model Assistant {
   modelId   String? // chosen explicitly; null only while the owner has no models
   model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   agentIds  String    @default("[]") // JSON: agents it may run; nothing allowed until chosen
-  mcpIds    String    @default("[]") // JSON: MCP servers it may use (none exist yet)
-  mcpAccess String    @default("{}") // JSON {connectionId: "read" | "send"} (lib/agents/policy.ts)
-  apis      String    @default("[]") // JSON: portal APIs it may call, keys of ASSISTANT_APIS
+  mcpIds    String    @default("[]") // JSON: MCP servers it may use (none exist yet; connectors moved to connectorIds)
+  mcpAccess String    @default("{}") // JSON {serverId: "read" | "send"} (lib/agents/policy.ts)
+  connectorIds String @default("[]") // JSON: connectors it may use; nothing allowed until chosen
+  apis      String    @default("[]") // JSON: no longer used (the «API» tab became «Коннекторы»)
   instruction String  @default("") // added to the built-in chat instructions
   hitl      String    @default("\"changes_and_send\"") // JSON HITL choice (lib/agents/policy.ts)
   guardrails String   @default("{}") // JSON {rules}; {} → the default rules
@@ -266,15 +268,18 @@ model GuardrailDoc {
   @@index([ownerId])
 }
 
-// ─── MCP: the user's connections to outside services (catalog in lib/connectors.ts) ───
+// ─── Connectors: where to connect and how to log in — a mailbox or an HTTP API (lib/connectors.ts) ───
+// The table keeps its old name: these rows were «MCP connections» before the «Коннекторы» section.
 
-model McpConnection {
+model Connector {
   id        String    @id @default(cuid())
   ownerId   String
   owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  kind      String // connector key, e.g. "mail"
+  kind      String // "mail" | "api"
   name      String
-  config    String    @default("{}") // JSON settings without secrets (host, port, user…)
+  description String  @default("")
+  enabled   Boolean   @default(true) // off: agents and the assistant keep it but get no tools from it
+  config    String    @default("{}") // JSON settings without secrets (lib/connectors.ts)
   secretEnc String? // password / token, AES-GCM (lib/secret.ts); never sent to the browser
   checkedAt DateTime?
   checkOk   Boolean?
@@ -282,4 +287,5 @@ model McpConnection {
   createdAt DateTime  @default(now())
 
   @@index([ownerId])
+  @@map("McpConnection")
 }

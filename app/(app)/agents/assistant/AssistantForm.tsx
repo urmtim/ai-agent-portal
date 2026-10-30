@@ -15,7 +15,7 @@ export function AssistantActions({ cfg, instruction, ...choices }: { cfg: Assist
   const [open, setOpen] = useState(false);
   const a = {
     id: "assistant", name: "Ассистент", description: "С ним вы говорите в чате", enabled: true, modelId: cfg.modelId, instruction,
-    hitl: cfg.hitl, guardrails: cfg.guardrails, agentIds: cfg.agentIds, mcpIds: cfg.mcpIds, mcpAccess: cfg.mcpAccess, apis: cfg.apis as string[],
+    hitl: cfg.hitl, guardrails: cfg.guardrails, agentIds: cfg.agentIds, connectorIds: cfg.connectorIds,
   };
   return (
     <>

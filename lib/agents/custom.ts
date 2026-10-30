@@ -5,7 +5,7 @@ import type { Agent } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { chatModel, errorText } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
-import { firstMailConnection } from "@/lib/connections";
+import { firstMailConnector } from "@/lib/connections";
 import { maskPii } from "./guardrails";
 import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules, parseHitl } from "./policy";
 import { agentInstructions } from "@/lib/chat/instructions";
@@ -13,7 +13,7 @@ import { policySnapshot, policyTools, withPolicies } from "@/lib/chat/policy-too
 import { agentDesc } from "./types";
 import type { RunBy } from "./runner";
 
-// «Свой агент»: its instruction + the shared rules, its own tools (mail from its MCP tab, the agents on its «Субагенты» tab),
+// «Свой агент»: its instruction + the shared rules, its own tools (mail from its «Коннекторы» tab, the agents on its «Субагенты» tab),
 // current_time and get_policies (its HITL and guardrails; put before the task so the model can't skip them).
 // Runs to the end without a human — only subagents with HITL switched off can be called from inside, and only one level deep.
 
@@ -33,7 +33,7 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   // documents: only the owner's, only switched on in the catalog
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: agent.ownerId, enabled: true, id: { in: guardDocIds(rules) } }, select: { name: true, text: true } });
 
-  const conn = await firstMailConnection(agent.ownerId, ids(agent.mcpIds));
+  const conn = await firstMailConnector(agent.ownerId, ids(agent.connectorIds));
   const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs);
   const tools: ToolSet = {
     ...policyTools(snapshot),

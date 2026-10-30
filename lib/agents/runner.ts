@@ -4,7 +4,7 @@ import { audit, type AuditActor } from "@/lib/audit";
 import type { AuditChannel } from "@/lib/audit-events";
 import { runReceiptsAgent, type ReceiptsConfig } from "./receipts";
 import { runCustomAgent } from "./custom";
-import { firstMailConnection, mailAccess } from "@/lib/connections";
+import { firstMailConnector, mailAccess } from "@/lib/connections";
 
 const ids = (raw: string): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
 
@@ -29,9 +29,9 @@ export async function runAgent(agentId: string, by: RunBy = { actor: null, chann
 
     switch (agent.type) {
       case "RECEIPTS": {
-        // the mailbox comes from the agent's MCP tab, never from .env
-        const conn = await firstMailConnection(agent.ownerId, ids(agent.mcpIds));
-        if (!conn) throw new Error("Агенту не добавлена почта: подключите ящик в разделе MCP и добавьте его агенту на вкладке MCP");
+        // the mailbox comes from the agent's «Коннекторы» tab, never from .env
+        const conn = await firstMailConnector(agent.ownerId, ids(agent.connectorIds));
+        if (!conn) throw new Error("Агенту не добавлена почта: добавьте ящик в разделе «Коннекторы» и агенту на вкладке «Коннекторы»");
         result = await runReceiptsAgent(agent.ownerId, agent.id, config as ReceiptsConfig, agent.modelId, mailAccess(conn));
         break;
       }

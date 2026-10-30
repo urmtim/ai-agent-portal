@@ -23,19 +23,19 @@ test("parsePins: saved order kept", () => {
 });
 
 test("movePin: pin from tray between chat and agents", () => {
-  assert.deepEqual(movePin(DEFAULT_PINS, "stats", 1), ["chat", "stats", "agents", "models", "mcp", "api"]);
+  assert.deepEqual(movePin(DEFAULT_PINS, "stats", 1), ["chat", "stats", "agents", "models", "mcp", "connectors"]);
 });
 
 test("movePin: reorder models to the start", () => {
-  assert.deepEqual(movePin(DEFAULT_PINS, "models", 0), ["models", "chat", "agents", "mcp", "api"]);
+  assert.deepEqual(movePin(DEFAULT_PINS, "models", 0), ["models", "chat", "agents", "mcp", "connectors"]);
 });
 
 test("movePin: index past the end appends", () => {
-  assert.deepEqual(movePin(DEFAULT_PINS, "chat", 99), ["agents", "models", "mcp", "api", "chat"]);
+  assert.deepEqual(movePin(DEFAULT_PINS, "chat", 99), ["agents", "models", "mcp", "connectors", "chat"]);
 });
 
 test("unpin: removes the item, keeps the last one", () => {
-  assert.deepEqual(unpin(DEFAULT_PINS, "mcp"), ["chat", "agents", "models", "api"]);
+  assert.deepEqual(unpin(DEFAULT_PINS, "mcp"), ["chat", "agents", "models", "connectors"]);
   assert.deepEqual(unpin(["chat"], "chat"), ["chat"]);
 });
 
@@ -57,8 +57,10 @@ test("navKeyForPath: sections and child pages", () => {
 });
 
 test("parsePins: an untouched old default menu becomes the new default, a custom one stays", () => {
-  assert.deepEqual(parsePins('["chat","agents","mcp","models"]'), ["chat", "agents", "models", "mcp", "api"]);
-  assert.deepEqual(parsePins('["chat","models","agents","mcp","api"]'), ["chat", "agents", "models", "mcp", "api"]);
+  assert.deepEqual(parsePins('["chat","agents","mcp","models"]'), ["chat", "agents", "models", "mcp", "connectors"]);
+  assert.deepEqual(parsePins('["chat","models","agents","mcp","api"]'), ["chat", "agents", "models", "mcp", "connectors"]);
+  assert.deepEqual(parsePins('["chat","agents","models","mcp","api"]'), ["chat", "agents", "models", "mcp", "connectors"]);
+  assert.deepEqual(parsePins('["chat","stats","api"]'), ["chat", "stats", "connectors"]); // own menu: «API» → «Коннекторы» in place
   assert.deepEqual(parsePins('["chat","stats","agents"]'), ["chat", "stats", "agents"]);
   assert.deepEqual(parsePins('["agents","chat","mcp","models"]'), ["agents", "chat", "mcp", "models"]);
 });
@@ -70,7 +72,8 @@ test("«Чат» opens the latest chat and stays lit on any chat page", () => {
 });
 
 test("AI group order, API and guardrails sections", () => {
-  assert.deepEqual(NAV_GROUPS.find((g) => g.title === "AI")?.items, ["agents", "models", "mcp", "api", "guardrails"]);
-  assert.equal(navKeyForPath("/api-access"), "api");
+  assert.deepEqual(NAV_GROUPS.find((g) => g.title === "AI")?.items, ["agents", "models", "mcp", "connectors", "guardrails"]);
+  assert.equal(navKeyForPath("/api-access"), "connectors");
+  assert.equal(navKeyForPath("/connectors"), "connectors");
   assert.equal(navKeyForPath("/guardrails"), "guardrails");
 });

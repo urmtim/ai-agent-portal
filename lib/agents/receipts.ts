@@ -51,7 +51,7 @@ export async function runReceiptsAgent(
   agentId: string,
   config: ReceiptsConfig,
   modelId: string | null,
-  mail: MailAccess, // the agent's «Почта» connection (MCP tab)
+  mail: MailAccess, // the agent's «Почта» connector («Коннекторы» tab)
 ): Promise<{ processed: number; created: number; log: string[] }> {
   const log: string[] = [];
   const emails = await fetchRecentEmails(mail, {

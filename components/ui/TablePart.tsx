@@ -5,7 +5,7 @@ import { ICONS, IconButton } from "./icons";
 
 export type PartItem = { id: string; name: string; desc: string; note?: string; facet?: string };
 
-/** A per-row choice shown as its own column (e.g. «Доступ» of an MCP connection). */
+/** A per-row choice shown as its own column (e.g. «Доступ» of an MCP server). */
 export type PartColumn = {
   label: string;
   options: { value: string; label: string }[];

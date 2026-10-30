@@ -36,7 +36,7 @@ export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
     assistant: {
       modelName: models.find((m) => m.id === cfg.modelId)?.name ?? null,
       agentNames: agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name),
-      mail: (await prisma.mcpConnection.count({ where: { ownerId: userId, kind: "mail", id: { in: cfg.mcpIds } } })) > 0,
+      mail: (await prisma.connector.count({ where: { ownerId: userId, kind: "mail", enabled: true, id: { in: cfg.connectorIds } } })) > 0,
     },
   };
 }

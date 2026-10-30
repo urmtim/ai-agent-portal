@@ -6,8 +6,8 @@ import { runAgentNow, deleteAgent } from "../actions";
 import { AgentEditButton } from "../AgentModals";
 import { agentEditData } from "@/lib/agents/edit-data";
 import { agentDesc } from "@/lib/agents/types";
-import { ownConnections } from "@/lib/connections";
-import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
+import { ownConnectors } from "@/lib/connections";
+import { connectorDesc } from "@/lib/connectors";
 import { loadAssistant } from "@/lib/assistant";
 
 const RUN_ST: Record<string, { label: string; cls: string }> = {
@@ -30,7 +30,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
     include: { runs: { orderBy: { startedAt: "desc" }, take: 20 } },
   });
   if (!agent || agent.ownerId !== user.id) notFound();
-  const conns = await ownConnections(user.id);
+  const conns = await ownConnectors(user.id);
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, enabled: true } });
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" } });
   const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
@@ -48,7 +48,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
         <div className="spacer" />
         <AgentEditButton models={models} newModelId={cfg.modelId ?? models[0]?.id ?? ""} a={agentEditData(agent)}
           agents={own.map((x) => ({ id: x.id, name: x.name, desc: agentDesc(x), enabled: x.enabled }))}
-          connections={conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind }))}
+          connectors={conns.map((c) => ({ id: c.id, name: c.name, desc: connectorDesc(c), enabled: c.enabled }))}
           docs={docs.map((d) => ({ id: d.id, name: d.name, desc: d.description, enabled: d.enabled }))} />
       </div>
 

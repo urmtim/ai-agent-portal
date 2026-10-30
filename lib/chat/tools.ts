@@ -8,7 +8,7 @@ import { effectiveGuardrails, guardDocIds, hitlAsks } from "@/lib/agents/policy"
 import { policySnapshot, policyTools } from "@/lib/chat/policy-tools";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
-import { firstMailConnection } from "@/lib/connections";
+import { firstMailConnector } from "@/lib/connections";
 import { mailTools } from "@/lib/chat/mail-tools";
 
 export type { MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
@@ -35,8 +35,8 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   // only the agents the base assistant is allowed to run (settings: «Агенты» → «Ассистент»), and only enabled ones
   const agents = await prisma.agent.findMany({ where: { ownerId: userId, enabled: true, id: { in: cfg.agentIds } }, orderBy: { createdAt: "asc" } });
 
-  // the assistant's mailbox: the first «Почта» connection on its MCP tab
-  const mailConn = await firstMailConnection(userId, cfg.mcpIds);
+  // the assistant's mailbox: the first switched-on «Почта» connector on its «Коннекторы» tab
+  const mailConn = await firstMailConnector(userId, cfg.connectorIds);
   // the assistant's policies (enabled documents only) — returned by get_policies and put before every answer
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: userId, enabled: true, id: { in: guardDocIds(cfg.guardrails) } }, select: { name: true, text: true } });
   const snapshot = policySnapshot(cfg.hitl, cfg.guardrails, docs);

@@ -12,7 +12,7 @@ async function main() {
   }
 
   // Built-in «Чеки из почты» agents are gone from the portal: they become «Свои» with an instruction about receipts
-  // (and keep their mailbox on the MCP tab). They no longer write to «Траты».
+  // (and keep their mailbox, now on the «Коннекторы» tab). They no longer write to «Траты».
   const receipts = await prisma.agent.findMany({ where: { type: "RECEIPTS" } });
   for (const a of receipts) {
     let cfg: { sinceDays?: number; fromFilter?: string } = {};
@@ -45,6 +45,25 @@ async function main() {
     const assistant = !a || !a.modelId;
     if (agents.count || assistant) console.log(`✔ «${model.name}» chosen explicitly for ${assistant ? "the assistant and " : ""}${agents.count} agent(s)`);
   }
+
+  // Mailboxes moved from «MCP» to «Коннекторы»: their ids go from mcpIds to connectorIds (mcpIds is for MCP servers now).
+  // Only while connectorIds is still empty, so running again changes nothing.
+  const connectorIds = new Set((await prisma.connector.findMany({ select: { id: true } })).map((c) => c.id));
+  const moved = (raw: string) => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v.filter((id) => connectorIds.has(id)) : []; } catch { return []; } };
+  let fixed = 0;
+  for (const a of await prisma.agent.findMany({ where: { connectorIds: "[]" }, select: { id: true, mcpIds: true } })) {
+    const ids = moved(a.mcpIds);
+    if (!ids.length) continue;
+    await prisma.agent.update({ where: { id: a.id }, data: { connectorIds: JSON.stringify(ids), mcpIds: "[]", mcpAccess: "{}" } });
+    fixed++;
+  }
+  for (const a of await prisma.assistant.findMany({ where: { connectorIds: "[]" }, select: { ownerId: true, mcpIds: true } })) {
+    const ids = moved(a.mcpIds);
+    if (!ids.length) continue;
+    await prisma.assistant.update({ where: { ownerId: a.ownerId }, data: { connectorIds: JSON.stringify(ids), mcpIds: "[]", mcpAccess: "{}" } });
+    fixed++;
+  }
+  if (fixed) console.log(`✔ mailboxes moved to «Коннекторы» for ${fixed} agent(s) and assistant(s)`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());

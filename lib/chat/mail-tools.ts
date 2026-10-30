@@ -1,20 +1,20 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
-import type { McpConnection } from "@prisma/client";
+import type { Connector } from "@prisma/client";
 import { audit, type AuditActor } from "@/lib/audit";
 import type { AuditChannel } from "@/lib/audit-events";
 import { mailAccess } from "@/lib/connections";
 import { mailError, readEmail, searchEmails, type MailLetter, type MailSummary } from "@/lib/mailbox";
 import { maskDeep } from "@/lib/agents/guardrails";
 
-// mail_search / mail_read over one «Почта» connection — shared by the chat assistant and custom agents.
+// mail_search / mail_read over one «Почта» connector (IMAP or POP3) — shared by the chat assistant and custom agents.
 
 export type MailSearchResult = { mailbox: string; total: number; letters: MailSummary[] } | { error: string };
 export type MailReadResult = { mailbox: string; letter: MailLetter } | { error: string };
 
 export type MailToolsOptions = {
-  conn: McpConnection | null;
+  conn: Connector | null;
   /** Who reads, for the journal: «Ассистент», «Агент «Сводка»»… */
   who: string;
   actor: AuditActor;

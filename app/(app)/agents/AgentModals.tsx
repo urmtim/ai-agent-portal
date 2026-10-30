@@ -10,22 +10,21 @@ import { GuardrailPart, type GuardDoc } from "@/components/ui/GuardrailPart";
 import { Switch } from "@/components/ui/Switch";
 import { YamlEditor } from "@/components/ui/YamlEditor";
 import { useFormAction } from "@/components/ui/useFormAction";
-import { ASSISTANT_APIS } from "@/lib/assistant-config";
-import { DEFAULT_GUARD_RULES, DEFAULT_HITL, HITL_LABELS, MCP_ACCESS_LABELS, type GuardRule, type HitlChoice, type McpAccess } from "@/lib/agents/policy";
+import { DEFAULT_GUARD_RULES, DEFAULT_HITL, HITL_LABELS, type GuardRule, type HitlChoice } from "@/lib/agents/policy";
 import { specToYaml, yamlToSpec, type AgentSpec } from "@/lib/agents/spec";
 import type { agentEditData } from "@/lib/agents/edit-data";
 import { deleteAgentById, runAgentById, saveAgent } from "./actions";
 
 /** What the agent window edits; built on the server from the Agent row (lib/agents/edit-data.ts) or the assistant. */
 export type AgentEditData = ReturnType<typeof agentEditData>;
-/** What every agent window needs to offer: models, the user's agents, connections and guardrail documents. */
+/** What every agent window needs to offer: models, the user's agents, connectors and guardrail documents. */
 export type AgentChoices = {
   models: { id: string; name: string }[];
   /** The model a new agent starts with: the assistant's, else the first one ("" — no models). */
   newModelId: string;
   agents: { id: string; name: string; desc: string; enabled: boolean }[];
-  /** The user's MCP connections (section MCP). */
-  connections: { id: string; name: string; desc: string }[];
+  /** The user's connectors (section «Коннекторы»); a switched-off one stays, marked «выключен». */
+  connectors: { id: string; name: string; desc: string; enabled: boolean }[];
   /** The user's guardrail documents (section «Гардрейлы»). */
   docs: GuardDoc[];
 };
@@ -34,13 +33,13 @@ export type AgentChoices = {
 type SaveAction = (prev: { error?: string; ok?: string; id?: string } | undefined, fd: FormData) => Promise<{ error?: string; ok?: string; id?: string } | undefined>;
 
 const ON = "включён", OFF = "выключен";
-type Tab = "general" | "params" | "policies" | "subagents" | "mcp" | "apis" | "yaml";
+type Tab = "general" | "params" | "policies" | "subagents" | "mcp" | "connectors" | "yaml";
 
-/** The window's fields; subagents, MCP and APIs by id. */
+/** The window's fields; subagents and connectors by id. */
 type Fields = {
   name: string; description: string; modelId: string; enabled: boolean; instruction: string;
   hitl: HitlChoice; guardrails: GuardRule[];
-  agents: string[]; mcp: string[]; mcpAccess: Record<string, McpAccess>; apis: string[];
+  agents: string[]; connectors: string[];
 };
 
 const idsByName = (names: string[], items: { id: string; name: string }[]) =>
@@ -50,16 +49,17 @@ function initial(a: AgentEditData | undefined, newModelId: string): Fields {
   return {
     name: a?.name ?? "", description: a?.description ?? "", modelId: a?.modelId ?? newModelId, enabled: a?.enabled ?? true, instruction: a?.instruction ?? "",
     hitl: a?.hitl ?? DEFAULT_HITL, guardrails: a?.guardrails ?? [...DEFAULT_GUARD_RULES],
-    agents: a?.agentIds ?? [], mcp: a?.mcpIds ?? [], mcpAccess: a?.mcpAccess ?? {}, apis: a?.apis ?? [],
+    agents: a?.agentIds ?? [], connectors: a?.connectorIds ?? [],
   };
 }
 
 /**
- * The agent window, the same size as the model window: «Общее · Модель · Политики · Субагенты · MCP · API · YAML»
+ * The agent window, the same size as the model window: «Общее · Модель · Политики · Субагенты · MCP · Коннекторы · YAML»
+ * (MCP stays empty until MCP servers arrive)
  * and «Сохранить»; the on/off slider sits in the header. The same window creates (no `a`), edits, and — with `builtin` —
  * shows the built-in assistant with its name, description, slider and instruction locked and its YAML read-only.
  */
-export function AgentForm({ a, models, newModelId, agents, connections, docs, onDone, builtin, save = saveAgent }:
+export function AgentForm({ a, models, newModelId, agents, connectors, docs, onDone, builtin, save = saveAgent }:
   { a?: AgentEditData; onDone: () => void; builtin?: boolean; save?: SaveAction } & AgentChoices) {
   const toast = useToast();
   const [state, onSubmit, pending] = useFormAction(save, undefined);
@@ -81,20 +81,17 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
   const fileInput = useRef<HTMLInputElement>(null);
 
   const others = agents.filter((x) => x.id !== a?.id);
-  const apiList = Object.entries(ASSISTANT_APIS).map(([k, v]) => ({ id: k, label: v.label, desc: v.desc }));
   const agentItems: PartItem[] = others.map((x) => ({ id: x.id, name: x.name, desc: x.desc, note: x.enabled ? undefined : OFF, facet: x.enabled ? ON : OFF }));
-  const apiItems: PartItem[] = apiList.map((x) => ({ id: x.id, name: x.label, desc: x.desc }));
-  const connItems: PartItem[] = connections.map((c) => ({ id: c.id, name: c.name, desc: c.desc }));
+  const connItems: PartItem[] = connectors.map((c) => ({ id: c.id, name: c.name, desc: c.desc, note: c.enabled ? undefined : OFF, facet: c.enabled ? ON : OFF }));
 
   // ---- YAML: generated from the form when the tab opens; every edit there fills the other tabs ----
   const docRefs = docs.map((d) => ({ id: d.id, name: d.name }));
-  const known = { models: models.map((m) => m.name), connections: connections.map((c) => c.name), agents: others.map((x) => x.name), apis: apiList.map((x) => x.id), documents: docRefs };
+  const known = { models: models.map((m) => m.name), connectors: connectors.map((c) => c.name), agents: others.map((x) => x.name), documents: docRefs };
   const toSpec = (v: Fields): AgentSpec => ({
     name: v.name, description: v.description, enabled: v.enabled, model: models.find((m) => m.id === v.modelId)?.name ?? null, instruction: v.instruction,
     hitl: v.hitl, guardrails: v.guardrails,
-    mcp: v.mcp.flatMap((id) => { const c = connections.find((x) => x.id === id); return c ? [{ name: c.name, access: v.mcpAccess[id] ?? "read" }] : []; }),
     agents: v.agents.map((id) => others.find((x) => x.id === id)?.name).filter((x): x is string => !!x),
-    api: v.apis,
+    connectors: v.connectors.map((id) => connectors.find((x) => x.id === id)?.name).filter((x): x is string => !!x),
   });
   const [yaml, setYaml] = useState("");
   const [yamlNote, setYamlNote] = useState<{ error?: string; warnings: string[] }>({ warnings: [] });
@@ -108,14 +105,11 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
     const r = yamlToSpec(text, known);
     if ("error" in r) { setYamlNote({ error: r.error, warnings: [] }); return; }
     const s = r.spec;
-    const mcp = idsByName(s.mcp.map((m) => m.name), connections);
     setF((p) => ({
       name: s.name, description: s.description, enabled: s.enabled,
       modelId: models.find((m) => m.name === s.model)?.id ?? p.modelId, instruction: s.instruction,
       hitl: s.hitl, guardrails: s.guardrails,
-      agents: idsByName(s.agents, others), mcp,
-      mcpAccess: Object.fromEntries(mcp.map((id) => [id, s.mcp.find((m) => m.name === connections.find((c) => c.id === id)?.name)?.access ?? "read"])),
-      apis: s.api,
+      agents: idsByName(s.agents, others), connectors: idsByName(s.connectors, connectors),
     }));
     setYamlNote({ warnings: r.warnings });
   }
@@ -142,8 +136,8 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
         { key: "params", label: "Модель" },
         { key: "policies", label: "Политики", count: f.guardrails.length },
         { key: "subagents", label: "Субагенты", count: f.agents.length },
-        { key: "mcp", label: "MCP", count: f.mcp.length },
-        { key: "apis", label: "API", count: f.apis.length },
+        { key: "mcp", label: "MCP", count: 0 },
+        { key: "connectors", label: "Коннекторы", count: f.connectors.length },
         { key: "yaml", label: "YAML" },
       ]} />
 
@@ -194,17 +188,12 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
       <div className="apanel" hidden={tab !== "subagents"}>
         <TablePart items={agentItems} picked={f.agents} onChange={(ids) => upd({ agents: ids })} filter={{ label: "Состояние", options: [ON, OFF] }} />
       </div>
+      {/* MCP servers come later (section «MCP»): nothing to add yet */}
       <div className="apanel" hidden={tab !== "mcp"}>
-        <TablePart items={connItems} picked={f.mcp} onChange={(ids) => upd({ mcp: ids })}
-          column={{
-            label: "Доступ",
-            options: (Object.keys(MCP_ACCESS_LABELS) as McpAccess[]).map((k) => ({ value: k, label: MCP_ACCESS_LABELS[k] })),
-            value: (id) => f.mcpAccess[id] ?? "read",
-            onChange: (id, v) => upd({ mcpAccess: { ...f.mcpAccess, [id]: v as McpAccess } }),
-          }} />
+        <TablePart items={[]} picked={[]} onChange={() => {}} />
       </div>
-      <div className="apanel" hidden={tab !== "apis"}>
-        <TablePart items={apiItems} picked={f.apis} onChange={(ids) => upd({ apis: ids })} />
+      <div className="apanel" hidden={tab !== "connectors"}>
+        <TablePart items={connItems} picked={f.connectors} onChange={(ids) => upd({ connectors: ids })} filter={{ label: "Состояние", options: [ON, OFF] }} />
       </div>
 
       <div className="apanel yamlpanel" hidden={tab !== "yaml"}>
@@ -230,10 +219,8 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
       {/* what gets saved, whichever tab is open */}
       <input type="hidden" name="hitl" value={f.hitl} />
       <input type="hidden" name="guardrails" value={JSON.stringify({ rules: f.guardrails })} />
-      <input type="hidden" name="mcpAccess" value={JSON.stringify(f.mcpAccess)} />
       {f.agents.map((id) => <input key={`a${id}`} type="hidden" name="agent" value={id} />)}
-      {f.mcp.map((id) => <input key={`m${id}`} type="hidden" name="mcp" value={id} />)}
-      {f.apis.map((id) => <input key={`p${id}`} type="hidden" name="api" value={id} />)}
+      {f.connectors.map((id) => <input key={`c${id}`} type="hidden" name="connector" value={id} />)}
 
       {state?.error && <div className="formerr">{state.error}</div>}
       <div className="mfoot">
