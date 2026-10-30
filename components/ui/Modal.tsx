@@ -86,7 +86,10 @@ export function Modal({
   return createPortal(
     <div className="mbg">
       <div ref={ref} className={cls} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <button type="button" className="mclose" aria-label="Закрыть" onClick={tryClose}>×</button>
+        <button type="button" className="mclose" aria-label="Закрыть" title="Закрыть" onClick={tryClose}>
+          {/* a drawn cross, as tall as the header's on/off slider; the same in every dialog */}
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19" /></svg>
+        </button>
         {editor ? (
           <div className="mhead">
             <h2 className="mtitle" id={titleId}>{title}</h2>
