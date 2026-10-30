@@ -5,10 +5,10 @@ import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
 import { agentDesc } from "@/lib/agents/types";
 import { effectiveGuardrails, guardDocIds, hitlAsks } from "@/lib/agents/policy";
-import { abilitiesOf, policySnapshot, policyTools } from "@/lib/chat/policy-tools";
+import { policySnapshot, policyTools } from "@/lib/chat/policy-tools";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
-import { accessInfo, agentsWithConnections, connectorMailTools, firstMailConnector } from "@/lib/connections";
+import { accessInfo, agentTree, connectorMailTools, firstMailConnector } from "@/lib/connections";
 import { mailTools } from "@/lib/chat/mail-tools";
 import { MAIL_TOOL_NAMES, mailNeedsApproval } from "@/lib/mail-catalog";
 
@@ -41,9 +41,8 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   const mailConn = await firstMailConnector(userId, cfg.connectorIds);
   // the assistant's policies (enabled documents only) — returned by get_policies and put before every answer
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: userId, enabled: true, id: { in: guardDocIds(cfg.guardrails) } }, select: { name: true, text: true } });
-  const access = await accessInfo(userId, cfg.modelId, cfg.connectorIds, mailConn?.id ?? null);
-  // what it can do right now, in words — every connector and every agent it may run, with what that agent has
-  access.abilities = abilitiesOf({ agents: await agentsWithConnections(userId, agents), connectors: access.connectors });
+  // its connectors and the agents it may run, each with its own connectors and agents: the model reads what it can do from these
+  const access = await accessInfo(userId, cfg.modelId, cfg.connectorIds, mailConn?.id ?? null, await agentTree(userId, agents, []));
   const snapshot = policySnapshot(cfg.hitl, cfg.guardrails, docs, access);
 
   const tools = {

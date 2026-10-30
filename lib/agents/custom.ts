@@ -5,17 +5,17 @@ import type { Agent } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { chatModel, errorText } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
-import { accessInfo, agentsWithConnections, connectorMailTools, firstMailConnector } from "@/lib/connections";
+import { MAX_AGENT_CHAIN, accessInfo, agentTree, connectorMailTools, firstMailConnector } from "@/lib/connections";
 import { maskPii } from "./guardrails";
 import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules, parseHitl } from "./policy";
 import { agentInstructions } from "@/lib/chat/instructions";
-import { abilitiesOf, policySnapshot, policyTools, withPolicies } from "@/lib/chat/policy-tools";
+import { policySnapshot, policyTools, withPolicies } from "@/lib/chat/policy-tools";
 import { agentDesc } from "./types";
 import type { RunBy } from "./runner";
 
 // «Свой агент»: its instruction + the shared rules, its own tools (mail from its «Коннекторы» tab, the agents on its «Субагенты» tab),
 // current_time and get_policies (its HITL and guardrails; put before the task so the model can't skip them).
-// Runs to the end without a human — only subagents with HITL switched off can be called from inside, and only one level deep.
+// Runs to the end without a human — only subagents with HITL switched off can be called from inside, down a chain of at most MAX_AGENT_CHAIN, never back into it.
 
 const ids = (raw: string): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
 const short = (v: unknown, n: number) => { const s = typeof v === "string" ? v : JSON.stringify(v); return s.length > n ? s.slice(0, n) + "…" : s; };
@@ -27,7 +27,7 @@ export type CustomResult = { processed: number; created: number; log: string[]; 
 /** Starts a nested agent run and returns its summary (injected to avoid a runner ↔ custom import cycle). */
 export type RunNested = (agentId: string, task: string) => Promise<{ status: "ok" | "error"; summary: string }>;
 
-export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunBy; depth: number; runNested: RunNested }): Promise<CustomResult> {
+export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunBy; chain: string[]; runNested: RunNested }): Promise<CustomResult> {
   const llm = await chatModel(agent.ownerId, agent.modelId);
   if ("error" in llm) throw new Error(llm.error);
   const rules = parseGuardRules(agent.guardrails);
@@ -35,15 +35,15 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   // documents: only the owner's, only switched on in the catalog
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: agent.ownerId, enabled: true, id: { in: guardDocIds(rules) } }, select: { name: true, text: true } });
 
-  // agents it may call: enabled, without confirmation, not itself; nested agents don't call further
-  const subs = ctx.depth > 0 ? [] : (await prisma.agent.findMany({
-    where: { ownerId: agent.ownerId, enabled: true, id: { in: ids(agent.agentIds).filter((x) => x !== agent.id) } },
+  // agents it may call: enabled, without confirmation (nobody to ask), never one already in the chain of calls, at most MAX_AGENT_CHAIN deep
+  const path = [...ctx.chain, agent.id];
+  const subs = path.length >= MAX_AGENT_CHAIN ? [] : (await prisma.agent.findMany({
+    where: { ownerId: agent.ownerId, enabled: true, id: { in: ids(agent.agentIds).filter((x) => !path.includes(x)) } },
     orderBy: { createdAt: "asc" },
   })).filter((a) => !hitlAsks(a.hitl));
 
   const conn = await firstMailConnector(agent.ownerId, ids(agent.connectorIds));
-  const access = await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null);
-  access.abilities = abilitiesOf({ agents: await agentsWithConnections(agent.ownerId, subs), connectors: access.connectors });
+  const access = await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null, await agentTree(agent.ownerId, subs, path));
   const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs, access);
   const tools: ToolSet = {
     ...policyTools(snapshot),

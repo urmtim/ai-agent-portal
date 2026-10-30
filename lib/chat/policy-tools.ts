@@ -7,35 +7,24 @@ import { effectiveGuardrails, HITL_LABELS, type GuardRule, type HitlChoice } fro
 
 export type PolicySnapshot = ReturnType<typeof policySnapshot>;
 
+/** A switched-on connector: what it is (type, name, its description), where, and what it gives here. */
+export type ConnectorInfo = { name: string; type: string; about: string; server: string; gives: string; limits?: string };
+
+/** An agent it may run: what it is for, its own connectors and the agents it may call in turn (as deep as runs may go). */
+export type AgentInfo = { name: string; about: string; connectors: ConnectorInfo[]; agents: AgentInfo[] };
+
 /**
- * What the assistant or agent works with right now, so it can say «на какой модели», «какую почту читаешь».
- * Two different things: the model (the LLM itself and the server it runs on) and the connectors (the portal's
- * mailboxes and APIs, which the tools use).
+ * What the assistant or agent works with right now — the model reads what it can do from this, not from its instructions.
+ * The model (the LLM itself and its server) is one thing; the connectors (mailboxes, APIs) and the agents are another.
  */
 export type AccessInfo = {
   /** The LLM: its name in the portal, the model id and the server it runs on; null when none is chosen (the .env one). */
   model: { name: string; model: string; server: string } | null;
-  /** Its switched-on connectors: name, type, server and what it gives here. */
-  connectors: { name: string; type: string; server: string; gives: string; limits?: string }[];
-  /** Everything it can do in this answer, in words — the whole answer to «что умеешь». */
-  abilities?: string[];
+  /** Its own switched-on connectors. */
+  connectors: ConnectorInfo[];
+  /** The agents it may run, each with all it has. */
+  agents: AgentInfo[];
 };
-
-/**
- * «Что умеешь» in words, from everything it is given: the date, each agent it may run with that agent's own connections,
- * each switched-on connector (mail, API…) with what it gives — and plainly what it lacks. Nothing here is about one kind of connector.
- */
-export function abilitiesOf(a: { agents: { name: string; has: string[] }[]; connectors: AccessInfo["connectors"] }): string[] {
-  return [
-    "узнавать текущие дату и время",
-    ...(a.agents.length
-      ? a.agents.map((g) => `запускать агента «${g.name}»${g.has.length ? `, у него подключения: ${g.has.join(", ")}` : ", подключений у него нет"}`)
-      : ["агентов запускать не могу: ни один не разрешён"]),
-    ...(a.connectors.length
-      ? a.connectors.map((c) => `${c.type} «${c.name}» — ${c.gives}`)
-      : ["подключений нет: коннекторы не добавлены или выключены, поэтому ни почты, ни API у меня нет"]),
-  ];
-}
 
 /** What get_policies returns: what it works with (when given), HITL and guardrails as plain facts (documents only the enabled ones). */
 export function policySnapshot(hitl: HitlChoice, rules: GuardRule[], docs: { name: string; text: string }[], access?: AccessInfo) {

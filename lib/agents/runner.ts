@@ -13,9 +13,9 @@ export type RunBy = { actor: AuditActor; channel: AuditChannel };
 
 /**
  * Runs one agent, recording an AgentRun with status, counts and a log, and a journal entry.
- * task — what the caller asks («Свой агент» only); depth — 1 when another agent started it.
+ * task — what the caller asks («Свой агент» only); chain — the agents above it when another agent started it.
  */
-export async function runAgent(agentId: string, by: RunBy = { actor: null, channel: "система" }, task = "", depth = 0): Promise<string> {
+export async function runAgent(agentId: string, by: RunBy = { actor: null, channel: "система" }, task = "", chain: string[] = []): Promise<string> {
   const agent = await prisma.agent.findUnique({ where: { id: agentId } });
   if (!agent) throw new Error("Агент не найден");
 
@@ -38,9 +38,9 @@ export async function runAgent(agentId: string, by: RunBy = { actor: null, chann
       case "CUSTOM": {
         result = await runCustomAgent(agent, task, {
           by,
-          depth,
+          chain,
           runNested: async (subId, subTask) => {
-            const subRun = await prisma.agentRun.findUniqueOrThrow({ where: { id: await runAgent(subId, by, subTask, depth + 1) } });
+            const subRun = await prisma.agentRun.findUniqueOrThrow({ where: { id: await runAgent(subId, by, subTask, [...chain, agent.id]) } });
             return { status: subRun.status === "OK" ? "ok" : "error", summary: subRun.summary };
           },
         });

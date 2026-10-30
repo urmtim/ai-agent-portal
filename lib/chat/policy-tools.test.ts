@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { abilitiesOf, policySnapshot, timeNow, withPolicies } from "./policy-tools";
+import { policySnapshot, timeNow, withPolicies } from "./policy-tools";
 
 test("policy snapshot: HITL modes and guardrails", () => {
   const s = policySnapshot("changes_and_send", [{ kind: "maskPii" }, { kind: "maxSteps", value: 3 }, { kind: "forbiddenTopic", value: "политика" }], [{ name: "Регламент", text: "Не называй суммы." }]);
@@ -31,23 +31,13 @@ test("policies go right before the current question", () => {
   assert.equal(withPolicies([], s).length, 2);
 });
 
-test("the snapshot says the model and connectors only when given", () => {
+test("the snapshot says the model, connectors and agents (with theirs) only when given", () => {
   assert.equal("access" in policySnapshot("off", [], []), false);
-  const access = { model: { name: "Облако", model: "gpt-oss:120b", server: "ollama.com" }, connectors: [{ name: "Моя почта", type: "Почта", server: "IMAP imap.mail.ru", gives: "искать и читать письма" }] };
+  const mail = { name: "Моя почта", type: "Почта", about: "Личный ящик", server: "IMAP imap.mail.ru", gives: "чтение: искать письма" };
+  const access = {
+    model: { name: "Облако", model: "gpt-oss:120b", server: "ollama.com" },
+    connectors: [mail],
+    agents: [{ name: "Сводка", about: "Сводка писем за день", connectors: [mail], agents: [{ name: "Чеки", about: "Разбор чеков", connectors: [], agents: [] }] }],
+  };
   assert.deepEqual(policySnapshot("off", [], [], access).access, access);
-});
-
-test("«что умеешь» in words: every connector and agent, and plainly what is missing", () => {
-  assert.deepEqual(abilitiesOf({ agents: [], connectors: [] }), [
-    "узнавать текущие дату и время", "агентов запускать не могу: ни один не разрешён",
-    "подключений нет: коннекторы не добавлены или выключены, поэтому ни почты, ни API у меня нет",
-  ]);
-  const connectors = [
-    { name: "Моя почта", type: "Почта", server: "IMAP imap.mail.ru", gives: "чтение: искать письма" },
-    { name: "Курсы ЦБ", type: "API", server: "cbr.ru", gives: "пока ничего: агенты API не используют" },
-  ];
-  assert.deepEqual(abilitiesOf({ agents: [{ name: "Сводка", has: ["Почта «Работа»"] }, { name: "Чеки", has: [] }], connectors }).slice(1), [
-    "запускать агента «Сводка», у него подключения: Почта «Работа»", "запускать агента «Чеки», подключений у него нет",
-    "Почта «Моя почта» — чтение: искать письма", "API «Курсы ЦБ» — пока ничего: агенты API не используют",
-  ]);
 });
