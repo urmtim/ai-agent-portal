@@ -75,6 +75,15 @@ async function checkSmtp(acc: MailAccess) {
   try { await t.verify(); } finally { t.close(); }
 }
 
+/** «Сколько писем»: the whole inbox, and how many are unread (POP3 doesn't know: null). */
+export async function countEmails(acc: MailAccess): Promise<{ total: number; unread: number | null }> {
+  if (acc.protocol === "pop3") return { total: await withPop3(acc, (c) => c.count()), unread: null };
+  return withInbox(acc, async (c) => ({
+    total: c.mailbox ? c.mailbox.exists : 0,
+    unread: ((await c.search({ seen: false }, { uid: true })) || []).length,
+  }));
+}
+
 /** «Проверить»: log in, count the inbox, and log in to SMTP when it is set. `where` says which field a failure belongs to. */
 export async function checkMailbox(acc: MailAccess): Promise<{ ok: boolean; message: string; where?: "incoming" | "smtp" }> {
   let n: number;

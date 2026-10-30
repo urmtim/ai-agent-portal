@@ -5,13 +5,14 @@ import type { Connector } from "@prisma/client";
 import { audit, type AuditActor } from "@/lib/audit";
 import type { AuditChannel } from "@/lib/audit-events";
 import { mailAccess } from "@/lib/connections";
-import { mailError, readEmail, searchEmails, type MailLetter, type MailSummary } from "@/lib/mailbox";
+import { countEmails, mailError, readEmail, searchEmails, type MailLetter, type MailSummary } from "@/lib/mailbox";
 import { maskDeep } from "@/lib/agents/guardrails";
 
-// mail_search / mail_read over one «Почта» connector (IMAP or POP3) — shared by the chat assistant and custom agents.
+// mail_search / mail_read / mail_count over one «Почта» connector (IMAP or POP3) — shared by the chat assistant and custom agents.
 
 export type MailSearchResult = { mailbox: string; total: number; letters: MailSummary[] } | { error: string };
 export type MailReadResult = { mailbox: string; letter: MailLetter } | { error: string };
+export type MailCountResult = { mailbox: string; total: number; unread: number | null } | { error: string };
 
 export type MailToolsOptions = {
   conn: Connector | null;
@@ -64,6 +65,19 @@ export function mailTools({ conn, who, actor, channel, mask = false, missing = "
           if (!letter) return { error: "Такого письма нет" };
           await audit("tool", `${who} открыл письмо в «${conn!.name}»`, actor, channel);
           return out({ mailbox: conn!.name, letter });
+        } catch (e) {
+          return { error: readable(e) };
+        }
+      },
+    }),
+    mail_count: tool({
+      description: "Сколько писем во входящих: всего и непрочитанных (по POP3 — только всего). Для вопросов «сколько писем в ящике» — без поиска.",
+      inputSchema: z.object({}),
+      execute: async (): Promise<MailCountResult> => {
+        try {
+          const r = await countEmails(mail());
+          await audit("tool", `${who} посчитал письма в «${conn!.name}»: всего ${r.total}${r.unread === null ? "" : `, непрочитанных ${r.unread}`}`, actor, channel);
+          return { mailbox: conn!.name, ...r };
         } catch (e) {
           return { error: readable(e) };
         }

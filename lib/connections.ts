@@ -59,7 +59,7 @@ export async function accessInfo(userId: string, modelId: string | null, ids: st
         const cfg = parseMailConfig(c.config);
         return {
           name: c.name, type: "Почта", server: cfg ? `${cfg.protocol.toUpperCase()} ${cfg.host}` : "",
-          gives: c.id === mailId ? "искать и читать письма, только чтение (mail_search, mail_read)" : `ничего: почтовые инструменты работают с «${mailName}»`,
+          gives: c.id === mailId ? "искать, читать и считать письма, только чтение (mail_search, mail_read, mail_count)" : `ничего: почтовые инструменты работают с «${mailName}»`,
         };
       }
       const api = parseApiConfig(c.config);

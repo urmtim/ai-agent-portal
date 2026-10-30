@@ -46,6 +46,6 @@ export function parseAssistant(
 export function allowedTools(cfg: Pick<AssistantConfig, "agentIds" | "connectorIds">, enabledAgentIds: string[], mailConnectorIds: string[] = []): string[] {
   const tools: string[] = [];
   if (cfg.agentIds.some((id) => enabledAgentIds.includes(id))) tools.push("run_agent");
-  if (cfg.connectorIds.some((id) => mailConnectorIds.includes(id))) tools.push("mail_search", "mail_read");
+  if (cfg.connectorIds.some((id) => mailConnectorIds.includes(id))) tools.push("mail_search", "mail_read", "mail_count");
   return tools;
 }

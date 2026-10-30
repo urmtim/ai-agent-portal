@@ -11,7 +11,7 @@ import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
 import { accessInfo, firstMailConnector } from "@/lib/connections";
 import { mailTools } from "@/lib/chat/mail-tools";
 
-export type { MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
+export type { MailCountResult, MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
 
 // Tools the chat assistant can call — always scoped to one user's data.
 // run_agent acts, so the route asks for approval unless the agent's HITL is «Не спрашивать».

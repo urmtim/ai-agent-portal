@@ -2,6 +2,7 @@ import "server-only";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { endpointFor, resolveModel } from "@/lib/llm";
 import { noModelMessage } from "@/lib/llm-pick";
+import { toolErrorText } from "@/lib/chat/tool-errors";
 
 type ChatLlm = { model: ReturnType<ReturnType<typeof createOpenAICompatible>["chatModel"]>; token?: string; contextTokens: number };
 
@@ -18,9 +19,11 @@ export async function chatModel(ownerId: string, modelId?: string | null): Promi
   return { model: provider.chatModel(ep.model), token: ep.token, contextTokens: choice.contextTokens };
 }
 
-/** Error text for the browser, with the model token cut out. */
+/** Error text for the browser, with the model token cut out; a tool call the model got wrong is told in words (whole, before the cut). */
 export function errorText(e: unknown, token?: string): string {
   let text = e instanceof Error ? e.message : typeof e === "string" ? e : JSON.stringify(e);
   if (token) text = text.split(token).join("•••");
+  const tool = text.match(/Invalid input for tool (\w+)/)?.[1];
+  if (tool) text = toolErrorText(tool, text);
   return text.slice(0, 500) || "Неизвестная ошибка";
 }

@@ -23,7 +23,7 @@ test("allowedTools follows the table parts; run_agent only with an allowed enabl
 });
 
 test("an allowed switched-on «Почта» connector unlocks the mail tools", () => {
-  assert.deepEqual(allowedTools({ agentIds: [], connectorIds: ["c1"] }, [], ["c1"]), ["mail_search", "mail_read"]);
+  assert.deepEqual(allowedTools({ agentIds: [], connectorIds: ["c1"] }, [], ["c1"]), ["mail_search", "mail_read", "mail_count"]);
   assert.deepEqual(allowedTools({ agentIds: [], connectorIds: ["c1"] }, [], ["c2"]), []); // not mail, or switched off
   assert.deepEqual(allowedTools({ agentIds: [], connectorIds: [] }, [], ["c1"]), []);
 });
