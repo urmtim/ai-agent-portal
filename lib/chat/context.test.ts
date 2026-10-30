@@ -13,7 +13,7 @@ const search = { type: "tool-mail_search", toolCallId: "c1", state: "output-avai
 test("compactOutput: letters lose their text, a long letter is cut, an agent run loses its log", () => {
   assert.deepEqual((compactOutput("mail_search", letters) as typeof letters).letters[0], { id: 1, date: "2026-10-28", from: "bank@bank.test", subject: "Выписка" });
   const long = compactOutput("mail_read", { mailbox: "m", letter: { id: 1, subject: "s", text: "а".repeat(1000) } }) as { letter: { text: string } };
-  assert.equal(long.letter.text, "а".repeat(300) + "… [обрезано]");
+  assert.equal(long.letter.text, "а".repeat(300) + "… [в истории чата сокращено; целиком — прочитай снова тем же инструментом]");
   assert.deepEqual(compactOutput("run_agent", { agent: "A", status: "ok", summary: "итог", processed: 1, created: 0, log: "много" }),
     { agent: "A", status: "ok", summary: "итог", processed: 1, created: 0 });
   assert.deepEqual(compactOutput("mail_search", { error: "нет почты" }), { error: "нет почты" });

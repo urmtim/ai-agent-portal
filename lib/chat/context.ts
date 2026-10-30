@@ -9,7 +9,8 @@ type ToolPart = { type: string; state?: string; output?: unknown };
 export const SUMMARY_AT = 0.7;
 /** …and keep this share of it as real messages after the cut. */
 export const KEEP_SHARE = 0.4;
-const CUT_NOTE = "… [обрезано]";
+/** Says it is the history that is short, not the letter: otherwise the model tells the user the tool cuts it. */
+const CUT_NOTE = "… [в истории чата сокращено; целиком — прочитай снова тем же инструментом]";
 
 /** Rough token count: ~3 characters of JSON per token (Russian text and JSON alike, erring on the high side). */
 export function estimateTokens(v: unknown): number {

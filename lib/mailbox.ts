@@ -175,7 +175,11 @@ export async function checkMailbox(acc: MailAccess): Promise<{ ok: boolean; mess
   return { ok: true, message: `✓ Подключено. Писем во входящих: ${n}` };
 }
 
-const textOf = (p: ParsedMail) => p.text?.trim() || (p.html ? htmlToText(p.html) : "");
+/** A letter's text: the plain part, or the HTML one when it says more (receipts often put only a header in plain text). */
+const textOf = (p: ParsedMail) => {
+  const plain = p.text?.trim() ?? "", html = p.html ? htmlToText(p.html) : "";
+  return html.length > plain.length * 1.5 ? html : plain || html;
+};
 const addrs = (a: ParsedMail["to"]) => (Array.isArray(a) ? a.map((x) => x.text).join(", ") : a?.text ?? "");
 
 /**
