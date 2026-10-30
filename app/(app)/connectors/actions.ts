@@ -12,6 +12,7 @@ import {
 } from "@/lib/connectors";
 import { apiAccess, checkApi, mailAccess } from "@/lib/connections";
 import { checkMailbox } from "@/lib/mailbox";
+import { MAIL_TOOLS, parseToolsOff } from "@/lib/mail-catalog";
 
 // The user's connectors. Someone else's connector behaves as missing; passwords and tokens never leave the server.
 
@@ -68,7 +69,7 @@ export async function testConnector(fd: FormData): Promise<TestState> {
   const saved = id ? await prisma.connector.findUnique({ where: { id } }) : null;
   if (id && (!saved || saved.ownerId !== user.id)) return { ok: false, message: `✕ ${NOT_FOUND}` };
   const kind = saved?.kind ?? String(fd.get("kind") ?? "");
-  if (!isConnectorKind(kind)) return { ok: false, message: "✕ Выберите тип" };
+  if (!isConnectorKind(kind)) return { ok: false, message: "✕ Выберите тип", field: "kind" };
   const p = parseFields(kind, fd);
   if (!("kind" in p)) return p;
   const secret = secretFor(fd, saved);
@@ -84,9 +85,9 @@ export async function saveConnector(_prev: FormState, fd: FormData): Promise<For
   if (id && (!existing || existing.ownerId !== user.id)) return { error: NOT_FOUND };
 
   const kind = existing?.kind ?? String(fd.get("kind") ?? "");
-  if (!isConnectorKind(kind)) return { error: "Выберите тип" };
   const name = String(fd.get("name") ?? "").trim().slice(0, 80);
   if (!name) return { error: "Укажите название", field: "name" };
+  if (!isConnectorKind(kind)) return { error: "Выберите тип", field: "kind" };
   const p = parseFields(kind, fd);
   if (!("kind" in p)) return { error: p.message.replace(/^✕ /, ""), field: p.field };
   const typed = String(fd.get("secret") ?? "");
@@ -102,8 +103,11 @@ export async function saveConnector(_prev: FormState, fd: FormData): Promise<For
   }
 
   const enabled = fd.get("enabled") === "on";
+  // the mail tools switched off on «Инструменты»; an API has none
+  const toolsOff = kind === "mail" ? parseToolsOff(fd.getAll("toolOff")) : [];
+  const toolsChanged = !!existing && JSON.stringify(parseToolsOff(existing.toolsOff)) !== JSON.stringify(toolsOff);
   const data = {
-    name, enabled, config,
+    name, enabled, config, toolsOff: JSON.stringify(toolsOff),
     description: String(fd.get("description") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 300),
     ...(typed ? { secretEnc: encryptSecret(typed) } : {}),
     ...(check ? { checkedAt: new Date(), checkOk: true, checkMsg: check.message } : {}),
@@ -114,7 +118,8 @@ export async function saveConnector(_prev: FormState, fd: FormData): Promise<For
 
   const where = p.kind === "mail" ? `${p.config.protocol.toUpperCase()} ${p.config.user}, ${p.config.host}:${p.config.port}` : p.config.url;
   await audit("mcp", `${existing ? "Изменён" : "Добавлен"} коннектор «${saved.name}» (${CONNECTORS[kind].label}: ${where})` +
-    (existing && typed ? `, ${secretLabel(kind)} заменён` : "") + (existing && existing.enabled !== enabled ? (enabled ? ", включён" : ", выключен") : !enabled ? ", выключен" : ""), user);
+    (existing && typed ? `, ${secretLabel(kind)} заменён` : "") + (existing && existing.enabled !== enabled ? (enabled ? ", включён" : ", выключен") : !enabled ? ", выключен" : "") +
+    (kind === "mail" && (toolsChanged || (!existing && toolsOff.length)) ? `, инструментов включено ${MAIL_TOOLS.length - toolsOff.length} из ${MAIL_TOOLS.length}` : ""), user);
   revalidatePath("/connectors");
   revalidatePath("/agents");
   return { ok: existing ? "Сохранено" : "Коннектор добавлен" };

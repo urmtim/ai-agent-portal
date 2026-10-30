@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_FIELDS, fieldsToYaml, yamlToFields, type ConnectorFields } from "./connector-spec";
 
-const mail: ConnectorFields = { ...EMPTY_FIELDS, name: "Моя почта", description: "Чеки", protocol: "pop3", host: "pop.mail.ru", port: "995", sending: "smtp", smtpHost: "smtp.mail.ru", smtpPort: "465", user: "me@mail.ru" };
+const mail: ConnectorFields = { ...EMPTY_FIELDS, kind: "mail", name: "Моя почта", description: "Чеки", protocol: "pop3", host: "pop.mail.ru", port: "995", sending: "smtp", smtpHost: "smtp.mail.ru", smtpPort: "465", user: "me@mail.ru" };
 
 test("mail connector round-trips; no secrets in the text", () => {
   const y = fieldsToYaml(mail);
@@ -40,6 +40,23 @@ test("a saved connector keeps its type; secrets in the file are ignored", () => 
   assert.deepEqual(r.warnings, ["Тип сохранённого коннектора не меняется — остаётся прежний", "Пароль и токен из файла не берутся — впишите их на вкладке «Подключение»"]);
   const p = yamlToFields("incoming:\n  password: x\n", mail, true);
   assert.ok("fields" in p && p.warnings.length === 1 && p.fields.host === "pop.mail.ru");
+});
+
+test("mail tools: «tools:» lists the ones on; a file without it keeps the checkboxes", () => {
+  const y = fieldsToYaml({ ...mail, toolsOff: ["trash", "send"] });
+  assert.ok(y.includes("tools:\n  - search") && !y.includes("- trash") && !y.includes("- send\n"), y);
+  const back = yamlToFields(y, mail, true);
+  assert.ok("fields" in back);
+  assert.deepEqual(back.fields.toolsOff, ["trash", "send"]);
+  const keep = yamlToFields("name: X\n", { ...mail, toolsOff: ["spam"] }, true);
+  assert.ok("fields" in keep && keep.fields.toolsOff.join() === "spam");
+  const none = yamlToFields("tools: []\n", mail, true);
+  assert.ok("fields" in none && none.fields.toolsOff.length === 14);
+});
+
+test("a new connector has no type: only the general part in YAML", () => {
+  const y = fieldsToYaml({ ...EMPTY_FIELDS, name: "Новый" });
+  assert.ok(y.includes('type: ""') && !y.includes("incoming") && !y.includes("url") && !y.includes("tools"), y);
 });
 
 test("broken YAML is an error", () => {

@@ -8,13 +8,15 @@ import { effectiveGuardrails, guardDocIds, hitlAsks } from "@/lib/agents/policy"
 import { policySnapshot, policyTools } from "@/lib/chat/policy-tools";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
-import { accessInfo, firstMailConnector } from "@/lib/connections";
+import { accessInfo, connectorMailTools, firstMailConnector } from "@/lib/connections";
 import { mailTools } from "@/lib/chat/mail-tools";
+import { MAIL_TOOL_NAMES, mailNeedsApproval } from "@/lib/mail-catalog";
 
-export type { MailCountResult, MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
+export type { MailActionResult, MailAttachmentResult, MailCountResult, MailFoldersResult, MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
 
 // Tools the chat assistant can call — always scoped to one user's data.
-// run_agent acts, so the route asks for approval unless the agent's HITL is «Не спрашивать».
+// run_agent acts, so the route asks for approval unless the agent's HITL is «Не спрашивать»;
+// mail changes and sends — by the assistant's own HITL (lib/mail-catalog.ts).
 // Mail results are masked when the assistant's guardrails include «Маскирование ПДн».
 
 /** Output of the removed «Траты» tool — still rendered in old chats. */
@@ -43,7 +45,10 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
 
   const tools = {
     ...policyTools(snapshot),
-    ...mailTools({ conn: mailConn, who: "Ассистент", actor: user, channel: "чат", missing: "Почта не добавлена ассистенту", mask: effectiveGuardrails(cfg.guardrails).maskPii }),
+    ...mailTools({
+      conn: mailConn, who: "Ассистент", actor: user, channel: "чат", missing: "Почта не добавлена ассистенту", mask: effectiveGuardrails(cfg.guardrails).maskPii,
+      approved: (t) => mailNeedsApproval(t, cfg.hitl),
+    }),
     // removed «Траты» tool: kept only so chats that called it still validate; never in activeTools
     get_spending: tool({
       description: "Устарело: не используется.",
@@ -77,10 +82,12 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   };
 
   // every tool stays defined so stored history validates; the model is offered only the allowed ones
-  const activeTools = ["current_time", "get_policies", ...allowedTools(cfg, agents.map((a) => a.id), mailConn ? [mailConn.id] : [])] as (keyof typeof tools)[];
+  const activeTools = ["current_time", "get_policies", ...allowedTools(cfg, agents.map((a) => a.id), mailConn ? { id: mailConn.id, tools: connectorMailTools(mailConn) } : null)] as (keyof typeof tools)[];
   // HITL per agent: switched off → runs at once; on (and unknown ids) → waits for the user.
   // Until approvals move to the agent's own actions, «on» means: confirm the launch.
+  const asks = () => "user-approval" as const;
   const approval = {
+    ...Object.fromEntries(MAIL_TOOL_NAMES.filter((t) => mailNeedsApproval(t, cfg.hitl)).map((t) => [t, asks])),
     run_agent: ({ agentId }: { agentId: string }) => { const a = agents.find((x) => x.id === agentId); return a && !hitlAsks(a.hitl) ? undefined : ("user-approval" as const); },
   };
   return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null, snapshot };

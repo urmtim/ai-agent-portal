@@ -21,6 +21,7 @@ import { summarizeChat } from "@/lib/chat/summarize";
 import { effectiveGuardrails } from "@/lib/agents/policy";
 import { CHAT_INSTRUCTIONS } from "@/lib/chat/instructions";
 import { withPolicies } from "@/lib/chat/policy-tools";
+import { MAIL_TOOL_NAMES, mailActionText } from "@/lib/mail-catalog";
 
 // One chat turn: the browser sends the whole history (useChat), we check it,
 // save it, stream the model's answer with tools and save again with the answer.
@@ -74,12 +75,16 @@ export async function POST(req: Request) {
   });
   await save(messages); // the user's message survives a failing model
   if (!chat) await audit("chat", "Создан чат", user, "чат");
-  // a fresh "no" to an agent run (approvals are journaled when the run actually starts, in lib/chat/tools.ts)
+  // a fresh "no" to an agent run or a mail action (approvals are journaled when the action actually runs, in lib/chat/tools.ts)
   for (const p of messages.at(-1)?.role === "assistant" ? messages.at(-1)!.parts : []) {
-    const part = p as { type: string; state?: string; approval?: { approved?: boolean }; input?: { agentId?: string } };
-    if (part.type === "tool-run_agent" && part.state === "approval-responded" && part.approval?.approved === false) {
+    const part = p as { type: string; state?: string; approval?: { approved?: boolean }; input?: Record<string, unknown> };
+    if (part.state !== "approval-responded" || part.approval?.approved !== false) continue;
+    if (part.type === "tool-run_agent") {
       const name = agents.find((a) => a.id === part.input?.agentId)?.name ?? "агент";
       await audit("approval", `Отклонён запуск агента «${name}»`, user, "чат");
+    } else if (MAIL_TOOL_NAMES.includes(part.type.slice(5))) {
+      const a = mailActionText(part.type.slice(5), part.input);
+      await audit("approval", `Отклонено: ${a.title.toLowerCase()}${a.lines[0] ? `, ${a.lines[0]}` : ""}`, user, "чат");
     }
   }
 

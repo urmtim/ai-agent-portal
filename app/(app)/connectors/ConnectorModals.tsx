@@ -12,16 +12,65 @@ import { YamlEditor } from "@/components/ui/YamlEditor";
 import { SecretInput } from "@/components/ui/SecretInput";
 import { CONNECTORS, switchProtocol, type ConnectorField, type ConnectorKind, type MailSending } from "@/lib/connectors";
 import { EMPTY_FIELDS, fieldsToYaml, yamlToFields, type ConnectorFields } from "@/lib/connector-spec";
+import { MAIL_GROUPS, MAIL_TOOLS, NEED_TEXT, mailToolUsable, type MailAbility } from "@/lib/mail-catalog";
 import { checkConnector, deleteConnector, saveConnector, testConnector, type TestState } from "./actions";
 
 /** What the browser knows about a connector — never its password or token. `usedBy` — who has it on their «Коннекторы» tab. */
 export type ConnectorRowData = { id: string; fields: ConnectorFields; hasSecret: boolean; usedBy: string[] };
 
-type Tab = "general" | "connection" | "yaml";
+type Tab = "general" | "connection" | "tools" | "yaml";
 const INPUT_OF: Record<ConnectorField, string> = {
-  name: "cn-name", host: "cn-host", port: "cn-port", smtpHost: "cn-smtp", smtpPort: "cn-smtpport", user: "cn-user", password: "cn-secret", url: "cn-url", token: "cn-secret",
+  kind: "cn-kind", name: "cn-name", host: "cn-host", port: "cn-port", smtpHost: "cn-smtp", smtpPort: "cn-smtpport", user: "cn-user", password: "cn-secret", url: "cn-url", token: "cn-secret",
 };
 const URL_RE = /^https?:\/\/[^\s/]+/i;
+
+/**
+ * «Инструменты» of a mail connector: three groups by consequence, each with a checkbox that sets the whole group
+ * («частично» when only some are on). What the connection can't do is grey and unchecked; everything else is on by default.
+ */
+function MailToolsPanel({ ability, off, onChange }: { ability: MailAbility; off: string[]; onChange: (off: string[]) => void }) {
+  const set = (keys: string[], on: boolean) => onChange(on ? off.filter((k) => !keys.includes(k)) : [...new Set([...off, ...keys])]);
+  return (
+    <div className="tpart mtools">
+      <table>
+        <thead><tr><th /><th>Инструмент</th><th>Описание</th></tr></thead>
+        <tbody>
+          {MAIL_GROUPS.map((g) => {
+            const list = MAIL_TOOLS.filter((t) => t.group === g.key);
+            const usable = list.filter((t) => mailToolUsable(t, ability));
+            const onCount = usable.filter((t) => !off.includes(t.key)).length;
+            const need = list.find((t) => t.need)?.need;
+            return [
+              <tr key={g.key} className={usable.length ? "mgrp" : "mgrp off"}>
+                <td>
+                  <input type="checkbox" aria-label={`Включить всё: ${g.label}`} disabled={!usable.length}
+                    checked={usable.length > 0 && onCount === usable.length}
+                    ref={(el) => { if (el) el.indeterminate = onCount > 0 && onCount < usable.length; }}
+                    onChange={(e) => set(usable.map((t) => t.key), e.target.checked)} />
+                </td>
+                <td><b>{g.label}</b></td>
+                <td className="muted">{g.desc}{!usable.length && need ? `. ${NEED_TEXT[need]}` : ""}</td>
+              </tr>,
+              ...list.map((t) => {
+                const ok = mailToolUsable(t, ability);
+                return (
+                  <tr key={t.key} className={ok ? undefined : "off"}>
+                    <td className="sub1">
+                      <input type="checkbox" aria-label={`Включить «${t.label}»`} data-tool={t.key} disabled={!ok}
+                        checked={ok && !off.includes(t.key)} onChange={(e) => set([t.key], e.target.checked)} />
+                    </td>
+                    <td className="sub1">{t.label}</td>
+                    <td className="muted">{t.desc}{!ok && usable.length && t.need ? `. ${NEED_TEXT[t.need]}` : ""}</td>
+                  </tr>
+                );
+              }),
+            ];
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 /**
  * The connector window, the same size as the model and agent windows: the on/off slider in the header,
@@ -43,6 +92,8 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
   const [, startTest] = useTransition();
   const head = useModalHead();
   const mail = f.kind === "mail", smtp = f.sending === "smtp";
+  const ability: MailAbility = { protocol: f.protocol, smtp };
+  const toolsOn = MAIL_TOOLS.filter((t) => mailToolUsable(t, ability) && !f.toolsOff.includes(t.key)).length;
 
   const upd = (patch: Partial<ConnectorFields>, field?: ConnectorField) => {
     setF((p) => ({ ...p, ...patch }));
@@ -60,6 +111,7 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
 
   // top to bottom, the first problem only; a saved password or token may stay empty
   function connectionProblem(): [ConnectorField, string] | null {
+    if (!f.kind) return ["kind", "Выберите тип"];
     if (!mail) {
       if (!f.url.trim()) return ["url", "Укажите адрес API"];
       if (!URL_RE.test(f.url.trim())) return ["url", "Адрес должен начинаться с http:// или https://"];
@@ -134,13 +186,17 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
     <form ref={form} onSubmit={onSubmit} noValidate autoComplete="off">
       {c && <input type="hidden" name="id" value={c.id} />}
       <input type="hidden" name="kind" value={f.kind} />
-      <FormTabs active={tab} onChange={openTab} tabs={[{ key: "general", label: "Общее" }, { key: "connection", label: "Подключение" }, { key: "yaml", label: "YAML" }]} />
+      <FormTabs active={tab} onChange={openTab} tabs={[
+        { key: "general", label: "Общее" }, { key: "connection", label: "Подключение" },
+        ...(mail ? [{ key: "tools" as const, label: "Инструменты", count: toolsOn }] : []), { key: "yaml", label: "YAML" },
+      ]} />
+      {mail && f.toolsOff.map((k) => <input key={k} type="hidden" name="toolOff" value={k} />)}
 
       <div className="apanel fill" hidden={tab !== "general"}>
         <div className="field">
           <label htmlFor="cn-name">Название <span className="req">*</span></label>
           <input id="cn-name" name="name" autoComplete="off" className={bad("name")} value={f.name} maxLength={80}
-            onChange={(e) => upd({ name: e.target.value }, "name")} placeholder={mail ? "например, Моя почта" : "например, Курсы валют"} />
+            onChange={(e) => upd({ name: e.target.value }, "name")} placeholder={f.kind === "api" ? "например, Курсы валют" : "например, Моя почта"} />
           {fieldErr("name")}
         </div>
         <div className="field grow half">
@@ -152,10 +208,13 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
       <div className={mail ? "apanel tight" : "apanel"} hidden={tab !== "connection"}>
         <div className="field">
           <label htmlFor="cn-kind">Тип <span className="req">*</span></label>
-          <select id="cn-kind" value={f.kind} disabled={!!c}
+          {/* a new connector has no type yet: nothing below until it is chosen */}
+          <select id="cn-kind" value={f.kind} disabled={!!c} className={[!f.kind && "novalue", bad("kind")].filter(Boolean).join(" ") || undefined}
             onChange={(e) => { upd({ kind: e.target.value as ConnectorKind }); setErr(undefined); setTest(undefined); setSecret(""); }}>
+            {!f.kind && <option value="" disabled>Выберите тип</option>}
             {(Object.keys(CONNECTORS) as ConnectorKind[]).map((k) => <option key={k} value={k}>{CONNECTORS[k].label}</option>)}
           </select>
+          {fieldErr("kind")}
         </div>
 
         {mail ? (
@@ -218,7 +277,7 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
               </div>
             </div>
           </>
-        ) : (
+        ) : f.kind === "api" ? (
           <>
             <div className="field">
               <label htmlFor="cn-url">Адрес API <span className="req">*</span></label>
@@ -233,16 +292,22 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
               {fieldErr("token")}
             </div>
           </>
-        )}
-        <div className="checkrow">
+        ) : null}
+        {f.kind && <div className="checkrow">
           <button type="button" className="btn ghost" onClick={check} disabled={test === "checking"}>Проверить</button>
           {test && (
             <span className={`status ${testCls}`} role="status">
               {test === "checking" ? <><span className="spin" /> Проверяем подключение…</> : test.message}
             </span>
           )}
-        </div>
+        </div>}
       </div>
+
+      {mail && (
+        <div className="apanel" hidden={tab !== "tools"}>
+          <MailToolsPanel ability={ability} off={f.toolsOff} onChange={(toolsOff) => upd({ toolsOff })} />
+        </div>
+      )}
 
       <div className="apanel yamlpanel" hidden={tab !== "yaml"}>
         <YamlEditor label="YAML коннектора" value={yaml} onChange={applyYaml} />

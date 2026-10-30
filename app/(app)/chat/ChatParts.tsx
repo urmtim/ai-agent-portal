@@ -4,12 +4,15 @@ import Link from "next/link";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { UIMessage } from "ai";
-import type { MailCountResult, MailReadResult, MailSearchResult, RunAgentResult, SpendingResult } from "@/lib/chat/tools";
+import type {
+  MailActionResult, MailAttachmentResult, MailCountResult, MailFoldersResult, MailReadResult, MailSearchResult, RunAgentResult, SpendingResult,
+} from "@/lib/chat/tools";
+import { MAIL_TOOL_NAMES, mailActionText, mailToolGroup } from "@/lib/mail-catalog";
 import { toolErrorText } from "@/lib/chat/tool-errors";
 import type { AgentInfo } from "./data";
 
 // How one assistant message looks: Markdown text, a line per tool call (mockup .cstep)
-// and the confirmation card before an agent runs (mockup .hitl).
+// and the confirmation card before an agent runs or a mail change or send is made (mockup .hitl).
 
 type ToolPart = {
   type: string;
@@ -62,7 +65,8 @@ function MailSearchStep({ part }: { part: ToolPart }) {
   const q = part.input as { query?: string; from?: string; days?: number } | undefined;
   const what = [q?.query && `«${q.query}»`, q?.from && `от ${q.from}`].filter(Boolean).join(" ");
   const details = o.letters.map((l) => `${l.unread ? "● " : ""}${day(l.date)} — ${l.from} — ${l.subject || "(без темы)"}`).join("\n");
-  return <Step summary={<>Почта · найдено <b>{o.total}</b>{what ? <> по запросу {what}</> : null}{q?.days ? ` за ${q.days} дн.` : ""}</>} details={details || "Писем не найдено"} />;
+  const where = o.folder && o.folder !== "Входящие" ? <> в «{o.folder}»</> : null;
+  return <Step summary={<>Почта · найдено <b>{o.total}</b>{where}{what ? <> по запросу {what}</> : null}{q?.days ? ` за ${q.days} дн.` : ""}</>} details={details || "Писем не найдено"} />;
 }
 
 function MailCountStep({ part }: { part: ToolPart }) {
@@ -70,7 +74,23 @@ function MailCountStep({ part }: { part: ToolPart }) {
   if (part.state !== "output-available") return <Step running summary="Считаю письма…" />;
   const o = part.output as MailCountResult;
   if ("error" in o) return <Step summary="Почта" fail="Ошибка" details={o.error} />;
-  return <Step summary={<>Почта: всего <b>{o.total}</b>{o.unread === null ? "" : <>, непрочитанных <b>{o.unread}</b></>}</>} />;
+  return <Step summary={<>Почта{o.folder && o.folder !== "Входящие" ? <>, «{o.folder}»</> : null}: всего <b>{o.total}</b>{o.unread === null ? "" : <>, непрочитанных <b>{o.unread}</b></>}</>} />;
+}
+
+function MailFoldersStep({ part }: { part: ToolPart }) {
+  if (part.state === "output-error") return <Step summary="Папки" fail="Ошибка" details={toolErrorText("mail_folders", part.errorText)} />;
+  if (part.state !== "output-available") return <Step running summary="Смотрю папки…" />;
+  const o = part.output as MailFoldersResult;
+  if ("error" in o) return <Step summary="Папки" fail="Ошибка" details={o.error} />;
+  return <Step summary={<>Почта: папок <b>{o.folders.length}</b></>} details={o.folders.map((f) => `${f.name}: ${f.total}${f.unread ? `, непрочитанных ${f.unread}` : ""}`).join("\n")} />;
+}
+
+function MailAttachmentStep({ part }: { part: ToolPart }) {
+  if (part.state === "output-error") return <Step summary="Вложение" fail="Ошибка" details={toolErrorText("mail_attachment", part.errorText)} />;
+  if (part.state !== "output-available") return <Step running summary="Читаю вложение…" />;
+  const o = part.output as MailAttachmentResult;
+  if ("error" in o) return <Step summary="Вложение" fail="Ошибка" details={o.error} />;
+  return <Step summary={<>Вложение <b>«{o.name}»</b></>} details={o.text.slice(0, 1500)} />;
 }
 
 function TimeStep({ part }: { part: ToolPart }) {
@@ -94,7 +114,39 @@ function MailReadStep({ part }: { part: ToolPart }) {
   if ("error" in o) return <Step summary="Письмо" fail="Ошибка" details={o.error} />;
   const l = o.letter;
   return <Step summary={<>Письмо <b>«{l.subject || "без темы"}»</b> от {l.from}</>}
-    details={`${day(l.date)}\n${l.text.slice(0, 1500)}${l.attachments.length ? `\n\nВложения: ${l.attachments.join(", ")}` : ""}`} />;
+    details={`${day(l.date)}\n${l.text.slice(0, 1500)}${l.attachments.length ? `\n\nВложения: ${(l.attachments as (string | { name: string })[]).map((a) => (typeof a === "string" ? a : a.name)).join(", ")}` : ""}`} />;
+}
+
+/** A mail change or send: the confirmation card first when the assistant's HITL asks, then what was done. */
+function MailActionStep({ part, canApprove, onApprove }: { part: ToolPart; canApprove: boolean; onApprove: (id: string, approved: boolean) => void }) {
+  const tool = part.type.slice(5);
+  const a = mailActionText(tool, part.input);
+  const out = part.output as MailActionResult | undefined;
+  switch (part.state) {
+    case "approval-requested":
+      if (part.approval?.isAutomatic) return null;
+      return (
+        <div className="hitl">
+          <div className="ht">⏸ Нужно подтверждение. {a.title}</div>
+          {a.lines.map((l) => <div key={l} className="hd">{l}</div>)}
+          <div className="wrap-gap">
+            <button type="button" className="btn primary sm" disabled={!canApprove} onClick={() => onApprove(part.approval!.id, true)}>Выполнить</button>
+            <button type="button" className="btn ghost sm" disabled={!canApprove} onClick={() => onApprove(part.approval!.id, false)}>Отмена</button>
+          </div>
+        </div>
+      );
+    case "approval-responded":
+      return part.approval?.approved ? <Step running summary={<>{a.title}…</>} /> : <Step summary={<>Отменено: {a.title.toLowerCase()}</>} />;
+    case "output-denied":
+      return <Step summary={<>Отменено: {a.title.toLowerCase()}</>} />;
+    case "output-error":
+      return <Step summary={a.title} fail="Ошибка" details={toolErrorText(tool, part.errorText)} />;
+    case "output-available":
+      if (!out || "error" in out) return <Step summary={a.title} fail="Ошибка" details={out?.error} />;
+      return <Step summary={<>Почта: {out.done}</>} details={a.lines.join("\n") || undefined} />;
+    default:
+      return <Step running summary={<>{a.title}…</>} />;
+  }
 }
 
 function AgentStep({ part, agents, onApprove, canApprove }: {
@@ -154,6 +206,11 @@ export function AssistantParts({ message, agents, canApprove, onApprove }: {
     if (p.type === "tool-mail_search") return <MailSearchStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-mail_read") return <MailReadStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-mail_count") return <MailCountStep key={i} part={p as ToolPart} />;
+    if (p.type === "tool-mail_folders") return <MailFoldersStep key={i} part={p as ToolPart} />;
+    if (p.type === "tool-mail_attachment") return <MailAttachmentStep key={i} part={p as ToolPart} />;
+    if (MAIL_TOOL_NAMES.includes(p.type.slice(5)) && mailToolGroup(p.type.slice(5)) !== "read") {
+      return <MailActionStep key={i} part={p as ToolPart} canApprove={canApprove} onApprove={onApprove} />;
+    }
     if (p.type === "tool-current_time") return <TimeStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-get_policies") return <PoliciesStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-run_agent") {

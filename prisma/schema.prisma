@@ -281,6 +281,7 @@ model Connector {
   enabled   Boolean   @default(true) // off: agents and the assistant keep it but get no tools from it
   config    String    @default("{}") // JSON settings without secrets (lib/connectors.ts)
   secretEnc String? // password / token, AES-GCM (lib/secret.ts); never sent to the browser
+  toolsOff  String    @default("[]") // JSON: mail tools switched off on the «Инструменты» tab (lib/mail-catalog.ts); new tools are on
   checkedAt DateTime?
   checkOk   Boolean?
   checkMsg  String    @default("")

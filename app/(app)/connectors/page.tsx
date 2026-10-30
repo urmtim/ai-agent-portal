@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/session";
 import { ownConnectors } from "@/lib/connections";
 import { CONNECTORS, MAIL_PORTS, isConnectorKind, parseApiConfig, parseMailConfig } from "@/lib/connectors";
 import { EMPTY_FIELDS, type ConnectorFields } from "@/lib/connector-spec";
+import { parseToolsOff } from "@/lib/mail-catalog";
 import { AddConnectorButton, ConnectorActions } from "./ConnectorModals";
 
 const ids = (raw: string | undefined): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
@@ -20,7 +21,7 @@ const ST_CLS: Record<string, string> = { "выключен": "mut", "не про
 
 /** A saved connector → the window's fields (no password or token). */
 function fieldsOf(c: Row): ConnectorFields {
-  const base = { ...EMPTY_FIELDS, kind: isConnectorKind(c.kind) ? c.kind : "mail", name: c.name, description: c.description, enabled: c.enabled } as ConnectorFields;
+  const base = { ...EMPTY_FIELDS, kind: isConnectorKind(c.kind) ? c.kind : "mail", name: c.name, description: c.description, enabled: c.enabled, toolsOff: parseToolsOff(c.toolsOff) } as ConnectorFields;
   const m = c.kind === "mail" ? parseMailConfig(c.config) : null;
   if (m) return { ...base, protocol: m.protocol, host: m.host, port: String(m.port), sending: m.smtpHost ? "smtp" : "none", smtpHost: m.smtpHost, smtpPort: String(m.smtpHost ? m.smtpPort : MAIL_PORTS.smtp), user: m.user };
   return { ...base, url: parseApiConfig(c.config)?.url ?? "" };

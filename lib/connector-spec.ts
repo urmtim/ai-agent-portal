@@ -2,26 +2,31 @@
 // Passwords and tokens never appear here, and are not taken from a loaded file.
 import { parse, stringify } from "yaml";
 import { MAIL_PORTS, type ConnectorKind, type MailSending } from "./connectors";
+import { MAIL_TOOLS, parseToolsOff } from "./mail-catalog";
 
-/** The window's fields, as typed (ports too): what the YAML fills and is made from. */
+/** The window's fields, as typed (ports too): what the YAML fills and is made from. A new connector has no type yet (""). */
 export type ConnectorFields = {
-  kind: ConnectorKind; name: string; description: string; enabled: boolean;
+  kind: ConnectorKind | ""; name: string; description: string; enabled: boolean;
   protocol: "imap" | "pop3"; host: string; port: string; sending: MailSending; smtpHost: string; smtpPort: string; user: string;
   url: string;
+  /** Mail tools switched off on the «Инструменты» tab (lib/mail-catalog.ts). */
+  toolsOff: string[];
 };
 
 export const EMPTY_FIELDS: ConnectorFields = {
-  kind: "mail", name: "", description: "", enabled: true,
-  protocol: "imap", host: "", port: String(MAIL_PORTS.imap), sending: "none", smtpHost: "", smtpPort: String(MAIL_PORTS.smtp), user: "", url: "",
+  kind: "", name: "", description: "", enabled: true,
+  protocol: "imap", host: "", port: String(MAIL_PORTS.imap), sending: "none", smtpHost: "", smtpPort: String(MAIL_PORTS.smtp), user: "", url: "", toolsOff: [],
 };
 
 const num = (s: string) => (/^\d+$/.test(s.trim()) ? Number(s) : s.trim());
 
 export function fieldsToYaml(f: ConnectorFields): string {
   const head = { version: 1, type: f.kind, name: f.name, description: f.description, enabled: f.enabled };
+  // the mail tools that are on: a file without «tools:» leaves the checkboxes as they are
+  const tools = MAIL_TOOLS.filter((t) => !f.toolsOff.includes(t.key)).map((t) => t.key);
   const doc = f.kind === "mail"
-    ? { ...head, incoming: { protocol: f.protocol, host: f.host, port: num(f.port) }, outgoing: f.sending === "smtp" ? { host: f.smtpHost, port: num(f.smtpPort) } : "none", user: f.user }
-    : { ...head, url: f.url };
+    ? { ...head, incoming: { protocol: f.protocol, host: f.host, port: num(f.port) }, outgoing: f.sending === "smtp" ? { host: f.smtpHost, port: num(f.smtpPort) } : "none", user: f.user, tools }
+    : f.kind === "api" ? { ...head, url: f.url } : head;
   return "# AI Portal — коннектор. Пароли и токены сюда не попадают.\n" + stringify(doc, { lineWidth: 0 });
 }
 
@@ -63,6 +68,7 @@ export function yamlToFields(text: string, current: ConnectorFields, typeLocked:
       smtpHost: str(out.host, current.smtpHost), smtpPort: str(out.port, current.smtpPort),
       user: str(o.user, current.user),
       url: str(o.url, current.url),
+      toolsOff: Array.isArray(o.tools) ? MAIL_TOOLS.map((t) => t.key).filter((k) => !(o.tools as unknown[]).includes(k)) : parseToolsOff(current.toolsOff),
     },
     warnings,
   };

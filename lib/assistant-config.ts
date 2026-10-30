@@ -42,10 +42,10 @@ export function parseAssistant(
 }
 
 /** Chat tools the assistant may call with this config (run_agent needs at least one allowed, enabled agent;
- *  the mail tools — an allowed, switched-on «Почта» connector). */
-export function allowedTools(cfg: Pick<AssistantConfig, "agentIds" | "connectorIds">, enabledAgentIds: string[], mailConnectorIds: string[] = []): string[] {
+ *  the mail tools — an allowed, switched-on «Почта» connector, and only those its «Инструменты» tab and connection give). */
+export function allowedTools(cfg: Pick<AssistantConfig, "agentIds" | "connectorIds">, enabledAgentIds: string[], mail: { id: string; tools: string[] } | null = null): string[] {
   const tools: string[] = [];
   if (cfg.agentIds.some((id) => enabledAgentIds.includes(id))) tools.push("run_agent");
-  if (cfg.connectorIds.some((id) => mailConnectorIds.includes(id))) tools.push("mail_search", "mail_read", "mail_count");
+  if (mail && cfg.connectorIds.includes(mail.id)) tools.push(...mail.tools);
   return tools;
 }

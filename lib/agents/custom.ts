@@ -5,7 +5,7 @@ import type { Agent } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { chatModel, errorText } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
-import { accessInfo, firstMailConnector } from "@/lib/connections";
+import { accessInfo, connectorMailTools, firstMailConnector } from "@/lib/connections";
 import { maskPii } from "./guardrails";
 import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules, parseHitl } from "./policy";
 import { agentInstructions } from "@/lib/chat/instructions";
@@ -19,6 +19,8 @@ import type { RunBy } from "./runner";
 
 const ids = (raw: string): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
 const short = (v: unknown, n: number) => { const s = typeof v === "string" ? v : JSON.stringify(v); return s.length > n ? s.slice(0, n) + "…" : s; };
+
+const pickTools = (all: ToolSet, names: string[]): ToolSet => Object.fromEntries(Object.entries(all).filter(([k]) => names.includes(k)));
 
 export type CustomResult = { processed: number; created: number; log: string[]; summary: string };
 
@@ -37,7 +39,8 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs, await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null));
   const tools: ToolSet = {
     ...policyTools(snapshot),
-    ...(conn ? mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii }) : {}),
+    // only what the connector's «Инструменты» tab and connection give; its launch was confirmed by the agent's HITL
+    ...(conn ? pickTools(mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii }), connectorMailTools(conn)) : {}),
   };
 
   // agents it may call: enabled, without confirmation, not itself; nested agents don't call further

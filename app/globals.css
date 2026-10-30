@@ -484,6 +484,16 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 .tpart td { padding: 8px 12px; vertical-align: middle; }
 .tpart td.tempty { text-align: center; padding: 16px 12px; }
 .tpart td.acts { width: 1%; text-align: right; }
+/* a mail connector's «Инструменты»: group rows, tools under them, grey what the connection can't do */
+.tpart.mtools td { padding-top: 6px; padding-bottom: 6px; }
+.tpart.mtools td:first-child { width: 44px; }
+.tpart.mtools tr.mgrp td { background: var(--soft); }
+.tpart.mtools td.sub1:first-child { padding-left: 30px; }
+.tpart.mtools td.sub1 + td.sub1 { padding-left: 20px; }
+.tpart.mtools tr.off td { opacity: .55; }
+select.novalue { color: var(--muted); }
+.tpart.mtools input[type=checkbox] { accent-color: var(--primary); width: 16px; height: 16px; }
+select.novalue option { color: var(--ink); }
 .tadd { display: flex; gap: 8px; margin-top: 10px; }
 .tadd select { flex: 1; min-width: 0; }
 

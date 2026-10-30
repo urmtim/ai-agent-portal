@@ -31,6 +31,7 @@ export function compactOutput(toolName: string, output: unknown): unknown {
     const text = typeof l.text === "string" && l.text.length > 300 ? l.text.slice(0, 300) + CUT_NOTE : l.text;
     return { ...o, letter: { ...l, text } };
   }
+  if (toolName === "mail_attachment" && typeof o.text === "string" && o.text.length > 300) return { ...o, text: o.text.slice(0, 300) + CUT_NOTE };
   if (toolName === "get_policies") return { note: "Политики выдавались раньше; действуют те, что выданы перед текущим вопросом." };
   if (toolName === "run_agent" && "log" in o) {
     const { log: _log, ...rest } = o; // eslint-disable-line @typescript-eslint/no-unused-vars

@@ -2,8 +2,8 @@
 // A connector only keeps where to connect and how to log in: a mailbox (IMAP or POP3, plus SMTP) or an HTTP API.
 
 export const CONNECTORS = {
-  mail: { label: "Почта", tools: ["Искать письма", "Прочитать письмо"] },
-  api: { label: "API", tools: [] as string[] },
+  mail: { label: "Почта" },
+  api: { label: "API" },
 } as const;
 
 export type ConnectorKind = keyof typeof CONNECTORS;
@@ -55,7 +55,7 @@ export function parseApiConfig(raw: string | null | undefined): ApiConfig | null
 }
 
 /** Which window field a problem belongs to. */
-export type ConnectorField = "name" | "host" | "port" | "smtpHost" | "smtpPort" | "user" | "password" | "url" | "token";
+export type ConnectorField = "kind" | "name" | "host" | "port" | "smtpHost" | "smtpPort" | "user" | "password" | "url" | "token";
 export type FieldError = { field: ConnectorField; error: string };
 
 /** «Отправка» in the window: none (a read-only app password is enough) or SMTP with its server and port. */

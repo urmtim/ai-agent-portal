@@ -4,6 +4,7 @@ import { decryptSecret } from "@/lib/secret";
 import { parseApiConfig, parseMailConfig, apiCheckMessage, type ApiConfig } from "@/lib/connectors";
 import type { MailAccess } from "@/lib/mailbox";
 import type { AccessInfo } from "@/lib/chat/policy-tools";
+import { availableMailTools, mailGives, parseToolsOff, type MailAbility } from "@/lib/mail-catalog";
 
 type Row = { kind: string; name: string; config: string; secretEnc: string | null };
 
@@ -42,6 +43,18 @@ export async function checkApi(a: { url: string; token: string | null }): Promis
   }
 }
 
+/** What a mail connector's connection allows (null: not set up). */
+function abilityOf(c: { config: string }): MailAbility | null {
+  const m = parseMailConfig(c.config);
+  return m ? { protocol: m.protocol, smtp: !!m.smtpHost } : null;
+}
+
+/** The model's tool names a «Почта» connector gives: switched on on its «Инструменты» tab and allowed by its connection. */
+export function connectorMailTools(c: { config: string; toolsOff: string } | null): string[] {
+  const a = c ? abilityOf(c) : null;
+  return a ? availableMailTools(a, parseToolsOff(c!.toolsOff)) : [];
+}
+
 /**
  * What get_policies tells the model about its own setup: the model and the switched-on connectors among `ids`.
  * `mailId` — the mailbox the mail tools work on (the first switched-on one). No logins: they would be masked anyway.
@@ -59,7 +72,7 @@ export async function accessInfo(userId: string, modelId: string | null, ids: st
         const cfg = parseMailConfig(c.config);
         return {
           name: c.name, type: "Почта", server: cfg ? `${cfg.protocol.toUpperCase()} ${cfg.host}` : "",
-          gives: c.id === mailId ? "искать, читать и считать письма, только чтение" : `ничего: почтовые инструменты работают с «${mailName}»`,
+          gives: c.id !== mailId ? `ничего: почтовые инструменты работают с «${mailName}»` : cfg ? mailGives({ protocol: cfg.protocol, smtp: !!cfg.smtpHost }, parseToolsOff(c.toolsOff)) : "ничего: настроен не до конца",
         };
       }
       const api = parseApiConfig(c.config);

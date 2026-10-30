@@ -8,6 +8,12 @@ const PARAMS: Record<string, Record<string, { label: string; unit?: string }>> =
   run_agent: { agentId: { label: "Агент" }, task: { label: "Задача" } },
 };
 
+/** Parameters the mail tools share. */
+const COMMON: Record<string, { label: string }> = {
+  folder: { label: "Папка" }, ids: { label: "Письма" }, id: { label: "Номер письма" }, n: { label: "Номер вложения" }, to: { label: "Кому" },
+  cc: { label: "Копия" }, subject: { label: "Тема" }, text: { label: "Текст" }, name: { label: "Название папки" },
+};
+
 type Issue = { code?: string; path?: (string | number)[]; maximum?: number; minimum?: number; message?: string };
 
 export function toolErrorText(tool: string, errorText: string | undefined): string {
@@ -21,7 +27,7 @@ export function toolErrorText(tool: string, errorText: string | undefined): stri
 
   const lines = issues.map((i) => {
     const key = String(i.path?.[0] ?? "");
-    const p = PARAMS[tool]?.[key] ?? { label: key || "Параметр" };
+    const p = PARAMS[tool]?.[key] ?? COMMON[key] ?? { label: key || "Параметр" };
     const got = value[key];
     const asked = got === undefined ? "" : `модель запросила ${String(got)}${p.unit ?? ""}, `;
     if (i.code === "too_big" && i.maximum !== undefined) return `${p.label}: ${asked}можно не больше ${i.maximum}${p.unit ?? ""}`;
