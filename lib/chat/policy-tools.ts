@@ -21,12 +21,19 @@ export type AccessInfo = {
   abilities?: string[];
 };
 
-/** «Что умеешь» in words: the date, the agents it may run, its mailbox — and plainly what it lacks. */
-export function abilitiesOf(a: { agents: string[]; mail: { name: string; gives: string } | null }): string[] {
+/**
+ * «Что умеешь» in words, from everything it is given: the date, each agent it may run with that agent's own connections,
+ * each switched-on connector (mail, API…) with what it gives — and plainly what it lacks. Nothing here is about one kind of connector.
+ */
+export function abilitiesOf(a: { agents: { name: string; has: string[] }[]; connectors: AccessInfo["connectors"] }): string[] {
   return [
     "узнавать текущие дату и время",
-    a.agents.length ? `запускать агентов: ${a.agents.map((n) => `«${n}»`).join(", ")}` : "агентов запускать не могу: ни один не разрешён",
-    a.mail ? `почта «${a.mail.name}» — ${a.mail.gives}` : "почты нет: почтовый коннектор не добавлен или выключен",
+    ...(a.agents.length
+      ? a.agents.map((g) => `запускать агента «${g.name}»${g.has.length ? `, у него подключения: ${g.has.join(", ")}` : ", подключений у него нет"}`)
+      : ["агентов запускать не могу: ни один не разрешён"]),
+    ...(a.connectors.length
+      ? a.connectors.map((c) => `${c.type} «${c.name}» — ${c.gives}`)
+      : ["подключений нет: коннекторы не добавлены или выключены, поэтому ни почты, ни API у меня нет"]),
   ];
 }
 

@@ -5,7 +5,7 @@ import type { Agent } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { chatModel, errorText } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
-import { accessInfo, connectorMailTools, firstMailConnector } from "@/lib/connections";
+import { accessInfo, agentsWithConnections, connectorMailTools, firstMailConnector } from "@/lib/connections";
 import { maskPii } from "./guardrails";
 import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules, parseHitl } from "./policy";
 import { agentInstructions } from "@/lib/chat/instructions";
@@ -43,10 +43,7 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
 
   const conn = await firstMailConnector(agent.ownerId, ids(agent.connectorIds));
   const access = await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null);
-  access.abilities = abilitiesOf({
-    agents: subs.map((a) => a.name),
-    mail: conn ? { name: conn.name, gives: access.connectors.find((c) => c.name === conn.name)?.gives ?? "" } : null,
-  });
+  access.abilities = abilitiesOf({ agents: await agentsWithConnections(agent.ownerId, subs), connectors: access.connectors });
   const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs, access);
   const tools: ToolSet = {
     ...policyTools(snapshot),

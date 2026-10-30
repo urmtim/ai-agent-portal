@@ -83,6 +83,15 @@ export async function accessInfo(userId: string, modelId: string | null, ids: st
   };
 }
 
+/** Each agent's switched-on connections in words («Почта «Моя почта»»), for the abilities of whoever runs them. */
+export async function agentsWithConnections(userId: string, agents: { name: string; connectorIds: string }[]): Promise<{ name: string; has: string[] }[]> {
+  const ids = (raw: string): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const all = [...new Set(agents.flatMap((a) => ids(a.connectorIds)))];
+  const rows = all.length ? await prisma.connector.findMany({ where: { ownerId: userId, enabled: true, id: { in: all } }, orderBy: { createdAt: "asc" } }) : [];
+  const label = (k: string) => (k === "mail" ? "Почта" : k === "api" ? "API" : k);
+  return agents.map((a) => ({ name: a.name, has: rows.filter((c) => ids(a.connectorIds).includes(c.id)).map((c) => `${label(c.kind)} «${c.name}»`) }));
+}
+
 /** First switched-on «Почта» connector among the given ids that the user owns, or null. */
 export async function firstMailConnector(userId: string, ids: string[]) {
   if (!ids.length) return null;

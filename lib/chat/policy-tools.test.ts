@@ -37,11 +37,17 @@ test("the snapshot says the model and connectors only when given", () => {
   assert.deepEqual(policySnapshot("off", [], [], access).access, access);
 });
 
-test("«что умеешь» in words, and plainly what is missing", () => {
-  assert.deepEqual(abilitiesOf({ agents: [], mail: null }), [
-    "узнавать текущие дату и время", "агентов запускать не могу: ни один не разрешён", "почты нет: почтовый коннектор не добавлен или выключен",
+test("«что умеешь» in words: every connector and agent, and plainly what is missing", () => {
+  assert.deepEqual(abilitiesOf({ agents: [], connectors: [] }), [
+    "узнавать текущие дату и время", "агентов запускать не могу: ни один не разрешён",
+    "подключений нет: коннекторы не добавлены или выключены, поэтому ни почты, ни API у меня нет",
   ]);
-  assert.deepEqual(abilitiesOf({ agents: ["Чеки"], mail: { name: "Моя почта", gives: "чтение: искать письма" } }).slice(1), [
-    "запускать агентов: «Чеки»", "почта «Моя почта» — чтение: искать письма",
+  const connectors = [
+    { name: "Моя почта", type: "Почта", server: "IMAP imap.mail.ru", gives: "чтение: искать письма" },
+    { name: "Курсы ЦБ", type: "API", server: "cbr.ru", gives: "пока ничего: агенты API не используют" },
+  ];
+  assert.deepEqual(abilitiesOf({ agents: [{ name: "Сводка", has: ["Почта «Работа»"] }, { name: "Чеки", has: [] }], connectors }).slice(1), [
+    "запускать агента «Сводка», у него подключения: Почта «Работа»", "запускать агента «Чеки», подключений у него нет",
+    "Почта «Моя почта» — чтение: искать письма", "API «Курсы ЦБ» — пока ничего: агенты API не используют",
   ]);
 });

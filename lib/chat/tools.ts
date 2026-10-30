@@ -8,7 +8,7 @@ import { effectiveGuardrails, guardDocIds, hitlAsks } from "@/lib/agents/policy"
 import { abilitiesOf, policySnapshot, policyTools } from "@/lib/chat/policy-tools";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
-import { accessInfo, connectorMailTools, firstMailConnector } from "@/lib/connections";
+import { accessInfo, agentsWithConnections, connectorMailTools, firstMailConnector } from "@/lib/connections";
 import { mailTools } from "@/lib/chat/mail-tools";
 import { MAIL_TOOL_NAMES, mailNeedsApproval } from "@/lib/mail-catalog";
 
@@ -42,11 +42,8 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   // the assistant's policies (enabled documents only) — returned by get_policies and put before every answer
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: userId, enabled: true, id: { in: guardDocIds(cfg.guardrails) } }, select: { name: true, text: true } });
   const access = await accessInfo(userId, cfg.modelId, cfg.connectorIds, mailConn?.id ?? null);
-  // what it can do right now, in words: without a mailbox it says «почты нет» instead of guessing from the instructions
-  access.abilities = abilitiesOf({
-    agents: agents.map((a) => a.name),
-    mail: mailConn ? { name: mailConn.name, gives: access.connectors.find((c) => c.name === mailConn.name)?.gives ?? "" } : null,
-  });
+  // what it can do right now, in words — every connector and every agent it may run, with what that agent has
+  access.abilities = abilitiesOf({ agents: await agentsWithConnections(userId, agents), connectors: access.connectors });
   const snapshot = policySnapshot(cfg.hitl, cfg.guardrails, docs, access);
 
   const tools = {
