@@ -59,11 +59,11 @@ export async function accessInfo(userId: string, modelId: string | null, ids: st
         const cfg = parseMailConfig(c.config);
         return {
           name: c.name, type: "Почта", server: cfg ? `${cfg.protocol.toUpperCase()} ${cfg.host}` : "",
-          gives: c.id === mailId ? "искать, читать и считать письма, только чтение (mail_search, mail_read, mail_count)" : `ничего: почтовые инструменты работают с «${mailName}»`,
+          gives: c.id === mailId ? "искать, читать и считать письма, только чтение" : `ничего: почтовые инструменты работают с «${mailName}»`,
         };
       }
       const api = parseApiConfig(c.config);
-      return { name: c.name, type: "API", server: api ? api.url.replace(/^https?:\/\//, "").split("/")[0] : "", gives: "инструментов пока нет" };
+      return { name: c.name, type: "API", server: api ? api.url.replace(/^https?:\/\//, "").split("/")[0] : "", gives: "пока ничего: агенты API не используют" };
     }),
   };
 }
