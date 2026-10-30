@@ -145,7 +145,7 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
           <input id="md-name" name="name" autoComplete="off" className={bad("name")} value={f.name} onChange={(e) => upd({ name: e.target.value }, "name")} placeholder="например, Ollama Cloud" maxLength={80} />
           {fieldErr("name")}
         </div>
-        <div className="field grow">
+        <div className="field grow half">
           <label htmlFor="md-desc">Описание</label>
           <textarea id="md-desc" name="description" value={f.description} onChange={(e) => upd({ description: e.target.value })} placeholder="Для чего эта модель" maxLength={300} />
         </div>
