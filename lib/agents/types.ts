@@ -17,7 +17,8 @@ export const AGENT_TYPES: Record<AgentType, { label: string; desc: string; mcp: 
 };
 
 /** A custom agent is described by its instruction; built-in types by their fixed description. */
-export function agentDesc(a: { type: AgentType; instruction?: string | null }): string {
+export function agentDesc(a: { type: AgentType; instruction?: string | null; description?: string | null }): string {
+  if (a.description?.trim()) return a.description.trim();
   if (a.type === "CUSTOM") {
     const first = (a.instruction ?? "").trim().split(/\r?\n/)[0] ?? "";
     return first ? (first.length > 90 ? first.slice(0, 89) + "…" : first) : AGENT_TYPES.CUSTOM.desc;

@@ -6,11 +6,11 @@ const ids = (raw: string): string[] => {
 };
 
 export function agentEditData(a: {
-  id: string; name: string; enabled: boolean; modelId: string | null;
+  id: string; name: string; description: string; enabled: boolean; modelId: string | null;
   agentIds: string; mcpIds: string; mcpAccess: string; apis: string; instruction: string; hitl: string; guardrails: string;
 }) {
   return {
-    id: a.id, name: a.name, enabled: a.enabled, modelId: a.modelId, instruction: a.instruction,
+    id: a.id, name: a.name, description: a.description, enabled: a.enabled, modelId: a.modelId, instruction: a.instruction,
     hitl: parseHitl(a.hitl), guardrails: parseGuardRules(a.guardrails),
     agentIds: ids(a.agentIds), mcpIds: ids(a.mcpIds), mcpAccess: parseMcpAccess(a.mcpAccess), apis: ids(a.apis),
   };

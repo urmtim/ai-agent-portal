@@ -7,13 +7,13 @@ const known = { models: ["Ollama Cloud"], connections: ["Моя почта"], ag
 
 test("agent round-trips through YAML", () => {
   const spec: AgentSpec = {
-    ...EMPTY_SPEC, name: "Разбор почты", model: "Ollama Cloud", instruction: "Составь сводку новых писем.\nКоротко.",
+    ...EMPTY_SPEC, name: "Разбор почты", description: "Утренняя сводка", model: "Ollama Cloud", instruction: "Составь сводку новых писем.\nКоротко.",
     hitl: "off",
     guardrails: [{ kind: "maskPii" }, { kind: "maxSteps", value: 3 }, { kind: "forbiddenTopic", value: "политика" }, { kind: "document", id: "d1" }],
     mcp: [{ name: "Моя почта", access: "send" }], agents: ["Ответы на письма"],
   };
   const yaml = specToYaml(spec, docs);
-  assert.ok(yaml.includes("instruction: |"), yaml);
+  assert.ok(yaml.includes("instruction: |") && yaml.includes("description: Утренняя сводка"), yaml);
   assert.ok(yaml.includes("hitl: off") && yaml.includes("- maskPii") && yaml.includes("maxSteps: 3") && yaml.includes("document: Регламент"), yaml);
   assert.ok(!yaml.includes("type:") && !yaml.includes("enabled: true\n  rules"));
   const back = yamlToSpec(yaml, known);
@@ -38,7 +38,7 @@ test("unknown names become warnings and are skipped", () => {
   assert.equal(r.spec.model, null);
   assert.deepEqual(r.spec.mcp, [{ name: "Моя почта", access: "read" }]);
   assert.deepEqual(r.spec.guardrails, [{ kind: "maskPii" }]);
-  assert.deepEqual(r.warnings, ["Модель «GPT-9» не найдена — будет модель по умолчанию", "Документ «Нет документа» не найден — пропущен",
+  assert.deepEqual(r.warnings, ["Модель «GPT-9» не найдена — остаётся выбранная в окне", "Документ «Нет документа» не найден — пропущен",
     "Подключение «Рабочая почта» не найдено — пропущено", "Агент «Нет такого» не найден — пропущен"]);
 });
 

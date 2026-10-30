@@ -25,7 +25,7 @@ export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
       orderBy: { updatedAt: "desc" },
     }),
     prisma.llmModel.findMany({ where: { ownerId: userId }, select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
-    prisma.agent.findMany({ where: { ownerId: userId }, select: { id: true, name: true, type: true } }),
+    prisma.agent.findMany({ where: { ownerId: userId }, select: { id: true, name: true, type: true, description: true, instruction: true } }),
   ]);
   const cfg = await loadAssistant(userId);
   return {

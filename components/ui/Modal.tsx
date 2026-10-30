@@ -36,7 +36,6 @@ export function Modal({
   sub,
   wide,
   editor,
-  compact,
   children,
 }: {
   open: boolean;
@@ -45,10 +44,8 @@ export function Modal({
   sub?: React.ReactNode;
   /** Wider dialog for forms with tabs and tables (agent, assistant). */
   wide?: boolean;
-  /** Editor window (agent): wide and of constant size; header, tabs and footer stay, the tab body scrolls. */
+  /** Editor window (agent, model): wide and of one constant size; header, tabs and footer stay, the tab body scrolls. */
   editor?: boolean;
-  /** A lower editor window (model). */
-  compact?: boolean;
   children: React.ReactNode;
 }) {
   const titleId = useId();
@@ -84,7 +81,7 @@ export function Modal({
 
   if (!open) return null;
   const tryClose = () => (unsaved.current ? setAsking(true) : onClose());
-  const cls = editor ? `modal wide editor${compact ? " compact" : ""}` : wide ? "modal wide" : "modal";
+  const cls = editor ? "modal wide editor" : wide ? "modal wide" : "modal";
   // portal: opened from a table row, it must not inherit the cell's layout (td.acts is right-aligned)
   return createPortal(
     <div className="mbg">

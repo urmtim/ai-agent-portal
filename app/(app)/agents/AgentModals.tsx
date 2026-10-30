@@ -34,11 +34,11 @@ export type AgentChoices = {
 type SaveAction = (prev: { error?: string; ok?: string; id?: string } | undefined, fd: FormData) => Promise<{ error?: string; ok?: string; id?: string } | undefined>;
 
 const ON = "включён", OFF = "выключен";
-type Tab = "general" | "policies" | "subagents" | "mcp" | "apis" | "yaml";
+type Tab = "general" | "params" | "policies" | "subagents" | "mcp" | "apis" | "yaml";
 
 /** The window's fields; subagents, MCP and APIs by id. */
 type Fields = {
-  name: string; modelId: string; enabled: boolean; instruction: string;
+  name: string; description: string; modelId: string; enabled: boolean; instruction: string;
   hitl: HitlChoice; guardrails: GuardRule[];
   agents: string[]; mcp: string[]; mcpAccess: Record<string, McpAccess>; apis: string[];
 };
@@ -48,16 +48,16 @@ const idsByName = (names: string[], items: { id: string; name: string }[]) =>
 
 function initial(a: AgentEditData | undefined, newModelId: string): Fields {
   return {
-    name: a?.name ?? "", modelId: a?.modelId ?? newModelId, enabled: a?.enabled ?? true, instruction: a?.instruction ?? "",
+    name: a?.name ?? "", description: a?.description ?? "", modelId: a?.modelId ?? newModelId, enabled: a?.enabled ?? true, instruction: a?.instruction ?? "",
     hitl: a?.hitl ?? DEFAULT_HITL, guardrails: a?.guardrails ?? [...DEFAULT_GUARD_RULES],
     agents: a?.agentIds ?? [], mcp: a?.mcpIds ?? [], mcpAccess: a?.mcpAccess ?? {}, apis: a?.apis ?? [],
   };
 }
 
 /**
- * The agent window (mockup «Агент — окно»): «Общее · Политики · Субагенты · MCP · API · YAML» and «Сохранить»;
- * the on/off slider sits in the header. The same window creates (no `a`), edits, and — with `builtin` — shows the
- * built-in assistant with its name, slider and instruction locked.
+ * The agent window, the same size as the model window: «Общее · Параметры · Политики · Субагенты · MCP · API · YAML»
+ * and «Сохранить»; the on/off slider sits in the header. The same window creates (no `a`), edits, and — with `builtin` —
+ * shows the built-in assistant with its name, description, slider and instruction locked and its YAML read-only.
  */
 export function AgentForm({ a, models, newModelId, agents, connections, docs, onDone, builtin, save = saveAgent }:
   { a?: AgentEditData; onDone: () => void; builtin?: boolean; save?: SaveAction } & AgentChoices) {
@@ -90,7 +90,7 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
   const docRefs = docs.map((d) => ({ id: d.id, name: d.name }));
   const known = { models: models.map((m) => m.name), connections: connections.map((c) => c.name), agents: others.map((x) => x.name), apis: apiList.map((x) => x.id), documents: docRefs };
   const toSpec = (v: Fields): AgentSpec => ({
-    name: v.name, enabled: v.enabled, model: models.find((m) => m.id === v.modelId)?.name ?? null, instruction: v.instruction,
+    name: v.name, description: v.description, enabled: v.enabled, model: models.find((m) => m.id === v.modelId)?.name ?? null, instruction: v.instruction,
     hitl: v.hitl, guardrails: v.guardrails,
     mcp: v.mcp.flatMap((id) => { const c = connections.find((x) => x.id === id); return c ? [{ name: c.name, access: v.mcpAccess[id] ?? "read" }] : []; }),
     agents: v.agents.map((id) => others.find((x) => x.id === id)?.name).filter((x): x is string => !!x),
@@ -110,9 +110,8 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
     const s = r.spec;
     const mcp = idsByName(s.mcp.map((m) => m.name), connections);
     setF((p) => ({
-      // a built-in agent keeps its name, its instruction and stays on
-      name: builtin ? p.name : s.name, enabled: builtin ? true : s.enabled,
-      modelId: models.find((m) => m.name === s.model)?.id ?? p.modelId, instruction: builtin ? p.instruction : s.instruction,
+      name: s.name, description: s.description, enabled: s.enabled,
+      modelId: models.find((m) => m.name === s.model)?.id ?? p.modelId, instruction: s.instruction,
       hitl: s.hitl, guardrails: s.guardrails,
       agents: idsByName(s.agents, others), mcp,
       mcpAccess: Object.fromEntries(mcp.map((id) => [id, s.mcp.find((m) => m.name === connections.find((c) => c.id === id)?.name)?.access ?? "read"])),
@@ -140,6 +139,7 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
       {a && !builtin && <input type="hidden" name="agentId" value={a.id} />}
       <FormTabs active={tab} onChange={openTab} tabs={[
         { key: "general", label: "Общее" },
+        { key: "params", label: "Параметры" },
         { key: "policies", label: "Политики", count: f.guardrails.length },
         { key: "subagents", label: "Субагенты", count: f.agents.length },
         { key: "mcp", label: "MCP", count: f.mcp.length },
@@ -152,6 +152,14 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
           <label htmlFor="ag-ename">Название</label>
           <input id="ag-ename" name="name" value={f.name} disabled={builtin} onChange={(e) => upd({ name: e.target.value })} placeholder="например, Сводка почты" maxLength={80} />
         </div>
+        <div className="field grow half">
+          <label htmlFor="ag-desc">Описание</label>
+          <textarea id="ag-desc" name="description" maxLength={300} value={f.description} disabled={builtin}
+            onChange={(e) => upd({ description: e.target.value })} placeholder="Для чего этот агент" />
+        </div>
+      </div>
+
+      <div className="apanel fill" hidden={tab !== "params"}>
         <div className="field">
           <label htmlFor="ag-model">Модель</label>
           <select id="ag-model" name="modelId" value={f.modelId} onChange={(e) => upd({ modelId: e.target.value })} disabled={models.length === 0}>
@@ -163,7 +171,6 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
           <label htmlFor="ag-instr">Системная инструкция</label>
           <textarea id="ag-instr" name="instruction" maxLength={8000} value={f.instruction} disabled={builtin} onChange={(e) => upd({ instruction: e.target.value })}
             placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа." />
-          {!builtin && <div className="hint">Первая строка — описание агента в списке.</div>}
         </div>
       </div>
 
@@ -201,16 +208,19 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
       </div>
 
       <div className="apanel yamlpanel" hidden={tab !== "yaml"}>
-        <YamlEditor label="YAML агента" value={yaml} onChange={applyYaml} />
+        {/* the built-in assistant is only shown: its YAML can't change it, nor be loaded or downloaded */}
+        <YamlEditor label="YAML агента" value={yaml} onChange={applyYaml} readOnly={builtin} />
         {yamlNote.error && <div className="formerr">{yamlNote.error}</div>}
         {yamlNote.warnings.length > 0 && (
           <div className="callout warn yaml-warn"><div>{yamlNote.warnings.map((w) => <div key={w}>{w}</div>)}</div></div>
         )}
-        <div className="wrap-gap" style={{ marginTop: 12 }}>
-          <button type="button" className="btn ghost" onClick={download}>Скачать</button>
-          <button type="button" className="btn ghost" onClick={() => setAskUpload(true)}>Загрузить</button>
-          <input ref={fileInput} type="file" accept=".yaml,.yml,text/yaml" hidden onChange={upload} />
-        </div>
+        {!builtin && (
+          <div className="wrap-gap" style={{ marginTop: 12 }}>
+            <button type="button" className="btn ghost" onClick={download}>Скачать</button>
+            <button type="button" className="btn ghost" onClick={() => setAskUpload(true)}>Загрузить</button>
+            <input ref={fileInput} type="file" accept=".yaml,.yml,text/yaml" hidden onChange={upload} />
+          </div>
+        )}
       </div>
 
       {/* «Включён» sits in the window's header, outside the form: it is submitted from here */}

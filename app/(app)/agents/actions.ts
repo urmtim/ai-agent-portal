@@ -52,6 +52,7 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   const guardrails = ownGuardRules(String(formData.get("guardrails") ?? ""), docs.map((d) => d.id));
   const data = {
     name, modelId, enabled: formData.get("enabled") === "on",
+    description: String(formData.get("description") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 300),
     instruction: String(formData.get("instruction") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 8000), // forms send \r\n
     hitl,
     guardrails: JSON.stringify({ rules: guardrails }),

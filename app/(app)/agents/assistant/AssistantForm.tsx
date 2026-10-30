@@ -14,7 +14,7 @@ import { saveAssistant } from "./actions";
 export function AssistantActions({ cfg, instruction, ...choices }: { cfg: AssistantConfig; instruction: string } & AgentChoices) {
   const [open, setOpen] = useState(false);
   const a = {
-    id: "assistant", name: "Ассистент", enabled: true, modelId: cfg.modelId, instruction,
+    id: "assistant", name: "Ассистент", description: "С ним вы говорите в чате", enabled: true, modelId: cfg.modelId, instruction,
     hitl: cfg.hitl, guardrails: cfg.guardrails, agentIds: cfg.agentIds, mcpIds: cfg.mcpIds, mcpAccess: cfg.mcpAccess, apis: cfg.apis as string[],
   };
   return (

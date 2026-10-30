@@ -494,7 +494,7 @@ td.logdetails { min-width: 260px; overflow-wrap: anywhere; }
 .mpanel[hidden] { display: none; }
 
 /* agent window (mockup «Агент — окно»): constant size, only the tab body scrolls */
-.modal.editor { width: min(820px, 100%); height: min(720px, calc(88vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
+.modal.editor { width: min(820px, 100%); height: min(630px, calc(88vh - 16px)); display: flex; flex-direction: column; overflow: hidden; }
 .modal.editor > form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .modal.editor .mtabs { margin-top: 0; }
 .modal.editor .mfoot { margin-top: 12px; }
@@ -568,7 +568,6 @@ label.btn.sm { font-size: 12.5px; }
 .mhead { display: flex; align-items: center; gap: 14px; padding-right: 40px; margin: 0 0 14px; min-height: 32px; }
 .mhead .mtitle { margin: 0; padding-right: 0; flex: 1; min-width: 0; }
 .mhead-slot:empty { display: none; }
-.modal.editor.compact { height: min(630px, calc(88vh - 16px)); }
 
 /* ---- field errors: under the field, the field red ---- */
 .ferr { margin-top: 6px; font-size: 12.5px; color: var(--err); }

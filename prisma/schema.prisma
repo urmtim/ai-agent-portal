@@ -139,6 +139,7 @@ model Agent {
   owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   type      AgentType
   name      String
+  description String  @default("") // what the agent is for; empty → the instruction's first line (lib/agents/types.ts)
   enabled   Boolean   @default(true)
   config    String    @default("{}") // JSON: filters, lookback days, etc.
   agentIds  String    @default("[]") // JSON: other agents this agent may call (not used by the receipts agent yet)

@@ -9,8 +9,9 @@ import {
 
 export type AgentSpec = {
   name: string;
+  description: string; // empty → the list shows the instruction's first line
   enabled: boolean;
-  model: string | null; // model name; null → the owner's default
+  model: string | null; // model name; null → the one already chosen in the window
   instruction: string;
   hitl: HitlChoice;
   guardrails: GuardRule[]; // documents by id
@@ -20,7 +21,7 @@ export type AgentSpec = {
 };
 
 export const EMPTY_SPEC: AgentSpec = {
-  name: "", enabled: true, model: null, instruction: "", hitl: DEFAULT_HITL, guardrails: [...DEFAULT_GUARD_RULES], mcp: [], agents: [], api: [],
+  name: "", description: "", enabled: true, model: null, instruction: "", hitl: DEFAULT_HITL, guardrails: [...DEFAULT_GUARD_RULES], mcp: [], agents: [], api: [],
 };
 
 /** What exists for this user, by name; documents are {id, name}. */
@@ -31,6 +32,7 @@ export function specToYaml(s: AgentSpec, documents: { id: string; name: string }
   const doc = {
     version: 3,
     name: s.name,
+    description: s.description,
     enabled: s.enabled,
     model: s.model,
     instruction: s.instruction,
@@ -75,7 +77,7 @@ export function yamlToSpec(text: string, known: Known): { spec: AgentSpec; warni
   });
 
   let model = typeof o.model === "string" && o.model.trim() ? o.model.trim() : null;
-  if (model && !known.models.includes(model)) { warnings.push(`Модель «${model}» не найдена — будет модель по умолчанию`); model = null; }
+  if (model && !known.models.includes(model)) { warnings.push(`Модель «${model}» не найдена — остаётся выбранная в окне`); model = null; }
   if (o.type === "receipts") warnings.push("Встроенного типа «Чеки из почты» больше нет — агент будет «Своим», задайте ему инструкцию");
 
   // guardrails: a list now ({document: name} by name), {enabled, rules} in version 2, an object in version 1
@@ -105,6 +107,7 @@ export function yamlToSpec(text: string, known: Known): { spec: AgentSpec; warni
 
   const spec: AgentSpec = {
     name: typeof o.name === "string" ? o.name.trim().slice(0, 80) : "",
+    description: typeof o.description === "string" ? o.description.trim().slice(0, 300) : "",
     enabled: o.enabled !== false,
     model,
     instruction: typeof o.instruction === "string" ? o.instruction.trim() : "",

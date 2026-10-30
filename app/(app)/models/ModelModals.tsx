@@ -217,7 +217,7 @@ export function AddModelButton() {
   return (
     <>
       <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Добавить</button>
-      <Modal open={open} onClose={() => setOpen(false)} title="Новая модель" editor compact>
+      <Modal open={open} onClose={() => setOpen(false)} title="Новая модель" editor>
         {open && <ModelForm onDone={() => setOpen(false)} />}
       </Modal>
     </>
@@ -238,7 +238,7 @@ export function ModelActions({ m }: { m: ModelRowData }) {
         onClick={() => startCheck(async () => { const r = await checkSavedModel(m.id); if (r) toast(r.message); })} />
       <IconButton icon="edit" title="Изменить" data-row-open onClick={() => setModal("edit")} />
       <IconButton icon="del" title="Удалить" onClick={() => setModal("del")} />
-      <Modal open={modal === "edit"} onClose={close} title={m.name} editor compact>
+      <Modal open={modal === "edit"} onClose={close} title={m.name} editor>
         {modal === "edit" && <ModelForm m={m} onDone={close} />}
       </Modal>
       {/* a model somebody works on can't go: say who, nothing to confirm */}
