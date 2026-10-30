@@ -116,10 +116,11 @@ model LlmModel {
   ownerId   String? // personal model; models made before this had none and go to the first admin (prisma/fix-data.ts)
   owner     User?     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   name      String
+  description String  @default("") // what the model is for; shown under the name on /models
   baseUrl   String // up to /v1
   model     String // model id sent to the endpoint
   tokenEnc  String? // AES-GCM encrypted API token (lib/secret.ts); never sent to the browser
-  isDefault Boolean   @default(false)
+  isDefault Boolean   @default(false) // no longer used: prisma/fix-data.ts reads it once to give everyone an explicit model
   contextTokens Int   @default(32000) // how much the model keeps in mind; long chats get summarized at 70 % (lib/chat/context.ts)
   checkedAt DateTime?
   checkOk   Boolean?
@@ -147,7 +148,7 @@ model Agent {
   instruction String  @default("") // system instruction («Свой агент»)
   hitl      String    @default("confirm") // JSON {enabled, ask}; old "confirm" / "none" still read (lib/agents/policy.ts)
   guardrails String   @default("{}") // JSON {enabled, rules}; the old {maskPii, maxSteps, forbiddenTopics} still read
-  modelId   String? // null → the default model
+  modelId   String? // chosen explicitly; null only while the owner has no models
   model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   createdAt DateTime  @default(now())
 
@@ -197,7 +198,7 @@ model Chat {
   ownerId   String
   owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   title     String    @default("") // empty until the first answer
-  modelId   String? // null → the default model
+  modelId   String? // chosen explicitly; null only while the owner has no models
   model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   pinned    Boolean   @default(false)
   archived  Boolean   @default(false)
@@ -232,7 +233,7 @@ model AuditLog {
 model Assistant {
   ownerId   String    @id
   owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  modelId   String? // null → the default model
+  modelId   String? // chosen explicitly; null only while the owner has no models
   model     LlmModel? @relation(fields: [modelId], references: [id], onDelete: SetNull)
   agentIds  String    @default("[]") // JSON: agents it may run; nothing allowed until chosen
   mcpIds    String    @default("[]") // JSON: MCP servers it may use (none exist yet)

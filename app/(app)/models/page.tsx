@@ -3,6 +3,7 @@ import { ListTable, type ListRow } from "@/components/ui/ListTable";
 import { prisma } from "@/lib/db";
 import { envModelName } from "@/lib/llm";
 import { requireUser } from "@/lib/session";
+import { modelUsers } from "@/lib/model-users";
 import { AddModelButton, ModelActions } from "./ModelModals";
 
 function status(m: { checkedAt: Date | null; checkOk: boolean | null; checkMsg: string }) {
@@ -16,24 +17,23 @@ export default async function ModelsPage() {
   const user = await requireUser();
 
   // models are personal: the page shows and manages only the user's own
-  const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, include: { _count: { select: { agents: true } } } });
-  const unassigned = await prisma.agent.count({ where: { ownerId: user.id, modelId: null } });
-  const defaultId = (models.find((m) => m.isDefault) ?? models[0])?.id;
+  const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" } });
+  const users = await modelUsers(user.id);
   const envName = models.length === 0 ? envModelName() : null;
 
   const rows: ListRow[] = models.map((m, i) => ({
     key: m.id,
-    search: `${m.name} ${m.model} ${m.baseUrl}`,
+    search: `${m.name} ${m.description} ${m.model} ${m.baseUrl}`,
     cells: [
       <span key="id" className="muted">#{i + 1}</span>,
       <div key="n">
-        <span className="b">{m.name}</span>
-        {m.id === defaultId && <span className="st info" style={{ marginLeft: 8 }}>по умолчанию</span>}
+        <div className="b">{m.name}</div>
+        {m.description && <div className="sub">{m.description}</div>}
       </div>,
       <code key="m" className="muted" style={{ wordBreak: "break-all" }}>{m.model}</code>,
-      m._count.agents + (m.id === defaultId ? unassigned : 0),
+      <span key="u" title={users.get(m.id)?.join(", ")}>{users.get(m.id)?.length ?? 0}</span>,
       status(m),
-      <ModelActions key="a" m={{ id: m.id, name: m.name, baseUrl: m.baseUrl, model: m.model, isDefault: m.id === defaultId, hasToken: !!m.tokenEnc, contextTokens: m.contextTokens }} />,
+      <ModelActions key="a" m={{ id: m.id, name: m.name, description: m.description, baseUrl: m.baseUrl, model: m.model, hasToken: !!m.tokenEnc, contextTokens: m.contextTokens, usedBy: users.get(m.id) ?? [] }} />,
     ],
   }));
 
@@ -51,12 +51,12 @@ export default async function ModelsPage() {
         <div className="callout info" style={{ margin: "0 0 18px" }}>
           <span className="ic">ℹ️</span>
           <div style={{ fontSize: 13.5 }}>
-            Сейчас агенты работают на модели из <code>.env</code> — <b>{envName}</b>. Добавьте модель здесь, и она станет моделью по умолчанию.
+            Сейчас агенты работают на модели из <code>.env</code> — <b>{envName}</b>. Добавьте модель здесь — на неё перейдут Ассистент и агенты.
           </div>
         </div>
       )}
 
-      <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} action={<AddModelButton first={models.length === 0} />} minWidth={700}
+      <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} action={<AddModelButton />} minWidth={700}
         emptyText="Моделей пока нет — добавьте первую" />
     </div>
   );

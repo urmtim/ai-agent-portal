@@ -12,7 +12,7 @@ import {
 import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
+import { chatModel, errorText } from "@/lib/chat/model";
 import { chatTools } from "@/lib/chat/tools";
 import { loadAssistant } from "@/lib/assistant";
 import { audit } from "@/lib/audit";
@@ -49,16 +49,14 @@ export async function POST(req: Request) {
   const chat = await prisma.chat.findUnique({ where: { id } });
   if (chat && chat.ownerId !== user.id) return plain("Чат не найден", 404);
 
-  // the model picked in the header; an unknown id falls back to the default
-
   const assistant = await loadAssistant(user.id);
   let llm: Awaited<ReturnType<typeof chatModel>>;
   try {
-    llm = await chatModel(user.id, assistant.modelId); // the chat is the assistant: its model, else the default
+    llm = await chatModel(user.id, assistant.modelId); // the chat is the assistant: its model, never another one
   } catch (e) {
     return plain(errorText(e), 400);
   }
-  if (!llm) return plain(NO_MODEL_MESSAGE, 400);
+  if ("error" in llm) return plain(llm.error, 400);
 
   const { tools, activeTools, approval, agents, snapshot } = await chatTools(user, assistant);
 

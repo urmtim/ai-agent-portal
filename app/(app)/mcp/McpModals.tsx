@@ -5,6 +5,7 @@ import { ConfirmModal, Modal } from "@/components/ui/Modal";
 import { IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
 import { useFormAction } from "@/components/ui/useFormAction";
+import { SecretInput } from "@/components/ui/SecretInput";
 import { CONNECTORS, MAIL_PRESETS, type MailPreset } from "@/lib/connectors";
 import { checkConnection, deleteConnection, saveConnection, testConnection, type FormState, type TestState } from "./actions";
 
@@ -25,7 +26,6 @@ function ConnectionForm({ c, onDone }: { c?: ConnectionRowData; onDone: () => vo
   const form = useRef<HTMLFormElement>(null);
   const [state, onSubmit, pending] = useFormAction(saveConnection, undefined);
   const [preset, setPreset] = useState<MailPreset>(c?.preset ?? "mailru");
-  const [show, setShow] = useState(false);
   const [test, setTest] = useState<TestState | "checking">();
   const [testing, startTest] = useTransition();
   const [errFor, setErrFor] = useState<FormState>();
@@ -81,13 +81,8 @@ function ConnectionForm({ c, onDone }: { c?: ConnectionRowData; onDone: () => vo
         </div>
         <div>
           <label htmlFor="cn-pass">Пароль приложения {!c && <span className="req">*</span>}</label>
-          <div className="pwd">
-            <input id="cn-pass" name="password" type={show ? "text" : "password"} autoComplete="new-password"
-              placeholder={c?.hasSecret ? "Пароль сохранён" : "пароль приложения"} />
-            <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? "Скрыть пароль" : "Показать пароль"} title={show ? "Скрыть" : "Показать"}>
-              {show ? "🙈" : "👁"}
-            </button>
-          </div>
+          <SecretInput id="cn-pass" name="password" autoComplete="new-password" label="пароль"
+            placeholder={c?.hasSecret ? "Пароль сохранён" : "пароль приложения"} />
         </div>
       </div>
       {c?.hasSecret && <div className="hint">Пароль сохранён. Чтобы заменить — впишите новый; пустое поле оставит прежний.</div>}

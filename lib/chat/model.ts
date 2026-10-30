@@ -1,16 +1,18 @@
 import "server-only";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { endpointFor, resolveModel } from "@/lib/llm";
+import { noModelMessage } from "@/lib/llm-pick";
 
-export const NO_MODEL_MESSAGE = "LLM не настроена: добавьте модель в разделе «Модели»";
+type ChatLlm = { model: ReturnType<ReturnType<typeof createOpenAICompatible>["chatModel"]>; token?: string; contextTokens: number };
 
 /**
- * The chat's model as an AI SDK language model (any OpenAI-compatible endpoint).
- * Same choice as the rest of the portal, among the owner's models: given → owner's default → .env. Null when none.
+ * The chat's (or an agent's) model as an AI SDK language model (any OpenAI-compatible endpoint).
+ * Same choice as the rest of the portal: the given model; .env only while the owner has no models.
+ * `{ error }` says why there is none — nothing is silently replaced by another model.
  */
-export async function chatModel(ownerId: string, modelId?: string | null) {
+export async function chatModel(ownerId: string, modelId?: string | null): Promise<{ error: string } | ChatLlm> {
   const choice = await resolveModel(ownerId, modelId);
-  if (!choice) return null;
+  if ("none" in choice) return { error: noModelMessage(choice) };
   const ep = await endpointFor(choice);
   const provider = createOpenAICompatible({ name: "portal", baseURL: ep.baseUrl.replace(/\/$/, ""), apiKey: ep.token });
   return { model: provider.chatModel(ep.model), token: ep.token, contextTokens: choice.contextTokens };

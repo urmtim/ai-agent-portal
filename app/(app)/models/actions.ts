@@ -1,83 +1,103 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/secret";
-import { pingModel } from "@/lib/llm";
+import { listModels, pingModel } from "@/lib/llm";
+import { listMessage } from "@/lib/model-list";
+import { CONTEXT_MAX, CONTEXT_MIN } from "@/lib/model-spec";
 import { audit } from "@/lib/audit";
+import { modelUsers } from "@/lib/model-users";
 
-export type FormState = { error?: string; ok?: string } | undefined;
+/** Which field an error belongs to: the window shows it under that field and switches to its tab. */
+export type ModelField = "name" | "baseUrl" | "token" | "model" | "contextTokens";
+export type FormState = { error?: string; field?: ModelField; ok?: string } | undefined;
 export type TestState = { ok: boolean; message: string } | undefined;
+/** «Проверить» in the window: what to say and the server's models (sorted) when it gave a list. */
+export type ListState = { kind: "ok" | "nolist" | "token" | "down" | "http"; message: string; models: string[] };
 
-const fields = z.object({
-  id: z.string().optional(),
-  name: z.string().trim().max(80),
-  baseUrl: z.string().trim().regex(/^https?:\/\/\S+$/i, "Адрес должен начинаться с http:// или https://"),
-  model: z.string().trim().min(1, "Укажите модель").max(120),
-  token: z.string().trim().max(4000),
-  contextTokens: z.coerce.number().int("Контекст — от 2 000 до 2 000 000 токенов").min(2000, "Контекст — от 2 000 до 2 000 000 токенов").max(2000000, "Контекст — от 2 000 до 2 000 000 токенов"),
-});
-
-function parse(formData: FormData) {
-  return fields.safeParse({
-    id: formData.get("id") || undefined,
-    name: formData.get("name") ?? "",
-    baseUrl: formData.get("baseUrl") ?? "",
-    model: formData.get("model") ?? "",
-    token: formData.get("token") ?? "",
-    contextTokens: formData.get("contextTokens") || 32000, // «Проверить» and old forms may not send it
-  });
-}
+const URL_RE = /^https?:\/\/\S+$/i;
+const str = (formData: FormData, k: string) => String(formData.get(k) ?? "").trim();
 
 function revalidate() {
   revalidatePath("/models");
   revalidatePath("/agents");
 }
 
-/** Add or edit a model. Empty token on edit keeps the saved one, a new one replaces it. */
+/** The token to use: the typed one, else the saved one of this (own) model. */
+async function tokenFor(ownerId: string, id: string, typed: string): Promise<string | undefined> {
+  if (typed) return typed;
+  if (!id) return undefined;
+  const saved = await prisma.llmModel.findFirst({ where: { id, ownerId }, select: { tokenEnc: true } });
+  return saved?.tokenEnc ? decryptSecret(saved.tokenEnc) ?? undefined : undefined;
+}
+
+/** «Проверить» on «Параметры»: asks the entered (unsaved) address for its models; on edit an empty token means the saved one. */
+export async function listModelsFor(formData: FormData): Promise<ListState> {
+  const user = await requireUser();
+  const baseUrl = str(formData, "baseUrl");
+  if (!URL_RE.test(baseUrl)) return { kind: "down", message: "✕ Адрес должен начинаться с http:// или https://", models: [] };
+  const r = await listModels({ baseUrl, token: await tokenFor(user.id, str(formData, "id"), str(formData, "token")) });
+  return { kind: r.kind, message: listMessage(r), models: r.kind === "ok" ? r.models : [] };
+}
+
+/**
+ * Add or edit a model. Fields are checked top to bottom and only the first problem is returned.
+ * An empty token on edit keeps the saved one. A model typed by hand (not picked from the server's list)
+ * gets a test request first, so «бубубу» is never saved.
+ */
 export async function saveModel(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
-  const p = parse(formData);
-  if (!p.success) return { error: p.error.issues[0]?.message ?? "Проверьте поля" };
-  const { id, name, baseUrl, model, token, contextTokens } = p.data;
-  const makeDefault = formData.get("isDefault") === "on";
+  const id = str(formData, "id");
+  const name = str(formData, "name").slice(0, 80), description = str(formData, "description").slice(0, 300);
+  const baseUrl = str(formData, "baseUrl").replace(/\/$/, ""), token = str(formData, "token").slice(0, 4000);
+  const model = str(formData, "model").slice(0, 120), ctx = Number(str(formData, "contextTokens"));
+  const listed = formData.get("listed") === "1";
+
+  // models are personal: only the owner edits
+  const saved = id ? await prisma.llmModel.findFirst({ where: { id, ownerId: user.id } }) : null;
+  if (id && !saved) return { error: "Такой модели нет — обновите страницу" };
+
+  if (!name) return { field: "name", error: "Укажите название" };
+  if (!baseUrl) return { field: "baseUrl", error: "Укажите адрес API" };
+  if (!URL_RE.test(baseUrl)) return { field: "baseUrl", error: "Адрес должен начинаться с http:// или https://" };
+  if (!token && !saved?.tokenEnc) return { field: "token", error: "Укажите токен" };
+  if (!model) return { field: "model", error: "Укажите модель" };
+  if (!str(formData, "contextTokens")) return { field: "contextTokens", error: "Укажите размер контекста" };
+  if (!Number.isInteger(ctx) || ctx < CONTEXT_MIN || ctx > CONTEXT_MAX) return { field: "contextTokens", error: "Контекст — от 2 000 до 2 000 000 токенов" };
+
+  const changedModel = !saved || saved.model !== model || saved.baseUrl !== baseUrl;
+  if (!listed && changedModel) {
+    const r = await pingModel({ baseUrl, model, token: await tokenFor(user.id, id, token) });
+    if (!r.ok) {
+      const unknown = /\b404\b|not.?found|does not exist|unknown model|no such model/i.test(r.message);
+      return { field: "model", error: unknown ? `Сервер не знает модель «${model}»` : r.message.replace(/^✕\s*/, "") };
+    }
+  }
 
   const tokenEnc = token ? encryptSecret(token) : undefined; // undefined → unchanged
-  const data = { name: name || model, baseUrl: baseUrl.replace(/\/$/, ""), model, contextTokens, ...(tokenEnc !== undefined ? { tokenEnc } : {}) };
-
-  // models are personal: only the owner edits, and «по умолчанию» is per owner
-  if (id && !(await prisma.llmModel.findFirst({ where: { id, ownerId: user.id } }))) return { error: "Такой модели нет — обновите страницу" };
+  const data = { name, description, baseUrl, model, contextTokens: ctx, ...(tokenEnc !== undefined ? { tokenEnc } : {}) };
+  let firstFor = "";
   await prisma.$transaction(async (tx) => {
-    const first = (await tx.llmModel.count({ where: { ownerId: user.id } })) === 0;
-    const saved = id
-      ? await tx.llmModel.update({ where: { id }, data: { ...data, checkedAt: null, checkOk: null, checkMsg: "" } })
-      : await tx.llmModel.create({ data: { ...data, ownerId: user.id, tokenEnc: tokenEnc ?? null } });
-    if (makeDefault || first) {
-      await tx.llmModel.updateMany({ where: { ownerId: user.id, id: { not: saved.id } }, data: { isDefault: false } });
-      await tx.llmModel.update({ where: { id: saved.id }, data: { isDefault: true } });
+    if (saved) {
+      await tx.llmModel.update({ where: { id: saved.id }, data: { ...data, checkedAt: null, checkOk: null, checkMsg: "" } });
+      return;
     }
+    const created = await tx.llmModel.create({ data: { ...data, ownerId: user.id, tokenEnc: tokenEnc ?? null } });
+    // the first model: the assistant and agents without a model get it — nobody works on «nothing chosen»
+    const a = await tx.assistant.findUnique({ where: { ownerId: user.id }, select: { modelId: true } });
+    if (!a) await tx.assistant.create({ data: { ownerId: user.id, modelId: created.id } });
+    else if (!a.modelId) await tx.assistant.update({ where: { ownerId: user.id }, data: { modelId: created.id } });
+    const agents = await tx.agent.updateMany({ where: { ownerId: user.id, modelId: null }, data: { modelId: created.id } });
+    if (!a?.modelId) firstFor = `; выбрана у Ассистента${agents.count ? ` и ${agents.count} агент(ов)` : ""}`;
   });
 
   // never the token itself — only whether it changed
-  await audit("model", `${id ? "Изменена" : "Добавлена"} модель «${data.name}» (${data.model}, ${data.baseUrl})` +
-    `${token ? (id ? ", токен заменён" : ", с токеном") : ""}${makeDefault ? ", по умолчанию" : ""}`, user);
+  await audit("model", `${saved ? "Изменена" : "Добавлена"} модель «${name}» (${model}, ${baseUrl})` +
+    `${token ? (saved ? ", токен заменён" : ", с токеном") : ""}${firstFor}`, user);
   revalidate();
-  return { ok: id ? "Модель сохранена" : "Модель добавлена" };
-}
-
-/** "Проверить" in the modal: pings the entered (unsaved) values; on edit an empty token means the saved one. */
-export async function testModel(formData: FormData): Promise<TestState> {
-  const user = await requireUser();
-  const p = parse(formData);
-  if (!p.success) return { ok: false, message: "✕ " + (p.error.issues[0]?.message ?? "Проверьте поля") };
-  let token: string | undefined = p.data.token || undefined;
-  if (!token && p.data.id) {
-    const saved = await prisma.llmModel.findFirst({ where: { id: p.data.id, ownerId: user.id } });
-    if (saved?.tokenEnc) token = decryptSecret(saved.tokenEnc) ?? undefined;
-  }
-  return pingModel({ baseUrl: p.data.baseUrl, model: p.data.model, token });
+  return { ok: saved ? "Модель сохранена" : "Модель добавлена" };
 }
 
 /** Row "Проверить": pings the saved model and stores the result as its status. */
@@ -97,18 +117,15 @@ export async function checkSavedModel(id: string): Promise<TestState> {
   return r;
 }
 
-/** Delete a model (not the default one); its agents fall back to the default. */
-export async function deleteModel(id: string): Promise<FormState> {
+/** Delete a model nobody works on; a model in use stays and the answer names who uses it. */
+export async function deleteModel(id: string): Promise<FormState & { usedBy?: string[] }> {
   const user = await requireUser();
   const m = await prisma.llmModel.findFirst({ where: { id, ownerId: user.id } });
   if (!m) return { error: "Модель не найдена" };
-  // the default one can go too: the earliest model left becomes the default
-  const next = m.isDefault ? await prisma.llmModel.findFirst({ where: { ownerId: user.id, id: { not: id } }, orderBy: { createdAt: "asc" } }) : null;
-  await prisma.$transaction([
-    prisma.llmModel.delete({ where: { id } }),
-    ...(next ? [prisma.llmModel.update({ where: { id: next.id }, data: { isDefault: true } })] : []),
-  ]);
-  await audit("model", `Удалена модель «${m.name}» (${m.model})${next ? `; по умолчанию теперь «${next.name}»` : ""}`, user);
+  const usedBy = (await modelUsers(user.id)).get(id) ?? [];
+  if (usedBy.length) return { error: `Её используют: ${usedBy.join(", ")}. Сначала выберите им другую модель.`, usedBy };
+  await prisma.llmModel.delete({ where: { id } });
+  await audit("model", `Удалена модель «${m.name}» (${m.model})`, user);
   revalidate();
   return { ok: "Модель удалена" };
 }

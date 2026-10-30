@@ -38,19 +38,19 @@ export default async function AgentsPage() {
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, enabled: true } });
   const connNames = (a: (typeof agents)[number]) => agentEditData(a).mcpIds.map((id) => conns.find((c) => c.id === id)?.name).filter(Boolean).join(", ");
   const llmOk = await llmAvailable(user.id);
-  const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
-  const model = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
+  const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
+  const cfg = await loadAssistant(user.id);
+  // no fallback model: a missing one says so; .env shows only while there are no models at all
+  const unset = models.length ? "не выбрана" : envModelName() ?? "не задана";
   const choices = {
-    models: models.map(({ id, name }) => ({ id, name })),
-    defaultModel: model,
-    defaultModelId: (models.find((m) => m.isDefault) ?? models[0])?.id ?? "",
+    models,
+    newModelId: cfg.modelId ?? models[0]?.id ?? "",
     agents: agents.map((a) => ({ id: a.id, name: a.name, desc: agentDesc(a), enabled: a.enabled })),
     connections: conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind })),
     docs: docs.map((d) => ({ id: d.id, name: d.name, desc: d.description, enabled: d.enabled })),
   };
 
   // the chat's own agent: model and what it may use come from its modal (assistant/AssistantForm.tsx)
-  const cfg = await loadAssistant(user.id);
   const allowed = [
     cfg.agentIds.length && `агенты: ${agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name).join(", ")}`,
     cfg.mcpIds.length && `MCP: ${conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ")}`,
@@ -65,7 +65,7 @@ export default async function AgentsPage() {
         <div className="b">Ассистент</div>
         <div className="sub">С ним вы говорите в чате, агенты — его исполнители · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
       </div>,
-      <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? model}</span>,
+      <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? unset}</span>,
       <span key="m">{conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ") || <span className="muted">—</span>}</span>,
       <span key="st" className="st info">встроенный</span>,
       <span key="r" className="muted">—</span>,
@@ -88,7 +88,7 @@ export default async function AgentsPage() {
           <Link href={`/agents/${a.id}`} className="b link">{a.name}</Link>
           <div className="sub">{desc}</div>
         </div>,
-        <span key="mo" style={{ whiteSpace: "nowrap" }}>{a.model?.name ?? model}</span>,
+        <span key="mo" style={{ whiteSpace: "nowrap" }}>{a.model?.name ?? unset}</span>,
         connNames(a) || <span key="m" className="muted">—</span>,
         <span key="st" className={`st ${a.enabled ? "ok" : "mut"}`}>{status}</span>,
         last ? (

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ConfirmModal, Modal } from "@/components/ui/Modal";
+import { createPortal } from "react-dom";
+import { ConfirmModal, Modal, QuestionModal, useModalHead, useUnsavedGuard } from "@/components/ui/Modal";
 import { IconButton } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/Toast";
 import { FormTabs, TablePart, type PartItem } from "@/components/ui/TablePart";
@@ -20,9 +21,8 @@ export type AgentEditData = ReturnType<typeof agentEditData>;
 /** What every agent window needs to offer: models, the user's agents, connections and guardrail documents. */
 export type AgentChoices = {
   models: { id: string; name: string }[];
-  defaultModel: string;
-  /** The owner's default model, preselected when nothing was chosen yet. */
-  defaultModelId: string;
+  /** The model a new agent starts with: the assistant's, else the first one ("" — no models). */
+  newModelId: string;
   agents: { id: string; name: string; desc: string; enabled: boolean }[];
   /** The user's MCP connections (section MCP). */
   connections: { id: string; name: string; desc: string }[];
@@ -46,9 +46,9 @@ type Fields = {
 const idsByName = (names: string[], items: { id: string; name: string }[]) =>
   names.map((n) => items.find((x) => x.name === n)?.id).filter((x): x is string => !!x);
 
-function initial(a: AgentEditData | undefined, defaultModelId: string): Fields {
+function initial(a: AgentEditData | undefined, newModelId: string): Fields {
   return {
-    name: a?.name ?? "", modelId: a?.modelId ?? defaultModelId, enabled: a?.enabled ?? true, instruction: a?.instruction ?? "",
+    name: a?.name ?? "", modelId: a?.modelId ?? newModelId, enabled: a?.enabled ?? true, instruction: a?.instruction ?? "",
     hitl: a?.hitl ?? DEFAULT_HITL, guardrails: a?.guardrails ?? [...DEFAULT_GUARD_RULES],
     agents: a?.agentIds ?? [], mcp: a?.mcpIds ?? [], mcpAccess: a?.mcpAccess ?? {}, apis: a?.apis ?? [],
   };
@@ -59,7 +59,7 @@ function initial(a: AgentEditData | undefined, defaultModelId: string): Fields {
  * The same window creates (no `a`), edits, and — with `builtin` — shows the built-in assistant with its name, «включён»
  * and test run locked.
  */
-export function AgentForm({ a, models, defaultModelId, agents, connections, docs, onDone, builtin, save = saveAgent }:
+export function AgentForm({ a, models, newModelId, agents, connections, docs, onDone, builtin, save = saveAgent }:
   { a?: AgentEditData; onDone: () => void; builtin?: boolean; save?: SaveAction } & AgentChoices) {
   const toast = useToast();
   const [state, onSubmit, pending] = useFormAction(save, undefined);
@@ -74,8 +74,15 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [tab, setTab] = useState<Tab>("general");
-  const [f, setF] = useState<Fields>(() => initial(a, defaultModelId));
+  const [start] = useState<Fields>(() => initial(a, newModelId));
+  const [f, setF] = useState<Fields>(start);
   const upd = (patch: Partial<Fields>) => setF((p) => ({ ...p, ...patch }));
+  // editing: «Сохранить» stays grey until something changes; × / Esc with changes ask first (Modal)
+  const dirty = JSON.stringify(f) !== JSON.stringify(start);
+  useUnsavedGuard(dirty);
+  const head = useModalHead();
+  const [askUpload, setAskUpload] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const locked = builtin ? "Встроенный агент — это чат" : undefined;
 
   const others = agents.filter((x) => x.id !== a?.id);
@@ -110,7 +117,7 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
     setF((p) => ({
       // a built-in agent keeps its name, its instruction and stays on
       name: builtin ? p.name : s.name, enabled: builtin ? true : s.enabled,
-      modelId: models.find((m) => m.name === s.model)?.id ?? defaultModelId, instruction: builtin ? p.instruction : s.instruction,
+      modelId: models.find((m) => m.name === s.model)?.id ?? p.modelId, instruction: builtin ? p.instruction : s.instruction,
       hitl: s.hitl, guardrails: s.guardrails,
       agents: idsByName(s.agents, others), mcp,
       mcpAccess: Object.fromEntries(mcp.map((id) => [id, s.mcp.find((m) => m.name === connections.find((c) => c.id === id)?.name)?.access ?? "read"])),
@@ -146,10 +153,6 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
       ]} />
 
       <div className="apanel" hidden={tab !== "general"}>
-        <div className="psec">
-          <Switch name="enabled" checked={builtin || f.enabled} disabled={builtin} onChange={(enabled) => upd({ enabled })} label="Агент включён" />
-          <div className="hint">{locked ? `${locked}, выключить его нельзя.` : "Выключенный агент не запускается: ни из чата, ни другими агентами, ни вручную."}</div>
-        </div>
         <div className="field">
           <label htmlFor="ag-ename">Название</label>
           <input id="ag-ename" name="name" value={f.name} disabled={builtin} onChange={(e) => upd({ name: e.target.value })} placeholder="например, Сводка почты" maxLength={80} />
@@ -160,7 +163,6 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
             {models.length === 0 && <option value="">Моделей нет — добавьте в разделе «Модели»</option>}
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
-          <div className="hint">Только ваши подключённые модели (раздел «Модели»). {builtin ? "На этой модели работает чат." : "У нового агента сразу стоит модель по умолчанию."}</div>
         </div>
         <div className="field">
           <label htmlFor="ag-instr">Системная инструкция</label>
@@ -212,10 +214,18 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
           <div className="callout warn yaml-warn"><div>{yamlNote.warnings.map((w) => <div key={w}>{w}</div>)}</div></div>
         )}
         <div className="wrap-gap" style={{ marginTop: 12 }}>
-          <button type="button" className="btn primary" onClick={download}>Скачать .yaml</button>
-          <label className="btn primary">Загрузить .yaml<input type="file" accept=".yaml,.yml,text/yaml" hidden onChange={upload} /></label>
+          <button type="button" className="btn ghost" onClick={download}>Скачать</button>
+          <button type="button" className="btn ghost" onClick={() => setAskUpload(true)}>Загрузить</button>
+          <input ref={fileInput} type="file" accept=".yaml,.yml,text/yaml" hidden onChange={upload} />
         </div>
       </div>
+
+      {/* «Включён» sits in the window's header, outside the form: it is submitted from here */}
+      {head && createPortal(
+        <span title={locked ? `${locked}, выключить его нельзя` : undefined}>
+          <Switch checked={builtin || f.enabled} disabled={builtin} onChange={(enabled) => upd({ enabled })} label="Включён" />
+        </span>, head)}
+      {(builtin || f.enabled) && <input type="hidden" name="enabled" value="on" />}
 
       {/* what gets saved, whichever tab is open */}
       <input type="hidden" name="hitl" value={f.hitl} />
@@ -230,10 +240,13 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
         <button className="btn ghost" type="submit" disabled={pending || builtin} onClick={() => { runAfter.current = true; }}
           title={builtin ? "Встроенный агент проверяют прямо в чате" : "Сохранить и сразу запустить агента"}>▶ Тест-запуск</button>
         <span className="spacer" />
-        <button className="btn primary" type="submit" disabled={pending} onClick={() => { runAfter.current = false; }}>
+        <button className="btn primary" type="submit" disabled={pending || (!!a && !dirty)} onClick={() => { runAfter.current = false; }}>
           {pending ? "Сохраняем…" : "Сохранить"}
         </button>
       </div>
+      <QuestionModal open={askUpload} title="Загрузить YAML?" text="Текущие настройки будут заменены данными из файла."
+        confirmLabel="Заменить" onCancel={() => setAskUpload(false)}
+        onConfirm={() => { setAskUpload(false); fileInput.current?.click(); }} />
     </form>
   );
 }

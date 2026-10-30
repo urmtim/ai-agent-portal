@@ -16,6 +16,8 @@ export async function saveAssistant(_prev: FormState, formData: FormData): Promi
   const modelId = String(formData.get("modelId") ?? "") || null;
   const model = modelId ? await prisma.llmModel.findFirst({ where: { id: modelId, ownerId: user.id } }) : null;
   if (modelId && !model) return { error: "Такой модели нет — обновите страницу" };
+  // no fallback model any more: with models around, one has to be chosen
+  if (!modelId && (await prisma.llmModel.count({ where: { ownerId: user.id } })) > 0) return { error: "Выберите модель" };
 
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, select: { id: true, name: true } });
   const picked = formData.getAll("agent").map(String);

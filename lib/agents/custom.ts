@@ -3,7 +3,7 @@ import { generateText, isStepCount, tool, type ToolSet } from "ai";
 import { z } from "zod";
 import type { Agent } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
+import { chatModel, errorText } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
 import { firstMailConnection } from "@/lib/connections";
 import { maskPii } from "./guardrails";
@@ -27,7 +27,7 @@ export type RunNested = (agentId: string, task: string) => Promise<{ status: "ok
 
 export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunBy; depth: number; runNested: RunNested }): Promise<CustomResult> {
   const llm = await chatModel(agent.ownerId, agent.modelId);
-  if (!llm) throw new Error(NO_MODEL_MESSAGE);
+  if ("error" in llm) throw new Error(llm.error);
   const rules = parseGuardRules(agent.guardrails);
   const g = effectiveGuardrails(rules);
   // documents: only the owner's, only switched on in the catalog

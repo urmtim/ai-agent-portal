@@ -38,7 +38,7 @@ export async function ensureChatTitle(chatId: string): Promise<string | null> {
   let title: string | null = null;
   try {
     const llm = await chatModel(chat.user.id, (await loadAssistant(chat.user.id)).modelId);
-    if (llm) {
+    if (!("error" in llm)) {
       const { text } = await generateText({
         model: llm.model,
         instructions: "Придумай короткое название для чата: 2–6 слов, по-русски, без кавычек и точки в конце. Ответь только названием.",

@@ -6,7 +6,7 @@ import { loadAssistant } from "@/lib/assistant";
 
 /** Plain data the chat screen needs (dates as ISO strings — they cross into the browser). */
 export type ChatSummary = { id: string; title: string; pinned: boolean; archived: boolean; updatedAt: string };
-export type ModelOption = { id: string; name: string; isDefault: boolean };
+export type ModelOption = { id: string; name: string };
 export type AgentInfo = { id: string; name: string; desc: string };
 export type ChatScreenData = {
   chats: ChatSummary[];
@@ -24,7 +24,7 @@ export async function loadChatScreen(userId: string): Promise<ChatScreenData> {
       select: { id: true, title: true, pinned: true, archived: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.llmModel.findMany({ where: { ownerId: userId }, select: { id: true, name: true, isDefault: true }, orderBy: { createdAt: "asc" } }),
+    prisma.llmModel.findMany({ where: { ownerId: userId }, select: { id: true, name: true }, orderBy: { createdAt: "asc" } }),
     prisma.agent.findMany({ where: { ownerId: userId }, select: { id: true, name: true, type: true } }),
   ]);
   const cfg = await loadAssistant(userId);

@@ -38,6 +38,8 @@ export async function saveAgent(_prev: FormState, formData: FormData): Promise<F
   const name = (String(formData.get("name") ?? "").trim() || AGENT_TYPES.CUSTOM.label).slice(0, 80);
   const modelId = String(formData.get("modelId") ?? "") || null;
   if (modelId && !(await prisma.llmModel.findFirst({ where: { id: modelId, ownerId: user.id } }))) return { error: "Такой модели нет — обновите страницу" };
+  // no fallback model any more: with models around, one has to be chosen
+  if (!modelId && (await prisma.llmModel.count({ where: { ownerId: user.id } })) > 0) return { error: "Выберите модель" };
 
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, select: { id: true } });
   const agentIds = formData.getAll("agent").map(String).filter((id) => id !== agentId && own.some((a) => a.id === id));

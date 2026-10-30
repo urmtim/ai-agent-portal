@@ -1,9 +1,34 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-/** Centered dialog over a blurred backdrop. Closes by ×, Esc or its own buttons — never by a stray click on the backdrop. */
+// Open dialogs, newest last: Esc goes only to the top one (a question over a window must not close the window too).
+const openStack: symbol[] = [];
+
+type ModalCtx = { setUnsaved: (dirty: boolean) => void; head: HTMLElement | null };
+const Ctx = createContext<ModalCtx | null>(null);
+
+/** A form inside a Modal says whether it has unsaved changes: × and Esc then ask before closing. */
+export function useUnsavedGuard(dirty: boolean) {
+  const ctx = useContext(Ctx);
+  const set = ctx?.setUnsaved;
+  useEffect(() => {
+    if (!set) return;
+    set(dirty);
+    return () => set(false);
+  }, [set, dirty]);
+}
+
+/** The place in the editor window's header next to × (the agent's «Включён»); null outside such a window. */
+export function useModalHead(): HTMLElement | null {
+  return useContext(Ctx)?.head ?? null;
+}
+
+/**
+ * Centered dialog over a blurred backdrop. Closes by ×, Esc or its own buttons — never by a stray click on the backdrop.
+ * With unsaved changes (see useUnsavedGuard) × and Esc first ask «Закрыть без сохранения?».
+ */
 export function Modal({
   open,
   onClose,
@@ -11,6 +36,7 @@ export function Modal({
   sub,
   wide,
   editor,
+  compact,
   children,
 }: {
   open: boolean;
@@ -21,10 +47,19 @@ export function Modal({
   wide?: boolean;
   /** Editor window (agent): wide and of constant size; header, tabs and footer stay, the tab body scrolls. */
   editor?: boolean;
+  /** A lower editor window (model). */
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLDivElement>(null);
+  const unsaved = useRef(false);
+  const [head, setHead] = useState<HTMLElement | null>(null);
+  const ctx = useMemo(() => ({ setUnsaved: (dirty: boolean) => { unsaved.current = dirty; }, head }), [head]);
+  const [asking, setAsking] = useState(false);
+  // parents pass a new onClose on every render; the Esc listener must not be re-made (and the question lost) for that
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; });
 
   useEffect(() => {
     if (!open) return;
@@ -33,23 +68,72 @@ export function Modal({
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const me = Symbol("modal");
+    openStack.push(me);
+    // the question is a modal of its own on top, so while it is open this one is not the top and ignores Esc
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || openStack[openStack.length - 1] !== me) return;
+      if (unsaved.current) setAsking(true); else closeRef.current();
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      openStack.splice(openStack.indexOf(me), 1);
+    };
+  }, [open]);
 
   if (!open) return null;
+  const tryClose = () => (unsaved.current ? setAsking(true) : onClose());
+  const cls = editor ? `modal wide editor${compact ? " compact" : ""}` : wide ? "modal wide" : "modal";
   // portal: opened from a table row, it must not inherit the cell's layout (td.acts is right-aligned)
   return createPortal(
     <div className="mbg">
-      <div ref={ref} className={editor ? "modal wide editor" : wide ? "modal wide" : "modal"} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <button type="button" className="mclose" aria-label="Закрыть" onClick={onClose}>×</button>
-        <h2 className="mtitle" id={titleId} style={sub ? undefined : { marginBottom: 18 }}>{title}</h2>
+      <div ref={ref} className={cls} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <button type="button" className="mclose" aria-label="Закрыть" onClick={tryClose}>×</button>
+        {editor ? (
+          <div className="mhead">
+            <h2 className="mtitle" id={titleId}>{title}</h2>
+            <div className="mhead-slot" ref={setHead} />
+          </div>
+        ) : (
+          <h2 className="mtitle" id={titleId} style={sub ? undefined : { marginBottom: 18 }}>{title}</h2>
+        )}
         {sub && <p className="msub">{sub}</p>}
-        {children}
+        <Ctx.Provider value={ctx}>{children}</Ctx.Provider>
       </div>
+      <QuestionModal open={asking} title="Закрыть без сохранения?" text="Изменения будут потеряны."
+        cancelLabel="Остаться" confirmLabel="Закрыть" onCancel={() => setAsking(false)}
+        onConfirm={() => { setAsking(false); onClose(); }} />
     </div>,
     document.body,
+  );
+}
+
+/** A question over another window: «Отмена» and a red action (or a single «Понятно» when there is nothing to do). */
+export function QuestionModal({ open, title, text, cancelLabel = "Отмена", confirmLabel, onCancel, onConfirm }: {
+  open: boolean;
+  title: string;
+  text: React.ReactNode;
+  cancelLabel?: string;
+  /** No confirmLabel → one primary button that just closes. */
+  confirmLabel?: string;
+  onCancel: () => void;
+  onConfirm?: () => void;
+}) {
+  return (
+    <Modal open={open} onClose={onCancel} title={title} sub={text}>
+      <div className="mfoot">
+        <span className="spacer" />
+        {confirmLabel ? (
+          <>
+            <button type="button" className="btn ghost" onClick={onCancel}>{cancelLabel}</button>
+            <button type="button" className="btn danger" onClick={onConfirm}>{confirmLabel}</button>
+          </>
+        ) : (
+          <button type="button" className="btn primary" onClick={onCancel}>Понятно</button>
+        )}
+      </div>
+    </Modal>
   );
 }
 

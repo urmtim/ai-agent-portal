@@ -80,6 +80,7 @@
   .btn { font-family: inherit; font-size: 13.5px; font-weight: 600; border-radius: 9px; padding: 9px 15px; border: 1px solid transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: .12s; white-space: nowrap; }
   .btn.primary { background: var(--primary); color: #fff; } .btn.primary:hover { background: var(--primary-dark); }
   .btn.ghost { background: var(--card); border-color: var(--line); color: var(--ink); } .btn.ghost:hover { border-color: var(--primary); color: var(--primary-dark); }
+  .btn:disabled { opacity: .5; cursor: default; }
   .btn.danger { background: var(--card); border-color: color-mix(in srgb, var(--err) 40%, transparent); color: var(--err); }
   .btn.sm { padding: 6px 11px; font-size: 12.5px; } .btn.block { width: 100%; justify-content: center; }
 
@@ -140,6 +141,13 @@
   input, select.f, .field textarea { width: 100%; font-family: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; background: var(--card); }
   .field textarea { line-height: 1.55; resize: vertical; }
   input:focus, select.f:focus, .field textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent); }
+  .ferr { margin-top: 6px; font-size: 12.5px; color: var(--err); } input.bad { border-color: var(--err); }
+  .cmenu { position: fixed; z-index: 60; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-pop); padding: 6px; max-height: 232px; overflow: auto; }
+  .cmenu button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; font-size: 13.5px; color: var(--ink); background: none; border: 0; border-radius: 8px; padding: 8px 10px; cursor: pointer; }
+  .cmenu button:hover, .cmenu button.act { background: var(--soft); }
+  .cmenu button.sel { color: var(--primary-dark); font-weight: 600; } .cmenu button.sel::after { content: "✓"; margin-left: auto; }
+  .cmenu .none { padding: 8px 10px; font-size: 13px; color: var(--muted); }
+  input.pick { padding-right: 40px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8799' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 12px; }
   select.f { appearance: none; -webkit-appearance: none; padding-right: 40px; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8799' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; background-size: 12px; }
   select.f.sm { width: auto; min-width: 170px; font-size: 13px; padding: 6px 34px 6px 10px; border-radius: 8px; background-position: right 11px center; }
   /* switch: a knob sliding along an oval; the checkbox stays for keyboard and screen readers, visually hidden */
@@ -157,7 +165,8 @@
   .field { margin-bottom: 14px; }
   .hint { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; } .hint a { color: var(--primary-dark); font-weight: 600; }
   .pwd { position: relative; } .pwd input { padding-right: 44px; }
-  .pwd button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; cursor: pointer; font-size: 15px; padding: 6px; }
+  .pwd button { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; border-radius: 7px; background: transparent; cursor: pointer; padding: 6px; display: grid; place-items: center; color: var(--muted); }
+  .pwd button:hover { color: var(--ink); background: var(--soft); }
   .formerr { color: var(--err); font-size: 13px; background: var(--errbg); border-radius: 9px; padding: 10px 13px; }
   .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; } .toggle input { width: auto; }
 
@@ -183,7 +192,7 @@
 
   /* ---- status (connection test) ---- */
   .status { font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 9px; padding: 8px 12px; border-radius: 9px; }
-  .status.ok { background: var(--okbg); color: var(--ok); } .status.err { background: var(--errbg); color: var(--err); } .status.checking { background: var(--infobg); color: var(--info); }
+  .status.ok { background: var(--okbg); color: var(--ok); } .status.warn { background: var(--warnbg); color: var(--warn); } .status.err { background: var(--errbg); color: var(--err); } .status.checking { background: var(--infobg); color: var(--info); }
   .spin { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: sp .7s linear infinite; }
   @keyframes sp { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
   .seg { display: inline-flex; background: var(--soft); border: 1px solid var(--line); border-radius: 9px; padding: 3px; }
@@ -345,8 +354,14 @@
   .mbg[hidden] { display: none; }
   .modal { position: relative; width: min(520px, 100%); max-height: calc(88vh - 16px); overflow: auto; background: var(--card); border-radius: 16px; box-shadow: var(--shadow-pop); padding: 24px; }
   .mtitle { font-size: 18px; font-weight: 700; margin: 0 0 6px; padding-right: 36px; } .msub { color: var(--muted); font-size: 13.5px; line-height: 1.5; margin: 0 0 18px; }
+  /* a window with few fields (model): shorter, still the same height on every tab */
+  .modal.wide.compact { height: min(620px, calc(88vh - 16px)); }
+  .modal.compact .yamlwrap { height: 290px; }
+  .mhead { display: flex; align-items: center; gap: 14px; padding-right: 40px; margin: 0 0 14px; } .mhead .mtitle { margin: 0; flex: 1; min-width: 0; }
+  .mhead .switch { font-size: 13px; white-space: nowrap; }
   .mclose { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
   .mclose:hover { background: var(--soft); color: var(--ink); }
+  .modal:has(.mhead) .mclose { top: 21px; }
   .mfoot { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
@@ -544,9 +559,9 @@
       ${tbar()}
       <div class="card tcard"><table style="min-width:820px"><thead><tr><th>ID</th><th>Название</th><th>Модель</th><th>MCP</th><th>Статус</th><th>Последний прогон</th><th></th></tr></thead><tbody>
         <tr><td>#1</td><td><div class="b link" data-go="assistantwin">Ассистент</div><div class="sub">С ним вы говорите в чате, агенты — его исполнители · разрешено — агенты: Сводка почты · MCP: Моя почта</div></td><td>GLM-4</td><td>Моя почта</td><td><span class="st info">встроенный</span></td><td class="muted">—</td><td class="acts">${ibtn('edit','Изменить','data-go="assistantwin"')}</td></tr>
-        ${agentRow(2,'Сводка почты','Составь сводку новых писем: от кого, о чём, что требует ответа.','GLM-4',['Почта'],'включён','ok','23 окт · сводка по 12 письмам')}
-        ${agentRow(3,'Разбор писем','Разбирает входящие и готовит ответы','GLM-4',['Почта','Документы'],'включён','ok','22 окт')}
-        ${agentRow(4,'Документы по политике','Проверяет документ по регламенту','GLM-4',['Документы'],'черновик','mut','—')}
+        ${agentRow(2,'Сводка почты','Составь сводку новых писем: от кого, о чём, что требует ответа.','Ollama Cloud',['Почта'],'включён','ok','23 окт · сводка по 12 письмам')}
+        ${agentRow(3,'Разбор писем','Разбирает входящие и готовит ответы','Ollama Cloud',['Почта','Документы'],'включён','ok','22 окт')}
+        ${agentRow(4,'Документы по политике','Проверяет документ по регламенту','Ollama Cloud',['Документы'],'черновик','mut','—')}
         ${agentRow(5,'1С ЗУП помощник','Заводит удержания по исполнительным листам','Llama 3.1',['1С'],'не настроен','wait','—')}
       </tbody></table></div>`),
 
@@ -590,39 +605,40 @@
       ${aiTabs('settings')}
       ${tbar()}
       <div class="card tcard"><table style="min-width:700px"><thead><tr><th>ID</th><th>Название</th><th>Адрес API</th><th>Агенты</th><th>Статус</th><th></th></tr></thead><tbody>
-        ${modelRow(1,'GLM-4','open.bigmodel.cn/api/paas/v4',4,true)}
-        ${modelRow(2,'Llama 3.1 (локально)','localhost:11434/v1',2,false)}
+        ${modelRow(1,'Ollama Cloud','Облачная модель для чата и агентов','ollama.com/v1',4)}
+        ${modelRow(2,'Llama 3.1 (локально)','Локальная, для черновиков и тестов','localhost:11434/v1',0)}
       </tbody></table></div>
 
       <div class="mbg" id="addModel" hidden>
-        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="addModelTitle">
+        <div class="modal wide compact" role="dialog" aria-modal="true" aria-labelledby="addModelTitle">
           <button type="button" class="mclose" id="addModelCancel" aria-label="Закрыть">×</button>
           <h2 class="mtitle" id="addModelTitle" style="margin-bottom:14px">Новая модель</h2>
-          <div class="mtabs" role="tablist"><button class="on" data-atab="mgen">Общее</button><button data-atab="myaml">YAML</button></div>
+          <div class="mtabs" role="tablist"><button class="on" data-atab="mgen">Общее</button><button data-atab="mpar">Параметры</button><button data-atab="myaml">YAML</button></div>
           <div class="apanel" data-apanel="mgen">
-            <div class="psec">
-              <label class="switch"><input type="checkbox" role="switch" checked disabled><span class="track"></span><span>Сделать моделью по умолчанию</span></label>
-              <div class="hint" style="margin:6px 0 0">Это первая модель — она всегда становится моделью по умолчанию.</div>
-            </div>
-            <div class="field"><label>Название</label><input placeholder="например, GLM-4"></div>
-            <div class="field"><label>Адрес API <span class="req">*</span></label><input id="mUrl" placeholder="http://localhost:11434/v1"></div>
-            <div class="field"><label>Модель <span class="req">*</span></label><input placeholder="glm-4"></div>
-            <div class="field"><label>Токен</label><div class="pwd"><input type="password" id="p2" placeholder="sk-…"><button type="button" data-tg="p2">👁</button></div></div>
-            <div class="field"><label>Контекст, токенов</label><input type="number" value="32000"><div class="hint">Сколько модель держит в памяти. Длинный чат пересказывается, когда история подходит к 70 %.</div></div>
+            <div class="field"><label>Название <span class="req">*</span></label><input id="mName" placeholder="например, Ollama Cloud"><div class="ferr" id="mNameErr" hidden></div></div>
+            <div class="field"><label>Описание</label><textarea rows="4" id="mDesc" placeholder="Для чего эта модель"></textarea></div>
+          </div>
+          <div class="apanel" data-apanel="mpar" hidden>
+            <div class="field"><label>Адрес API <span class="req">*</span></label><input id="mUrl" placeholder="например, https://ollama.com/v1"><div class="ferr" hidden></div></div>
+            <div class="field"><label>Токен <span class="req">*</span></label><div class="pwd"><input type="password" id="p2"><button type="button" data-tg="p2" aria-label="Показать токен" title="Показать"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div><div class="ferr" hidden></div></div>
+            <div class="row" style="margin:-4px 0 18px;gap:14px;flex-wrap:wrap"><button type="button" class="btn ghost" data-test="llm">Проверить</button><span class="status" id="st-llm" hidden></span></div>
+            <div class="field"><label>Модель <span class="req">*</span></label>
+              <input id="mModel" placeholder="Нет подключения" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="mModelMenu" disabled>
+              <div class="cmenu" id="mModelMenu" role="listbox" hidden></div>
+              <div class="ferr" id="mModelErr" hidden></div></div>
+            <div class="field"><label>Контекст, токенов <span class="req">*</span></label><input type="number" id="mCtx" value="32000" min="1000" step="1000"><div class="ferr" hidden></div></div>
           </div>
           <div class="apanel" data-apanel="myaml" hidden>
-            <div class="hint" style="margin:0 0 10px">Модель текстом: правка здесь сразу меняет «Общее». Токен сюда не попадает — его вводят на «Общем».</div>
-            <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" spellcheck="false" aria-label="YAML модели"># AI Portal — модель. Токен сюда не попадает.
+            <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" id="mYaml" spellcheck="false" aria-label="YAML модели"># AI Portal — модель. Токен сюда не попадает.
 version: 1
 name: Ollama Cloud
+description: Облачная модель для чата и агентов
 baseUrl: https://ollama.com/v1
 model: gpt-oss:120b
-contextTokens: 32000
-default: true</textarea></div>
-            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn primary">Скачать .yaml</button><button type="button" class="btn primary">Загрузить .yaml</button></div>
+contextTokens: 32000</textarea></div>
+            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn ghost">Скачать</button><button type="button" class="btn ghost" data-yup>Загрузить</button></div>
           </div>
-          <div class="status" id="st-llm" hidden style="margin-top:14px"></div>
-          <div class="mfoot"><button class="btn ghost" data-test="llm">Проверить</button><span class="spacer"></span><button class="btn primary" id="saveBtn">Сохранить</button></div>
+          <div class="mfoot"><span class="spacer"></span><button class="btn primary" id="saveBtn" data-save>Сохранить</button></div>
         </div>
       </div>
       <section class="card pad" style="margin-bottom:18px" hidden>
@@ -632,7 +648,7 @@ default: true</textarea></div>
           <div><label>Порт</label><input value="993"></div>
           <div><label>Почтовый адрес <span class="req">*</span></label><input placeholder="you@mail.ru"></div>
           <div><label>Пароль приложения <span class="req">*</span></label>
-            <div class="pwd"><input type="password" id="p1" placeholder="••••••••••"><button type="button" data-tg="p1">👁</button></div>
+            <div class="pwd"><input type="password" id="p1" placeholder="••••••••••"><button type="button" data-tg="p1" aria-label="Показать пароль" title="Показать"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
             <div class="hint">Нужен <a>пароль для внешних приложений</a> Mail.ru, не обычный пароль.</div></div>
         </div>
         <div class="row" style="margin-top:18px;gap:14px;flex-wrap:wrap"><button class="btn ghost" data-test="mail">Проверить подключение</button><span class="status" id="st-mail" hidden></span></div>
@@ -780,22 +796,20 @@ default: true</textarea></div>
     const lock = builtin ? 'disabled' : '';
     const sw = (label, on) => `<label class="switch"><input type="checkbox" role="switch" ${on ? 'checked' : ''}><span class="track"></span><span>${label}</span></label>`;
     const yaml = isNew
-      ? `version: 3\nname: ""\nenabled: true\nmodel: GLM-4\ninstruction: ""\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\nmcp: []\nagents: []\napi: []`
-      : `version: 3\nname: Сводка почты\nenabled: true\nmodel: GLM-4\ninstruction: |-\n  Составь сводку новых писем: от кого, о чём, что требует ответа.\n  Коротко, списком, важное — первым.\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\n  - document: Регламент работы с почтой\nmcp:\n  - name: Моя почта\n    access: read\nagents:\n  - Ответы на письма\napi: []`;
+      ? `version: 3\nname: ""\nenabled: true\nmodel: Ollama Cloud\ninstruction: ""\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\nmcp: []\nagents: []\napi: []`
+      : `version: 3\nname: Сводка почты\nenabled: true\nmodel: Ollama Cloud\ninstruction: |-\n  Составь сводку новых писем: от кого, о чём, что требует ответа.\n  Коротко, списком, важное — первым.\nhitl: changes_and_send\nguardrails:\n  - maskPii\n  - maxSteps: 5\n  - document: Регламент работы с почтой\nmcp:\n  - name: Моя почта\n    access: read\nagents:\n  - Ответы на письма\napi: []`;
     return `
       <div class="mbg" id="agentWin">
-        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle">
+        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="awTitle" ${isNew ? 'data-new' : ''}>
           <button type="button" class="mclose" data-close aria-label="Закрыть">×</button>
-          <h2 class="mtitle" id="awTitle" style="margin-bottom:14px">${isNew ? 'Новый агент' : name}</h2>
+          <div class="mhead"><h2 class="mtitle" id="awTitle">${isNew ? 'Новый агент' : name}</h2>
+            ${sw('Включён', true).replace('role="switch"', `role="switch" ${lock}`)}</div>
           <div class="mtabs" role="tablist">${tab('gen', 'Общее', undefined, true)}${tab('grd', 'Политики', guards.length)}${tab('agt', 'Субагенты', agents.length)}${tab('mcp', 'MCP', mcp.length)}${tab('api', 'API', 0)}${tab('yaml', 'YAML')}</div>
 
           <div class="apanel" data-apanel="gen">
             <div class="psec">
-              ${sw('Агент включён', true).replace('role="switch"', `role="switch" ${lock}`)}
-              <div class="hint" style="margin:6px 0 14px">${builtin ? 'Встроенный агент — это чат, выключить его нельзя.' : 'Выключенный агент не запускается: ни из чата, ни другими агентами, ни вручную.'}</div>
               <div class="field"><label>Название</label><input value="${name}" placeholder="например, Сводка почты" ${lock}></div>
-              <div class="field"><label>Модель</label><select class="f"><option selected>GLM-4</option><option>Llama 3.1 (локально)</option></select>
-                <div class="hint">Только ваши подключённые модели (раздел «Модели»). У нового агента сразу стоит модель по умолчанию.</div></div>
+              <div class="field"><label>Модель</label><select class="f"><option selected>Ollama Cloud</option><option>Llama 3.1 (локально)</option></select></div>
               <div class="field" style="margin-bottom:0"><label>Системная инструкция</label>
                 <textarea rows="5" placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа.">${instr}</textarea>
                 <div class="hint">Первая строка — описание агента в списке.</div></div>
@@ -826,10 +840,10 @@ default: true</textarea></div>
 
           <div class="apanel" data-apanel="yaml" hidden>
             <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" spellcheck="false" aria-label="YAML агента"># AI Portal — агент.\n${yaml}</textarea></div>
-            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn primary">Скачать .yaml</button><button type="button" class="btn primary">Загрузить .yaml</button></div>
+            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn ghost">Скачать</button><button type="button" class="btn ghost" data-yup>Загрузить</button></div>
           </div>
 
-          <div class="mfoot"><button class="btn ghost" ${lock} title="${builtin ? 'Встроенный агент проверяют прямо в чате' : 'Сохранить и сразу запустить агента'}">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-toast="${isNew ? 'Агент создан' : 'Сохранено'}">Сохранить</button></div>
+          <div class="mfoot"><button class="btn ghost" ${lock} title="${builtin ? 'Встроенный агент проверяют прямо в чате' : 'Сохранить и сразу запустить агента'}">▶ Тест-запуск</button><span class="spacer"></span><button class="btn primary" data-close data-save data-toast="${isNew ? 'Агент создан' : 'Сохранено'}">Сохранить</button></div>
         </div>
       </div>`;
   }
@@ -865,7 +879,7 @@ default: true</textarea></div>
   function ibtn(icon, title, extra) { return `<button type="button" class="ibtn ${icon === 'del' ? 'del' : ''}" title="${title}" aria-label="${title}" ${extra || ''}>${IC[icon]}</button>`; }
   function tbar(ph) { return `<div class="tbar"><label class="search"><span class="sr">Поиск</span>${IC.search}<input type="search" data-search placeholder="${ph || 'Поиск по названию…'}"></label><button type="button" class="btn dashed">+ Фильтр</button></div>`; }
   function agentRow(id,name,desc,model,mcp,status,cls,run){ return `<tr><td>#${id}</td><td><div class="b link" data-go="agent">${name}</div><div class="sub">${desc}</div></td><td style="white-space:nowrap">${model}</td><td>${mcp.join(', ')}</td><td><span class="st ${cls}">${status}</span></td><td class="muted">${run}</td><td class="acts">${ibtn('run','Запустить')}${ibtn('edit','Изменить','data-go="agentwin"')}${ibtn('del','Удалить')}</td></tr>`; }
-  function modelRow(id,name,url,agents,def){ return `<tr><td>#${id}</td><td><span class="b">${name}</span>${def ? '<span class="st info" style="margin-left:8px">по умолчанию</span>' : ''}</td><td class="muted">${url}</td><td>${agents}</td><td class="stcell"><span class="st ok">подключена</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Изменить')}${ibtn('del','Удалить', def ? 'disabled' : '')}</td></tr>`; }
+  function modelRow(id,name,desc,url,agents){ return `<tr><td>#${id}</td><td><span class="b">${name}</span><div class="sub">${desc}</div></td><td class="muted">${url}</td><td>${agents}</td><td class="stcell"><span class="st ok">подключена</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Изменить',`data-medit="${id}"`)}${ibtn('del','Удалить',`data-mdel="${id}"`)}</td></tr>`; }
   function mcpRow(id,name,desc,tools,agents,status,cls){ return `<tr><td>#${id}</td><td><div class="b">${name}</div><div class="sub">${desc}</div></td><td><span title="${tools.join(', ')}">${tools.length}</span></td><td>${agents}</td><td class="stcell"><span class="st ${cls}">${status}</span></td><td class="acts">${ibtn('check','Проверить','data-rowtest')}${ibtn('edit','Настроить')}${ibtn('del','Удалить')}</td></tr>`; }
   function histGroup(title, items) { return `<div class="hgroup"><button type="button" class="hhead" data-hgroup aria-expanded="true">${title}<span class="chev">▾</span></button><div class="hitems">${items.map(([t, on]) => `<button type="button" class="hitem ${on ? 'on' : ''}" data-hitem>${t}</button>`).join('')}</div></div>`; }
   function cu(t, file) { return `<div class="cu">${file ? `<div class="cfile"><div class="b">${file}</div><span class="cft">PDF</span></div>` : ''}<div class="cub">${t}</div></div>`; }
@@ -921,7 +935,10 @@ default: true</textarea></div>
   lbtn.addEventListener('click', () => setTray(!tray.classList.contains('open')));
   tray.addEventListener('click', (e) => { if (e.target.closest('.titem')) setTray(false); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { setTray(false); document.querySelectorAll('.mbg').forEach(m => { m.hidden = true; }); }
+    if (e.key === 'Escape') { setTray(false);
+      const q = [...document.querySelectorAll('#yamlAsk, #leaveAsk, #delAsk')].find(m => !m.hidden);
+      if (q) { q.hidden = true; return; }
+      [...document.querySelectorAll('.mbg')].filter(m => !m.hidden).forEach(askClose); }
     const t = e.target.closest && e.target.closest('.titem');
     if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setTray(false); go(t.dataset.go); }
   });
@@ -986,20 +1003,138 @@ default: true</textarea></div>
   window.addEventListener('hashchange', () => render(location.hash.slice(1)));
 
   // ---- settings interactions (bound after render) ----
+  const EYE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.6M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7c1.9 0 3.6-.6 5-1.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>';
+  let MODELS = [], EDIT = null, SAVED = '';
+  const ASK = (id, title, text, no, yes) => `<div class="mbg" id="${id}" hidden style="z-index:80"><div class="modal" role="alertdialog" aria-modal="true" style="width:min(440px,100%)">
+    <h2 class="mtitle">${title}</h2><p style="margin:10px 0 0;font-size:14px;line-height:1.5">${text}</p>
+    <div class="mfoot"><span class="spacer"></span><button type="button" class="btn ghost" data-${id}-no>${no}</button><button type="button" class="btn danger" data-${id}-ok>${yes}</button></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', ASK('yamlAsk', 'Загрузить YAML?', 'Текущие настройки будут заменены данными из файла.', 'Отмена', 'Заменить')
+    + ASK('leaveAsk', 'Закрыть без сохранения?', 'Изменения будут потеряны.', 'Остаться', 'Закрыть'));
+  // what the window holds now; «Сохранить» is on only when it differs from what was opened (a new item: always on)
+  const formState = (m) => JSON.stringify([...m.querySelectorAll('input:not([type=search]), textarea, select')].map(e => e.type === 'checkbox' ? e.checked : e.value));
+  function track(m) {
+    m._base = formState(m);
+    m._upd = () => { const sv = m.querySelector('[data-save]'); if (sv) sv.disabled = !m.hasAttribute('data-new') && formState(m) === m._base; };
+    m._upd();
+  }
+  const isDirty = (m) => !!m && m._base !== undefined && formState(m) !== m._base;
+  let leaving = null;
+  function askClose(bg) { if (isDirty(bg.querySelector('.modal'))) { leaving = bg; document.getElementById('leaveAsk').hidden = false; } else bg.hidden = true; }
+  ['input', 'change'].forEach(t => document.addEventListener(t, (e) => e.target.closest?.('.modal')?._upd?.()));
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-leaveAsk-no]')) document.getElementById('leaveAsk').hidden = true;
+    if (e.target.closest('[data-leaveAsk-ok]')) { document.getElementById('leaveAsk').hidden = true; if (leaving) leaving.hidden = true; leaving = null; }
+  });
+  document.addEventListener('click', (e) => {
+    const ask = document.getElementById('yamlAsk');
+    if (e.target.closest('[data-yup]')) ask.hidden = false;
+    else if (e.target.closest('[data-yamlAsk-no]')) ask.hidden = true;
+    else if (e.target.closest('[data-yamlAsk-ok]')) { ask.hidden = true; showSaved('Настройки загружены из файла'); }
+  });
   function wireSettings() {
-    document.querySelectorAll('[data-tg]').forEach(btn => btn.addEventListener('click', () => { const i = document.getElementById(btn.dataset.tg); i.type = i.type === 'password' ? 'text' : 'password'; btn.textContent = i.type === 'password' ? '👁' : '🙈'; }));
-    const MSG = { mail: { ok: '✓ Подключено — INBOX, 1240 писем за 30 дней', err: '✕ Не удалось войти — проверьте адрес и пароль приложения' }, llm: { ok: '✓ Модель ответила — glm-4, 420 мс', err: '✕ Не удалось подключиться — укажите адрес API и проверьте токен' } };
+    document.querySelectorAll('[data-tg]').forEach(btn => btn.addEventListener('click', () => { const i = document.getElementById(btn.dataset.tg); i.type = i.type === 'password' ? 'text' : 'password'; const shown = i.type === 'text'; btn.innerHTML = shown ? EYE_OFF : EYE; btn.title = shown ? 'Скрыть' : 'Показать'; }));
+    const MSG = { mail: { ok: '✓ Подключено — INBOX, 1240 писем за 30 дней', err: '✕ Не удалось войти — проверьте адрес и пароль приложения' }, llm: { ok: '✓ Подключено. Моделей: 5', warn: '⚠ Список моделей недоступен — впишите вручную', err: '✕ Сервер не отвечает', token: '✕ Неверный токен' } };
     document.querySelectorAll('[data-test]').forEach(btn => btn.addEventListener('click', () => {
       const k = btn.dataset.test, st = document.getElementById('st-' + k);
-      const mock = k === 'llm' && !document.getElementById('mUrl').value.trim() ? 'err' : 'ok';
+      const url = k === 'llm' ? document.getElementById('mUrl').value.trim() : 'x';
+      // mockup: empty address → no answer; empty token → 401; localhost → no /models; otherwise the list
+      const mock = !url ? 'err' : k === 'llm' && !document.getElementById('p2').value ? 'token' : k === 'llm' && /localhost|127\.0\.0\.1/.test(url) ? 'warn' : 'ok';
       st.hidden = false; st.className = 'status checking'; st.innerHTML = '<span class="spin"></span> Проверяем подключение…'; btn.disabled = true;
-      setTimeout(() => { st.className = 'status ' + mock; st.textContent = MSG[k][mock]; btn.disabled = false; }, 1200);
+      setTimeout(() => { st.className = 'status ' + (mock === 'token' ? 'err' : mock); st.textContent = MSG[k][mock]; btn.disabled = false;
+        if (k !== 'llm') return;
+        const inp = document.getElementById('mModel');
+        const names = mock === 'ok' ? ['gpt-oss:120b', 'gpt-oss:20b', 'deepseek-v3.1:671b', 'qwen3-coder:480b', 'kimi-k2:1t'].sort() : [];
+        MODELS = names;
+        inp.disabled = mock === 'err' || mock === 'token'; inp.classList.toggle('pick', names.length > 0);
+        inp.placeholder = inp.disabled ? 'Нет подключения' : names.length ? 'Выберите модель' : 'например, llama3.1:8b'; }, 1200);
     }));
     const form = document.getElementById('addModel');
-    document.getElementById('addModelBtn').addEventListener('click', () => { form.hidden = false; document.getElementById('st-llm').hidden = true; form.querySelector('input').focus(); });
-    document.getElementById('addModelCancel').addEventListener('click', () => { form.hidden = true; });
-    form.addEventListener('click', (e) => { if (e.target === form) form.hidden = true; });
-    document.getElementById('saveBtn').addEventListener('click', () => { form.hidden = true; showSaved('Модель добавлена'); });
+    // mockup data of the two rows in the table
+    const MODEL_DATA = {
+      1: { name: 'Ollama Cloud', desc: 'Облачная модель для чата и агентов', url: 'https://ollama.com/v1', model: 'gpt-oss:120b', ctx: 32000, usedBy: ['Ассистент', 'Сводка почты', 'Разбор писем', 'Документы по политике'] },
+      2: { name: 'Llama 3.1 (локально)', desc: 'Локальная, для черновиков и тестов', url: 'http://localhost:11434/v1', model: 'llama3.1:8b', ctx: 8000, usedBy: [] },
+    };
+    const $ = (id) => document.getElementById(id);
+    const modelYaml = (d) => `# AI Portal — модель. Токен сюда не попадает.\nversion: 1\nname: ${d.name || '""'}\ndescription: ${d.desc || '""'}\nbaseUrl: ${d.url || '""'}\nmodel: ${d.model || '""'}\ncontextTokens: ${d.ctx}`;
+    function openModel(id) {
+      const d = MODEL_DATA[id], m = form.querySelector('.modal');
+      EDIT = d || null; SAVED = d ? d.model : ''; MODELS = [];
+      $('addModelTitle').textContent = d ? d.name : 'Новая модель';
+      $('mName').value = d ? d.name : ''; $('mDesc').value = d ? d.desc : '';
+      $('mUrl').value = d ? d.url : ''; $('p2').value = d ? '••••••••••••' : ''; $('p2').type = 'password';
+      $('mModel').value = d ? d.model : ''; $('mModel').disabled = !d; $('mModel').placeholder = d ? 'Выберите модель' : 'Нет подключения'; $('mModel').classList.remove('pick', 'bad');
+      $('mCtx').value = d ? d.ctx : 32000;
+      $('mYaml').value = modelYaml(d || { ctx: 32000 }); $('mYaml').dispatchEvent(new Event('input'));
+      $('st-llm').hidden = true; form.querySelectorAll('.ferr').forEach((e) => { e.hidden = true; }); form.querySelectorAll('.bad').forEach((e) => e.classList.remove('bad')); $('mNameErr').hidden = true; $('mModelErr').hidden = true; $('mName').classList.remove('bad');
+      document.querySelector('[data-atab=mgen]').click();
+      d ? m.removeAttribute('data-new') : m.setAttribute('data-new', '');
+      form.hidden = false; track(m); $('mName').focus();
+    }
+    document.getElementById('addModelBtn').addEventListener('click', () => openModel(null));
+    view.querySelectorAll('[data-medit]').forEach((b) => b.addEventListener('click', () => openModel(b.dataset.medit)));
+    document.getElementById('addModelCancel').addEventListener('click', () => askClose(form));
+    view.querySelectorAll('[data-mdel]').forEach((b) => b.addEventListener('click', () => {
+      const d = MODEL_DATA[b.dataset.mdel], used = d.usedBy.length > 0;
+      document.getElementById('delAsk')?.remove();
+      document.body.insertAdjacentHTML('beforeend', `<div class="mbg" id="delAsk" style="z-index:80"><div class="modal" role="alertdialog" aria-modal="true" style="width:min(460px,100%)">
+        <h2 class="mtitle">${used ? 'Удалить модель нельзя' : `Удалить модель «${d.name}»?`}</h2>
+        <p style="margin:10px 0 0;font-size:14px;line-height:1.5">${used ? `Её используют: ${d.usedBy.join(', ')}. Сначала выберите им другую модель.` : 'Действие нельзя отменить.'}</p>
+        <div class="mfoot"><span class="spacer"></span>${used ? '<button type="button" class="btn primary" data-delask-no>Понятно</button>'
+          : '<button type="button" class="btn ghost" data-delask-no>Отмена</button><button type="button" class="btn danger" data-delask-ok>Удалить</button>'}</div></div></div>`);
+      const ask = document.getElementById('delAsk');
+      ask.querySelector('[data-delask-no]').addEventListener('click', () => ask.remove());
+      ask.querySelector('[data-delask-ok]')?.addEventListener('click', () => { ask.remove(); b.closest('tr').remove(); showSaved('Модель удалена'); });
+    }));
+    const mInp = document.getElementById('mModel'), mErr = document.getElementById('mModelErr'), menu = document.getElementById('mModelMenu');
+    let act = -1;
+    const items = () => { const q = mInp.value.trim().toLowerCase(); const all = MODELS.filter(m => m.toLowerCase().includes(q)); return all.length || !q ? all : []; };
+    const closeMenu = () => { menu.hidden = true; mInp.setAttribute('aria-expanded', 'false'); act = -1; };
+    const openMenu = (all) => {
+      if (!MODELS.length || mInp.disabled) return closeMenu();
+      const list = all ? MODELS : items();
+      menu.innerHTML = list.length ? list.map((m, i) => '<button type="button" role="option" data-v="' + m + '"' + (m === mInp.value ? ' class="sel"' : '') + '>' + m + '</button>').join('') : '<div class="none">Нет совпадений — можно оставить своё название</div>';
+      const r = mInp.getBoundingClientRect(); Object.assign(menu.style, { left: r.left + 'px', top: r.bottom + 6 + 'px', width: r.width + 'px' });
+      menu.hidden = false; mInp.setAttribute('aria-expanded', 'true'); act = -1;
+    };
+    const pick = (v) => { mInp.value = v; modelErr(''); closeMenu(); mInp.closest('.modal')._upd?.(); };
+    mInp.addEventListener('focus', () => openMenu(true));
+    mInp.addEventListener('click', () => menu.hidden ? openMenu(true) : null);
+    mInp.addEventListener('input', () => openMenu(false));
+    mInp.addEventListener('keydown', (e) => {
+      const btns = [...menu.querySelectorAll('button')];
+      if (e.key === 'Escape' && !menu.hidden) { e.stopPropagation(); return closeMenu(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (menu.hidden) openMenu(true); const b = [...menu.querySelectorAll('button')]; if (!b.length) return;
+        act = (act + (e.key === 'ArrowDown' ? 1 : -1) + b.length) % b.length; b.forEach((x, i) => x.classList.toggle('act', i === act)); b[act].scrollIntoView({ block: 'nearest' }); }
+      if (e.key === 'Enter' && !menu.hidden && act >= 0 && btns[act]) { e.preventDefault(); pick(btns[act].dataset.v); }
+    });
+    menu.addEventListener('mousedown', (e) => e.preventDefault());
+    menu.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) pick(b.dataset.v); });
+    mInp.addEventListener('blur', closeMenu);
+    document.querySelector('#addModel [data-apanel=mpar]').addEventListener('scroll', closeMenu);
+    window.addEventListener('resize', closeMenu);
+    const modelErr = (t) => { mErr.textContent = t; mErr.hidden = !t; mInp.classList.toggle('bad', !!t); };
+    mInp.addEventListener('input', () => modelErr(''));
+    const nInp = document.getElementById('mName'), nErr = document.getElementById('mNameErr');
+    const nameErr = (t) => { nErr.textContent = t; nErr.hidden = !t; nInp.classList.toggle('bad', !!t); };
+    nInp.addEventListener('input', () => nameErr(''));
+    ['mUrl', 'p2', 'mCtx'].forEach((id) => document.getElementById(id).addEventListener('input', (e) => { e.target.classList.remove('bad'); e.target.closest('.field').querySelector('.ferr').hidden = true; }));
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      // top to bottom, the first problem only
+      const fieldErr = (id, tab, t) => { const i = document.getElementById(id), e = i.closest('.field').querySelector('.ferr');
+        e.textContent = t; e.hidden = false; i.classList.add('bad'); document.querySelector('[data-atab=' + tab + ']').click(); i.focus(); };
+      if (!nInp.value.trim()) return fieldErr('mName', 'mgen', 'Укажите название');
+      if (!document.getElementById('mUrl').value.trim()) return fieldErr('mUrl', 'mpar', 'Укажите адрес API');
+      if (!document.getElementById('p2').value) return fieldErr('p2', 'mpar', 'Укажите токен');
+      const v = mInp.value.trim(), listed = MODELS;
+      // mockup: a local server knows only these; a model from the list needs no check
+      const local = ['llama3.1:8b', 'qwen2.5:7b'];
+      const bad = mInp.disabled ? 'Сначала проверьте подключение' : !v ? (listed.length ? 'Выберите модель' : 'Укажите модель')
+        : v === SAVED ? '' : listed.length ? (listed.includes(v) ? '' : 'Сервер не знает модель «' + v + '»') : local.includes(v) ? '' : 'Сервер не знает модель «' + v + '»';
+      if (bad) { document.querySelector('[data-atab=mpar]').click(); modelErr(bad); if (!mInp.disabled) mInp.focus(); return; }
+      if (!(Number(document.getElementById('mCtx').value) > 0)) return fieldErr('mCtx', 'mpar', 'Укажите размер контекста');
+      form.hidden = true; showSaved(EDIT ? 'Модель сохранена' : 'Модель добавлена');
+    });
   }
   function fitChat() { const w = document.getElementById('cwrap'); if (w) w.style.height = Math.max(420, window.innerHeight - w.getBoundingClientRect().top - 20) + 'px'; }
   window.addEventListener('resize', fitChat);
@@ -1063,10 +1198,11 @@ default: true</textarea></div>
   }
   function wireTables() {
     wireAgentWin();
+    view.querySelectorAll('#agentWin .modal').forEach(track);
     view.querySelectorAll('[data-open]').forEach((btn) => btn.addEventListener('click', () => {
       const m = document.getElementById(btn.dataset.open); m.hidden = false; const i = m.querySelector('input'); if (i) i.focus();
     }));
-    view.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { b.closest('.mbg').hidden = true; }));
+    view.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => { b.classList.contains('mclose') ? askClose(b.closest('.mbg')) : (b.closest('.mbg').hidden = true); }));
     view.querySelectorAll('[data-toast]').forEach((b) => b.addEventListener('click', () => showSaved(b.dataset.toast)));
     view.querySelectorAll('[data-search]').forEach((inp) => inp.addEventListener('input', () => {
       const q = inp.value.trim().toLowerCase();

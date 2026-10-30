@@ -1,19 +1,20 @@
 import "server-only";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/secret";
-import { DEFAULT_CONTEXT_TOKENS, pickModel, type ModelChoice } from "@/lib/llm-pick";
+import { DEFAULT_CONTEXT_TOKENS, noModelMessage, pickModel, type ModelChoice, type NoModel } from "@/lib/llm-pick";
+import { listResult, type ListResult } from "@/lib/model-list";
 
 // Minimal OpenAI-compatible chat client. Works with any endpoint that speaks
 // the OpenAI /chat/completions format (Ollama, GLM/Zhipu, OpenRouter, ...).
-// Which model: the agent's own → the default one in the registry (/models) →
-// LLM_BASE_URL / LLM_MODEL / LLM_API_KEY from .env.
+// Which model: the agent's own (chosen explicitly); LLM_BASE_URL / LLM_MODEL / LLM_API_KEY
+// from .env only while the owner has no models at all.
 
 type ChatOptions = {
   system?: string;
   user: string;
   temperature?: number;
   json?: boolean; // ask the endpoint for a JSON object (best-effort)
-  modelId?: string | null; // agent's model; null/undefined → default
+  modelId?: string | null; // the agent's model
   ownerId: string; // models are personal: only this user's models are considered
 };
 
@@ -27,15 +28,15 @@ function envModel(): ModelChoice | null {
   } : null;
 }
 
-/** The model a call should use among the owner's models (then .env), or null when there is none. */
-export async function resolveModel(ownerId: string, agentModelId?: string | null): Promise<ModelChoice | null> {
+/** The model a call should use (its own one, or .env while the owner has no models), or why there is none. */
+export async function resolveModel(ownerId: string, agentModelId?: string | null): Promise<ModelChoice | NoModel> {
   const rows = await prisma.llmModel.findMany({ where: { ownerId }, orderBy: { createdAt: "asc" } });
   return pickModel(rows, agentModelId ?? null, envModel());
 }
 
 /** Does this user have any LLM (own models or .env)? */
 export async function llmAvailable(ownerId: string): Promise<boolean> {
-  return !!(await resolveModel(ownerId));
+  return !!envModel() || (await prisma.llmModel.count({ where: { ownerId } })) > 0;
 }
 
 /** Name of the model in .env when it is the one in use (registry empty), for the Models page. */
@@ -65,7 +66,7 @@ async function chatCompletions(ep: Endpoint, body: object, signal?: AbortSignal)
 
 export async function llmChat(opts: ChatOptions): Promise<string> {
   const choice = await resolveModel(opts.ownerId, opts.modelId);
-  if (!choice) throw new Error("LLM не настроена: добавьте модель в разделе «Модели» или задайте LLM_BASE_URL и LLM_MODEL в .env");
+  if ("none" in choice) throw new Error(noModelMessage(choice));
   const ep = await endpointFor(choice);
 
   const messages = [
@@ -105,6 +106,20 @@ export function extractJson<T>(raw: string): T {
     const match = cleaned.match(/[{[][\s\S]*[}\]]/);
     if (match) return JSON.parse(match[0]) as T;
     throw new Error("LLM вернул не-JSON ответ");
+  }
+}
+
+/** «Проверить» in the model window: the server's model list (`GET {baseUrl}/models`), 20 seconds at most. */
+export async function listModels(ep: { baseUrl: string; token?: string }): Promise<ListResult> {
+  try {
+    const res = await fetch(`${ep.baseUrl.replace(/\/$/, "")}/models`, {
+      headers: ep.token ? { Authorization: `Bearer ${ep.token}` } : {},
+      signal: AbortSignal.timeout(20_000),
+    });
+    const body = await res.json().catch(() => undefined);
+    return listResult(res.status, body);
+  } catch {
+    return { kind: "down" };
   }
 }
 

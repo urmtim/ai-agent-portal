@@ -8,7 +8,7 @@ import { agentEditData } from "@/lib/agents/edit-data";
 import { agentDesc } from "@/lib/agents/types";
 import { ownConnections } from "@/lib/connections";
 import { CONNECTORS, isConnectorKind } from "@/lib/connectors";
-import { envModelName } from "@/lib/llm";
+import { loadAssistant } from "@/lib/assistant";
 
 const RUN_ST: Record<string, { label: string; cls: string }> = {
   RUNNING: { label: "идёт", cls: "info" },
@@ -33,8 +33,8 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
   const conns = await ownConnections(user.id);
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, description: true, enabled: true } });
   const own = await prisma.agent.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" } });
-  const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true, isDefault: true } });
-  const defaultName = (models.find((m) => m.isDefault) ?? models[0])?.name ?? envModelName() ?? "не задана";
+  const models = await prisma.llmModel.findMany({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
+  const cfg = await loadAssistant(user.id);
 
   return (
     <div className="narrow" style={{ margin: "0 auto" }}>
@@ -46,8 +46,7 @@ export default async function AgentPage({ params }: { params: Promise<{ id: stri
           <p className="lead">{agentDesc(agent)}</p>
         </div>
         <div className="spacer" />
-        <AgentEditButton models={models.map(({ id, name }) => ({ id, name }))} defaultModel={defaultName}
-          defaultModelId={(models.find((m) => m.isDefault) ?? models[0])?.id ?? ""} a={agentEditData(agent)}
+        <AgentEditButton models={models} newModelId={cfg.modelId ?? models[0]?.id ?? ""} a={agentEditData(agent)}
           agents={own.map((x) => ({ id: x.id, name: x.name, desc: agentDesc(x), enabled: x.enabled }))}
           connections={conns.map((c) => ({ id: c.id, name: c.name, desc: isConnectorKind(c.kind) ? CONNECTORS[c.kind].desc : c.kind }))}
           docs={docs.map((d) => ({ id: d.id, name: d.name, desc: d.description, enabled: d.enabled }))} />

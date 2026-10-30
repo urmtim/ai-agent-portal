@@ -30,6 +30,21 @@ async function main() {
     });
   }
   if (receipts.length) console.log(`✔ ${receipts.length} «Чеки из почты» agent(s) turned into «Свои»`);
+
+  // No more «модель по умолчанию»: the assistant and every agent without a model get the old default
+  // (or the earliest model) explicitly, so nothing silently runs on another model.
+  const owners = await prisma.llmModel.groupBy({ by: ["ownerId"], where: { ownerId: { not: null } } });
+  for (const { ownerId } of owners) {
+    if (!ownerId) continue;
+    const model = await prisma.llmModel.findFirst({ where: { ownerId }, orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }] });
+    if (!model) continue;
+    const agents = await prisma.agent.updateMany({ where: { ownerId, modelId: null }, data: { modelId: model.id } });
+    const a = await prisma.assistant.findUnique({ where: { ownerId }, select: { modelId: true } });
+    if (!a) await prisma.assistant.create({ data: { ownerId, modelId: model.id } });
+    else if (!a.modelId) await prisma.assistant.update({ where: { ownerId }, data: { modelId: model.id } });
+    const assistant = !a || !a.modelId;
+    if (agents.count || assistant) console.log(`✔ «${model.name}» chosen explicitly for ${assistant ? "the assistant and " : ""}${agents.count} agent(s)`);
+  }
 }
 
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
