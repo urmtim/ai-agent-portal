@@ -55,7 +55,7 @@ export default async function McpPage() {
       <div className="pagehead">
         <div>
           <h1 className="title">MCP</h1>
-          <p className="lead">Подключения к внешним сервисам. Агенты и ассистент пользуются подключением, когда его добавят им на вкладке MCP.</p>
+          <p className="lead">Подключения к внешним сервисам для Ассистента и агентов</p>
         </div>
       </div>
       <AiTabs active="/mcp" />

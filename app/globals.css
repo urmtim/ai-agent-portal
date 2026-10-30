@@ -83,6 +83,9 @@
 
 * { box-sizing: border-box; }
 
+/* the page never shifts sideways when a scrollbar comes or goes (AI tabs switch between short and long tables) */
+html { scrollbar-gutter: stable; }
+
 body {
   background: var(--bg);
   color: var(--ink);
@@ -589,3 +592,17 @@ input.pick { padding-right: 40px; background-image: url("data:image/svg+xml,%3Cs
 .cmenu button.sel { color: var(--primary-dark); font-weight: 600; }
 .cmenu button.sel::after { content: "✓"; margin-left: auto; }
 .cmenu .none { padding: 8px 10px; font-size: 13px; color: var(--muted); }
+
+/* SecretInput: a text field with hidden characters, so browsers don't offer saved logins in the window */
+.pwd input.masked { -webkit-text-security: disc; }
+
+/* a tab whose last field (description, instruction) stretches down to the window's footer */
+.apanel.fill:not([hidden]) { display: flex; flex-direction: column; }
+.apanel.fill .field.grow { flex: 1; display: flex; flex-direction: column; min-height: 140px; margin-bottom: 0; }
+.apanel.fill .field.grow textarea { flex: 1; min-height: 100px; resize: none; }
+
+/* list tables: the line under a name stays one line, so rows are the same height on every page */
+.tcard td .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+/* the name column takes its share of the width and the line under the name is cut to it (not the other way round) */
+.tcard td:nth-child(2) { width: 36%; max-width: 0; }
+.tcard td:nth-child(2) .sub { max-width: none; }

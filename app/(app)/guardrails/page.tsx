@@ -43,7 +43,7 @@ export default async function GuardrailsPage() {
       <div className="pagehead">
         <div>
           <h1 className="title">Гардрейлы</h1>
-          <p className="lead">Документы с правилами — регламенты, политики, инструкции. Агент получает их текст как правила, которые нельзя нарушать, когда документ добавлен ему на вкладке «Политики».</p>
+          <p className="lead">Документы с правилами для агентов: регламенты, политики, инструкции</p>
         </div>
       </div>
       <AiTabs active="/guardrails" />

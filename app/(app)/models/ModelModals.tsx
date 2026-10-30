@@ -133,28 +133,28 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   const generalError = state?.error && !state.field ? state.error : undefined;
 
   return (
-    <form ref={form} onSubmit={onSubmit} noValidate>
+    <form ref={form} onSubmit={onSubmit} noValidate autoComplete="off">
       {m && <input type="hidden" name="id" value={m.id} />}
       <input type="hidden" name="listed" value={models.includes(f.model.trim()) ? "1" : ""} />
       <input type="hidden" name="model" value={f.model} />
       <FormTabs active={tab} onChange={openTab} tabs={[{ key: "general", label: "Общее" }, { key: "params", label: "Параметры" }, { key: "yaml", label: "YAML" }]} />
 
-      <div className="apanel" hidden={tab !== "general"}>
+      <div className="apanel fill" hidden={tab !== "general"}>
         <div className="field">
           <label htmlFor="md-name">Название <span className="req">*</span></label>
-          <input id="md-name" name="name" className={bad("name")} value={f.name} onChange={(e) => upd({ name: e.target.value }, "name")} placeholder="например, Ollama Cloud" maxLength={80} />
+          <input id="md-name" name="name" autoComplete="off" className={bad("name")} value={f.name} onChange={(e) => upd({ name: e.target.value }, "name")} placeholder="например, Ollama Cloud" maxLength={80} />
           {fieldErr("name")}
         </div>
-        <div className="field">
+        <div className="field grow">
           <label htmlFor="md-desc">Описание</label>
-          <textarea id="md-desc" name="description" rows={4} value={f.description} onChange={(e) => upd({ description: e.target.value })} placeholder="Для чего эта модель" maxLength={300} />
+          <textarea id="md-desc" name="description" value={f.description} onChange={(e) => upd({ description: e.target.value })} placeholder="Для чего эта модель" maxLength={300} />
         </div>
       </div>
 
       <div className="apanel" hidden={tab !== "params"}>
         <div className="field">
           <label htmlFor="md-url">Адрес API <span className="req">*</span></label>
-          <input id="md-url" name="baseUrl" className={bad("baseUrl")} value={f.baseUrl} onChange={(e) => upd({ baseUrl: e.target.value }, "baseUrl")} placeholder="например, https://ollama.com/v1" />
+          <input id="md-url" name="baseUrl" autoComplete="off" className={bad("baseUrl")} value={f.baseUrl} onChange={(e) => upd({ baseUrl: e.target.value }, "baseUrl")} placeholder="например, https://ollama.com/v1" />
           {fieldErr("baseUrl")}
         </div>
         <div className="field">
@@ -181,7 +181,7 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
         </div>
         <div className="field">
           <label htmlFor="md-ctx">Контекст, токенов <span className="req">*</span></label>
-          <input id="md-ctx" name="contextTokens" type="number" className={bad("contextTokens")} min={2000} max={2000000} step={1000}
+          <input id="md-ctx" name="contextTokens" type="number" autoComplete="off" className={bad("contextTokens")} min={2000} max={2000000} step={1000}
             value={f.contextTokens} onChange={(e) => upd({ contextTokens: e.target.value }, "contextTokens")} />
           {fieldErr("contextTokens")}
         </div>
@@ -216,7 +216,7 @@ export function AddModelButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Добавить модель</button>
+      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Добавить</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Новая модель" editor compact>
         {open && <ModelForm onDone={() => setOpen(false)} />}
       </Modal>

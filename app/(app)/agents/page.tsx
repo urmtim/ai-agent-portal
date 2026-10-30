@@ -55,7 +55,7 @@ export default async function AgentsPage() {
     cfg.agentIds.length && `агенты: ${agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name).join(", ")}`,
     cfg.mcpIds.length && `MCP: ${conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ")}`,
     cfg.apis.length && `API: ${cfg.apis.map((k) => ASSISTANT_APIS[k].label).join(", ")}`,
-  ].filter(Boolean).join(" · ");
+  ].filter(Boolean).join("; ");
   const base: ListRow = {
     key: "base",
     search: "Ассистент встроенный чат",
@@ -63,7 +63,7 @@ export default async function AgentsPage() {
       <span key="id" className="muted">#1</span>,
       <div key="n">
         <div className="b">Ассистент</div>
-        <div className="sub">С ним вы говорите в чате, агенты — его исполнители · {allowed ? `разрешено — ${allowed}` : "пока ничего не разрешено"}</div>
+        <div className="sub">С ним вы говорите в чате. {allowed ? `Разрешено: ${allowed}` : "Пока ничего не разрешено"}</div>
       </div>,
       <span key="mo" style={{ whiteSpace: "nowrap" }}>{models.find((m) => m.id === cfg.modelId)?.name ?? unset}</span>,
       <span key="m">{conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ") || <span className="muted">—</span>}</span>,

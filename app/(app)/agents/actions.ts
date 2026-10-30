@@ -10,7 +10,7 @@ import { audit } from "@/lib/audit";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
 import { HITL_LABELS, ownGuardRules, parseHitl, parseMcpAccess } from "@/lib/agents/policy";
 
-/** id — the saved agent, for «▶ Тест-запуск» right after saving. */
+/** id — the saved agent. */
 export type FormState = { error?: string; ok?: string; id?: string } | undefined;
 
 async function ownAgentOrThrow(agentId: string, userId: string) {

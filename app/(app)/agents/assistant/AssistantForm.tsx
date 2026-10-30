@@ -9,7 +9,7 @@ import { saveAssistant } from "./actions";
 
 /**
  * ✎ in the «Ассистент» row (and the row click): the built-in agent opens the same window as any agent,
- * with «Включён», «Название», «Системная инструкция» (the real built-in one) and «Тест-запуск» locked.
+ * with the on/off slider, «Название» and «Системная инструкция» (the real built-in one) locked.
  */
 export function AssistantActions({ cfg, instruction, ...choices }: { cfg: AssistantConfig; instruction: string } & AgentChoices) {
   const [open, setOpen] = useState(false);

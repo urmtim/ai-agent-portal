@@ -38,7 +38,7 @@ function ConnectionForm({ c, onDone }: { c?: ConnectionRowData; onDone: () => vo
   }
 
   return (
-    <form ref={form} onSubmit={onSubmit} onInput={() => setErrFor(state)}>
+    <form ref={form} onSubmit={onSubmit} onInput={() => setErrFor(state)} autoComplete="off">
       {c && <input type="hidden" name="id" value={c.id} />}
       <div className="grid cols2" style={{ gap: 14 }}>
         <div className="field">
@@ -81,7 +81,7 @@ function ConnectionForm({ c, onDone }: { c?: ConnectionRowData; onDone: () => vo
         </div>
         <div>
           <label htmlFor="cn-pass">Пароль приложения {!c && <span className="req">*</span>}</label>
-          <SecretInput id="cn-pass" name="password" autoComplete="new-password" label="пароль"
+          <SecretInput id="cn-pass" name="password" label="пароль"
             placeholder={c?.hasSecret ? "Пароль сохранён" : "пароль приложения"} />
         </div>
       </div>

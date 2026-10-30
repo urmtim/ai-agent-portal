@@ -11,12 +11,21 @@ const EYE_OFF = (
   </svg>
 );
 
-/** A password / token field with an eye button to show what was typed. */
+/**
+ * A token / password field with an eye button to show what was typed.
+ * It is a text field whose characters are hidden by CSS: with no password field in the form, the browser's
+ * password manager doesn't take the window for a sign-in form and offers no saved logins. Browsers without
+ * that CSS get a plain password field. (Only rendered in open dialogs, never on the server.)
+ */
 export function SecretInput({ label = "токен", className, ...input }: { label?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   const [show, setShow] = useState(false);
+  const [maskByCss] = useState(() => typeof CSS !== "undefined" && CSS.supports("-webkit-text-security", "disc"));
+  const masked = !show && maskByCss;
   return (
     <div className="pwd">
-      <input autoComplete="off" {...input} className={className} type={show ? "text" : "password"} />
+      <input autoComplete="off" spellCheck={false} data-1p-ignore data-lpignore="true" {...input}
+        className={[className, masked ? "masked" : ""].filter(Boolean).join(" ") || undefined}
+        type={show || maskByCss ? "text" : "password"} />
       <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? `Скрыть ${label}` : `Показать ${label}`} title={show ? "Скрыть" : "Показать"}>
         {show ? EYE_OFF : EYE}
       </button>

@@ -6,6 +6,8 @@ import { requireUser } from "@/lib/session";
 import { modelUsers } from "@/lib/model-users";
 import { AddModelButton, ModelActions } from "./ModelModals";
 
+const statusLabel = (m: { checkedAt: Date | null; checkOk: boolean | null }) => (!m.checkedAt ? "не проверена" : m.checkOk ? "подключена" : "ошибка");
+
 function status(m: { checkedAt: Date | null; checkOk: boolean | null; checkMsg: string }) {
   if (!m.checkedAt) return <span className="st mut">не проверена</span>;
   return m.checkOk
@@ -24,6 +26,7 @@ export default async function ModelsPage() {
   const rows: ListRow[] = models.map((m, i) => ({
     key: m.id,
     search: `${m.name} ${m.description} ${m.model} ${m.baseUrl}`,
+    facets: { status: statusLabel(m) },
     cells: [
       <span key="id" className="muted">#{i + 1}</span>,
       <div key="n">
@@ -42,7 +45,7 @@ export default async function ModelsPage() {
       <div className="pagehead">
         <div>
           <h1 className="title">Модели</h1>
-          <p className="lead">Ваши LLM: на них работают ваш ассистент и ваши агенты. У каждого пользователя свои модели и токены.</p>
+          <p className="lead">Модели, на которых работают Ассистент и агенты</p>
         </div>
       </div>
       <AiTabs active="/models" />
@@ -57,6 +60,7 @@ export default async function ModelsPage() {
       )}
 
       <ListTable columns={["ID", "Название", "Модель", "Агенты", "Статус", ""]} rows={rows} action={<AddModelButton />} minWidth={700}
+        filters={[{ id: "status", label: "Статус", options: ["подключена", "ошибка", "не проверена"] }]}
         emptyText="Моделей пока нет — добавьте первую" />
     </div>
   );

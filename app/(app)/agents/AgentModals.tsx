@@ -55,22 +55,18 @@ function initial(a: AgentEditData | undefined, newModelId: string): Fields {
 }
 
 /**
- * The agent window (mockup «Агент — окно»): «Общее · Политики · Субагенты · MCP · API · YAML», «▶ Тест-запуск» and «Сохранить».
- * The same window creates (no `a`), edits, and — with `builtin` — shows the built-in assistant with its name, «включён»
- * and test run locked.
+ * The agent window (mockup «Агент — окно»): «Общее · Политики · Субагенты · MCP · API · YAML» and «Сохранить»;
+ * the on/off slider sits in the header. The same window creates (no `a`), edits, and — with `builtin` — shows the
+ * built-in assistant with its name, slider and instruction locked.
  */
 export function AgentForm({ a, models, newModelId, agents, connections, docs, onDone, builtin, save = saveAgent }:
   { a?: AgentEditData; onDone: () => void; builtin?: boolean; save?: SaveAction } & AgentChoices) {
   const toast = useToast();
   const [state, onSubmit, pending] = useFormAction(save, undefined);
-  const runAfter = useRef(false);
   useEffect(() => {
     if (!state?.ok) return;
     onDone();
-    if (runAfter.current && state.id) {
-      toast("Сохранено, запускаю агента…");
-      void runAgentById(state.id).then((r) => toast(r?.ok ? `Агент отработал: ${r.ok}` : r?.error ?? "Готово"));
-    } else toast(state.ok);
+    toast(state.ok);
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [tab, setTab] = useState<Tab>("general");
@@ -83,7 +79,6 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
   const head = useModalHead();
   const [askUpload, setAskUpload] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const locked = builtin ? "Встроенный агент — это чат" : undefined;
 
   const others = agents.filter((x) => x.id !== a?.id);
   const apiList = Object.entries(ASSISTANT_APIS).map(([k, v]) => ({ id: k, label: v.label, desc: v.desc }));
@@ -152,7 +147,7 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
         { key: "yaml", label: "YAML" },
       ]} />
 
-      <div className="apanel" hidden={tab !== "general"}>
+      <div className="apanel fill" hidden={tab !== "general"}>
         <div className="field">
           <label htmlFor="ag-ename">Название</label>
           <input id="ag-ename" name="name" value={f.name} disabled={builtin} onChange={(e) => upd({ name: e.target.value })} placeholder="например, Сводка почты" maxLength={80} />
@@ -164,13 +159,11 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         </div>
-        <div className="field">
+        <div className="field grow">
           <label htmlFor="ag-instr">Системная инструкция</label>
-          <textarea id="ag-instr" name="instruction" rows={5} maxLength={8000} value={f.instruction} disabled={builtin} onChange={(e) => upd({ instruction: e.target.value })}
+          <textarea id="ag-instr" name="instruction" maxLength={8000} value={f.instruction} disabled={builtin} onChange={(e) => upd({ instruction: e.target.value })}
             placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа." />
-          <div className="hint">{builtin
-            ? "Встроенная инструкция чата — модель получает ровно её. Дату и политики с вкладки «Политики» модель узнаёт инструментами current_time и get_policies."
-            : "Первая строка — описание агента в списке."}</div>
+          {!builtin && <div className="hint">Первая строка — описание агента в списке.</div>}
         </div>
       </div>
 
@@ -222,9 +215,8 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
 
       {/* «Включён» sits in the window's header, outside the form: it is submitted from here */}
       {head && createPortal(
-        <span title={locked ? `${locked}, выключить его нельзя` : undefined}>
-          <Switch checked={builtin || f.enabled} disabled={builtin} onChange={(enabled) => upd({ enabled })} label="Включён" />
-        </span>, head)}
+        <Switch checked={builtin || f.enabled} disabled={builtin} onChange={(enabled) => upd({ enabled })}
+          title={builtin ? "Ассистент всегда включён" : f.enabled ? "Агент включён" : "Агент выключен"} />, head)}
       {(builtin || f.enabled) && <input type="hidden" name="enabled" value="on" />}
 
       {/* what gets saved, whichever tab is open */}
@@ -237,10 +229,8 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
 
       {state?.error && <div className="formerr">{state.error}</div>}
       <div className="mfoot">
-        <button className="btn ghost" type="submit" disabled={pending || builtin} onClick={() => { runAfter.current = true; }}
-          title={builtin ? "Встроенный агент проверяют прямо в чате" : "Сохранить и сразу запустить агента"}>▶ Тест-запуск</button>
         <span className="spacer" />
-        <button className="btn primary" type="submit" disabled={pending || (!!a && !dirty)} onClick={() => { runAfter.current = false; }}>
+        <button className="btn primary" type="submit" disabled={pending || (!!a && !dirty)}>
           {pending ? "Сохраняем…" : "Сохранить"}
         </button>
       </div>
@@ -255,7 +245,7 @@ export function NewAgentButton(choices: AgentChoices) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Новый агент</button>
+      <button type="button" className="btn primary spacer" onClick={() => setOpen(true)}>Добавить</button>
       <Modal open={open} onClose={() => setOpen(false)} title="Новый агент" editor>
         {open && <AgentForm {...choices} onDone={() => setOpen(false)} />}
       </Modal>
