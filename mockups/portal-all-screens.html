@@ -1230,10 +1230,9 @@ contextTokens: 32000</textarea></div>
           + `<div class="mailrow" style="${row}">${field('Отправка', false, '<input value="SMTP" disabled>')}`
           + `${field('Сервер исходящей почты', false, `<input id="cwSmtp" value="${esc(D?.smtp)}" placeholder="например, smtp.mail.ru">`)}${field('Порт', false, `<input id="cwSmtpPort" type="number" value="${PORTS.smtp}">`)}</div>`
           + `<div class="grid c2" style="gap:14px">${field('Логин', true, `<input id="cwUser" value="${esc(D?.user)}" placeholder="you@mail.ru" autocomplete="off">`)}`
-          + `${field('Пароль приложения', true, pwd('cwPass', D ? 'Пароль сохранён' : ''))}</div>`
-          + `<div class="hint" style="margin:-6px 0 14px">Mail.ru, Яндекс и Gmail пускают только по паролю приложения: его создают в настройках безопасности почты.</div>` + check; }
+          + `${field('Пароль приложения', true, pwd('cwPass', D ? 'Пароль сохранён' : ''))}</div>` + check; }
       return typeSel + field('Адрес API', true, `<input id="cwUrl" value="${esc(D?.url)}" placeholder="например, https://api.example.ru/v1">`)
-        + field('Токен', false, pwd('cwTok', D?.auth === 'token' ? 'Токен сохранён' : ''), 'Если API его просит. Передаётся в заголовке Authorization: Bearer.') + check;
+        + field('Токен', false, pwd('cwTok', D?.auth === 'token' ? 'Токен сохранён' : '')) + check;
     }
     function panelTools() {
       const rows = !tools.length ? '<tr><td colspan="4" class="muted tempty">Список появится после проверки подключения</td></tr>'

@@ -208,7 +208,6 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
                 {fieldErr("password")}
               </div>
             </div>
-            <div className="hint" style={{ margin: "-6px 0 14px" }}>Mail.ru, Яндекс и Gmail пускают только по паролю приложения: его создают в настройках безопасности почты.</div>
           </>
         ) : (
           <>
@@ -223,7 +222,6 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
                 onChange={(e) => { setSecret(e.target.value); if (err?.field === "token") setErr(undefined); }}
                 placeholder={c?.hasSecret ? "Токен сохранён" : undefined} />
               {fieldErr("token")}
-              <div className="hint">Если API его просит. Передаётся в заголовке Authorization: Bearer.</div>
             </div>
           </>
         )}
