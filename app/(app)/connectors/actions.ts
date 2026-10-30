@@ -54,8 +54,8 @@ async function connect(p: Parsed, secret: string): Promise<TestState> {
   }
   const r = await checkMailbox({ ...p.config, pass: secret });
   if (r.ok) return { ok: true, message: r.message };
-  // a refused login is about the password, whichever server refused it; otherwise the server that did not answer
-  const field: ConnectorField = /логин|пароль/i.test(r.message) ? "password" : r.where === "smtp" ? "smtpHost" : "host";
+  // SMTP refusing the password that just opened the inbox is about sending (e.g. a read-only app password), so it marks SMTP
+  const field: ConnectorField = r.where === "smtp" ? "smtpHost" : /логин|пароль/i.test(r.message) ? "password" : "host";
   return { ok: false, message: r.message, field };
 }
 
