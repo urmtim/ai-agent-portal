@@ -26,12 +26,15 @@ export type AccessInfo = {
   agents: AgentInfo[];
 };
 
-/** What get_policies returns: what it works with (when given), HITL and guardrails as plain facts (documents only the enabled ones). */
-export function policySnapshot(hitl: HitlChoice, rules: GuardRule[], docs: { name: string; text: string }[], access?: AccessInfo) {
+/** What get_policies returns: the date now, what it works with (when given), HITL and guardrails as plain facts (documents only the enabled ones). */
+export function policySnapshot(hitl: HitlChoice, rules: GuardRule[], docs: { name: string; text: string }[], access?: AccessInfo, now = new Date()) {
   const g = effectiveGuardrails(rules);
-  const ask = hitl === "off" ? [] : hitl === "send_only" ? ["отправка наружу (письмо, сообщение, публикация)"]
-    : ["изменение данных (запись, правка, удаление)", "отправка наружу (письмо, сообщение, публикация)"];
+  const ask = hitl === "off" ? [] : hitl === "send_only" ? ["отправка наружу"]
+    : ["изменение данных (запись, правка, удаление)", "отправка наружу"];
+  const t = timeNow(now);
   return {
+    // the date comes with the policies: a «дата и время» tool was what weak models listed as their skill
+    now: { date: t.date, weekday: t.weekday, time: t.time, timezone: t.timezone },
     ...(access ? { access } : {}),
     hitl: {
       mode: HITL_LABELS[hitl],
@@ -40,7 +43,7 @@ export function policySnapshot(hitl: HitlChoice, rules: GuardRule[], docs: { nam
     },
     guardrails: {
       forbiddenTopics: g.forbiddenTopics,
-      maskedPersonalData: g.maskPii ? ["почта → [почта]", "телефон → [телефон]", "номер карты → [карта]", "паспорт → [паспорт]"] : [],
+      maskedPersonalData: g.maskPii ? ["адрес e-mail → [e-mail]", "телефон → [телефон]", "номер карты → [карта]", "паспорт → [паспорт]"] : [],
       maxToolStepsPerAnswer: g.maxSteps,
       documents: docs.map((d) => ({ name: d.name, rules: d.text })),
     },
@@ -60,12 +63,12 @@ export function timeNow(now = new Date()) {
 export function policyTools(snapshot: PolicySnapshot) {
   return {
     current_time: tool({
-      description: "Текущие дата, день недели и время (Москва). Вызывай, когда нужны «сегодня», «вчера», «за неделю», сроки.",
+      description: "Устарело: дата и время приходят в get_policies (now).",
       inputSchema: z.object({}),
       execute: async () => timeNow(),
     }),
     get_policies: tool({
-      description: "Твои политики и доступ: на какой модели ты работаешь и какие коннекторы (почта, API) тебе подключены; подтверждение действий (HITL) и гардрейлы — запрещённые темы, маскирование персональных данных, лимит шагов, правила из документов.",
+      description: "Сегодняшние дата и время; на какой модели ты работаешь, какие коннекторы и агенты тебе доступны; подтверждение действий (HITL) и гардрейлы.",
       inputSchema: z.object({}),
       execute: async () => snapshot,
     }),

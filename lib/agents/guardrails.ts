@@ -23,7 +23,7 @@ export function parseGuardrails(raw: unknown): Guardrails {
 
 // order matters: e-mail and cards before phones, phones (11 digits) before passports (10 digits)
 const PII: [RegExp, string][] = [
-  [/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "[почта]"],
+  [/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, "[e-mail]"],
   [/\b(?:\d[ -]?){15,18}\d\b/g, "[карта]"],
   [/(?:\+7|\b8)[\s(-]*\d{3}[\s)-]*\d{3}[\s-]*\d{2}[\s-]*\d{2}\b/g, "[телефон]"],
   [/\b\d{2}\s?\d{2}\s?\d{6}\b/g, "[паспорт]"],

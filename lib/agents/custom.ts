@@ -46,7 +46,7 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   const access = await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null, await agentTree(agent.ownerId, subs, path));
   const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs, access);
   const tools: ToolSet = {
-    ...policyTools(snapshot),
+    get_policies: policyTools(snapshot).get_policies, // the date comes inside it
     // only what the connector's «Инструменты» tab and connection give; its launch was confirmed by the agent's HITL
     ...(conn ? pickTools(mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii }), connectorMailTools(conn)) : {}),
   };
@@ -63,7 +63,9 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
     });
   }
 
-  const instructions = agentInstructions(agent.instruction);
+  const instructions = agentInstructions(agent.instruction, {
+    mail: Object.keys(tools).some((t) => t.startsWith("mail_")), agents: "run_agent" in tools, connectors: access.connectors.length > 0,
+  });
   const prompt = task.trim() ? (g.maskPii ? maskPii(task.trim()) : task.trim()) : "Выполни свою задачу по инструкции.";
 
   let res;

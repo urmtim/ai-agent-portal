@@ -19,7 +19,7 @@ import { audit } from "@/lib/audit";
 import { estimateTokens, lastUserIndex, planSummary, summaryInput, trimToolResults } from "@/lib/chat/context";
 import { summarizeChat } from "@/lib/chat/summarize";
 import { effectiveGuardrails } from "@/lib/agents/policy";
-import { CHAT_INSTRUCTIONS } from "@/lib/chat/instructions";
+import { chatInstructions } from "@/lib/chat/instructions";
 import { withPolicies } from "@/lib/chat/policy-tools";
 import { MAIL_TOOL_NAMES, mailActionText } from "@/lib/mail-catalog";
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   }
   if ("error" in llm) return plain(llm.error, 400);
 
-  const { tools, activeTools, approval, agents, snapshot } = await chatTools(user, assistant);
+  const { tools, activeTools, approval, agents, snapshot, setup } = await chatTools(user, assistant);
 
   let messages: UIMessage[];
   try {
@@ -88,8 +88,8 @@ export async function POST(req: Request) {
     }
   }
 
-  // the constant instruction (shown read-only in the «Ассистент» window); policies come as get_policies
-  const base = CHAT_INSTRUCTIONS;
+  // the instruction for this setup (the full text is shown read-only in the «Ассистент» window); the date and policies come as get_policies
+  const base = chatInstructions(setup);
   const g = effectiveGuardrails(assistant.guardrails);
 
   // ---- long chats: old tool results in short form; the start retold once the history nears the context ----

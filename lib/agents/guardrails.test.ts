@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { guardrailInstructions, maskDeep, maskPii, parseGuardrails } from "./guardrails";
 
 test("maskPii replaces e-mail, phones, cards and passports", () => {
-  assert.equal(maskPii("Пишите на ivan.petrov@mail.ru или звоните +7 912 345-67-89"), "Пишите на [почта] или звоните [телефон]");
+  assert.equal(maskPii("Пишите на ivan.petrov@mail.ru или звоните +7 912 345-67-89"), "Пишите на [e-mail] или звоните [телефон]");
   assert.equal(maskPii("тел. 8(495)123-45-67"), "тел. [телефон]");
   assert.equal(maskPii("карта 2200 1234 5678 9012"), "карта [карта]");
   assert.equal(maskPii("паспорт 4510 123456"), "паспорт [паспорт]");
@@ -12,7 +12,7 @@ test("maskPii replaces e-mail, phones, cards and passports", () => {
 
 test("maskDeep walks tool results", () => {
   assert.deepEqual(maskDeep({ letters: [{ from: "a@b.ru", n: 3 }], text: "звоните 89123456789" }),
-    { letters: [{ from: "[почта]", n: 3 }], text: "звоните [телефон]" });
+    { letters: [{ from: "[e-mail]", n: 3 }], text: "звоните [телефон]" });
 });
 
 test("parseGuardrails: defaults, clamping, cleanup", () => {

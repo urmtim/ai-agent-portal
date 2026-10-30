@@ -84,7 +84,8 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   };
 
   // every tool stays defined so stored history validates; the model is offered only the allowed ones
-  const activeTools = ["current_time", "get_policies", ...allowedTools(cfg, agents.map((a) => a.id), mailConn ? { id: mailConn.id, tools: connectorMailTools(mailConn) } : null)] as (keyof typeof tools)[];
+  // current_time stays defined for old chats only: the date comes with get_policies
+  const activeTools = ["get_policies", ...allowedTools(cfg, agents.map((a) => a.id), mailConn ? { id: mailConn.id, tools: connectorMailTools(mailConn) } : null)] as (keyof typeof tools)[];
   // HITL per agent: switched off → runs at once; on (and unknown ids) → waits for the user.
   // Until approvals move to the agent's own actions, «on» means: confirm the launch.
   const asks = () => "user-approval" as const;
@@ -92,7 +93,9 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
     ...Object.fromEntries(MAIL_TOOL_NAMES.filter((t) => mailNeedsApproval(t, cfg.hitl)).map((t) => [t, asks])),
     run_agent: ({ agentId }: { agentId: string }) => { const a = agents.find((x) => x.id === agentId); return a && !hitlAsks(a.hitl) ? undefined : ("user-approval" as const); },
   };
-  return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null, snapshot };
+  // what the instruction may talk about: nothing about mail without mail tools, nothing about agents without agents
+  const setup = { mail: activeTools.some((t) => t.startsWith("mail_")), agents: activeTools.includes("run_agent"), connectors: access.connectors.length > 0 };
+  return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null, snapshot, setup };
 }
 
 export type ChatTools = Awaited<ReturnType<typeof chatTools>>["tools"];
