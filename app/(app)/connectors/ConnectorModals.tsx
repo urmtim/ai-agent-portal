@@ -13,15 +13,18 @@ import { SecretInput } from "@/components/ui/SecretInput";
 import { CONNECTORS, switchProtocol, type ConnectorField, type ConnectorKind, type MailSending } from "@/lib/connectors";
 import { EMPTY_FIELDS, fieldsToYaml, yamlToFields, type ConnectorFields } from "@/lib/connector-spec";
 import { MAIL_GROUPS, MAIL_TOOLS, NEED_TEXT, mailToolUsable, type MailAbility } from "@/lib/mail-catalog";
+import { MAIL_LIMITS, limitsFromFields } from "@/lib/mail-limits";
 import { checkConnector, deleteConnector, saveConnector, testConnector, type TestState } from "./actions";
 
 /** What the browser knows about a connector — never its password or token. `usedBy` — who has it on their «Коннекторы» tab. */
 export type ConnectorRowData = { id: string; fields: ConnectorFields; hasSecret: boolean; usedBy: string[] };
 
-type Tab = "general" | "connection" | "tools" | "yaml";
-const INPUT_OF: Record<ConnectorField, string> = {
+type Tab = "general" | "connection" | "tools" | "limits" | "yaml";
+const INPUT_OF: Record<Exclude<ConnectorField, `limit:${string}`>, string> = {
   kind: "cn-kind", name: "cn-name", host: "cn-host", port: "cn-port", smtpHost: "cn-smtp", smtpPort: "cn-smtpport", user: "cn-user", password: "cn-secret", url: "cn-url", token: "cn-secret",
 };
+const inputOf = (field: ConnectorField) => (field.startsWith("limit:") ? `cn-lim-${field.slice(6)}` : INPUT_OF[field as keyof typeof INPUT_OF]);
+const tabOf = (field: ConnectorField): Tab => (field === "name" ? "general" : field.startsWith("limit:") ? "limits" : "connection");
 const URL_RE = /^https?:\/\/[^\s/]+/i;
 
 /**
@@ -105,8 +108,14 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
   useEffect(() => { if (state?.error && state.field) show(state.field, state.error); }, [state]);
   function show(field: ConnectorField, text: string) {
     setErr({ field, text });
-    setTab(field === "name" ? "general" : "connection");
-    requestAnimationFrame(() => document.getElementById(INPUT_OF[field])?.focus());
+    setTab(tabOf(field));
+    requestAnimationFrame(() => document.getElementById(inputOf(field))?.focus());
+  }
+  /** «Лимиты»: the first number out of its range. */
+  function limitsProblem(): [ConnectorField, string] | null {
+    if (!mail) return null;
+    const r = limitsFromFields(f.limits);
+    return "error" in r ? [`limit:${r.key}`, r.error] : null;
   }
 
   // top to bottom, the first problem only; a saved password or token may stay empty
@@ -138,7 +147,7 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
     });
   }
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    const p = !f.name.trim() ? (["name", "Укажите название"] as [ConnectorField, string]) : connectionProblem();
+    const p = !f.name.trim() ? (["name", "Укажите название"] as [ConnectorField, string]) : connectionProblem() ?? limitsProblem();
     if (p) { e.preventDefault(); show(p[0], p[1]); return; }
     submit(e);
   }
@@ -188,9 +197,10 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
       <input type="hidden" name="kind" value={f.kind} />
       <FormTabs active={tab} onChange={openTab} tabs={[
         { key: "general", label: "Общее" }, { key: "connection", label: "Подключение" },
-        ...(mail ? [{ key: "tools" as const, label: "Инструменты", count: toolsOn }] : []), { key: "yaml", label: "YAML" },
+        ...(mail ? [{ key: "tools" as const, label: "Инструменты", count: toolsOn }, { key: "limits" as const, label: "Лимиты" }] : []), { key: "yaml", label: "YAML" },
       ]} />
       {mail && f.toolsOff.map((k) => <input key={k} type="hidden" name="toolOff" value={k} />)}
+      {mail && <input type="hidden" name="limits" value={JSON.stringify(f.limits)} />}
 
       <div className="apanel fill" hidden={tab !== "general"}>
         <div className="field">
@@ -306,6 +316,26 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
       {mail && (
         <div className="apanel" hidden={tab !== "tools"}>
           <MailToolsPanel ability={ability} off={f.toolsOff} onChange={(toolsOff) => upd({ toolsOff })} />
+        </div>
+      )}
+
+      {/* «Лимиты»: where the mail tools stop; an empty search period means all time; the POP3 one is grey over IMAP */}
+      {mail && (
+        <div className="apanel" hidden={tab !== "limits"}>
+          <div style={half}>
+            {MAIL_LIMITS.map((l) => {
+              const field: ConnectorField = `limit:${l.key}`;
+              return (
+                <div className="field" key={l.key}>
+                  <label htmlFor={`cn-lim-${l.key}`}>{l.label}</label>
+                  <input id={`cn-lim-${l.key}`} type="number" min={l.min} max={l.max} autoComplete="off" className={bad(field)}
+                    value={f.limits[l.key]} disabled={!!l.pop3 && f.protocol !== "pop3"} placeholder={l.optional ? "без ограничения" : undefined}
+                    onChange={(e) => upd({ limits: { ...f.limits, [l.key]: e.target.value } }, field)} />
+                  {fieldErr(field)}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

@@ -5,8 +5,9 @@ import { parseApiConfig, parseMailConfig, apiCheckMessage, type ApiConfig } from
 import type { MailAccess } from "@/lib/mailbox";
 import type { AccessInfo } from "@/lib/chat/policy-tools";
 import { availableMailTools, mailGives, parseToolsOff, type MailAbility } from "@/lib/mail-catalog";
+import { limitsText, parseLimits } from "@/lib/mail-limits";
 
-type Row = { kind: string; name: string; config: string; secretEnc: string | null };
+type Row = { kind: string; name: string; config: string; secretEnc: string | null; limits?: string };
 
 /** The user's connectors, oldest first (#1, #2…). */
 export function ownConnectors(userId: string) {
@@ -20,7 +21,7 @@ export function mailAccess(c: Row): MailAccess {
   if (!cfg) throw new Error(`Коннектор «${c.name}» настроен не до конца — откройте его в разделе «Коннекторы»`);
   const pass = c.secretEnc ? decryptSecret(c.secretEnc) : null;
   if (!pass) throw new Error(`Пароль коннектора «${c.name}» не читается — введите его заново в разделе «Коннекторы»`);
-  return { ...cfg, pass };
+  return { ...cfg, pass, limits: parseLimits(c.limits) };
 }
 
 /** Address + decrypted token (null: none) of an «API» connector. */
@@ -72,6 +73,7 @@ export async function accessInfo(userId: string, modelId: string | null, ids: st
         const cfg = parseMailConfig(c.config);
         return {
           name: c.name, type: "Почта", server: cfg ? `${cfg.protocol.toUpperCase()} ${cfg.host}` : "",
+          ...(c.id === mailId && cfg ? { limits: limitsText(parseLimits(c.limits), cfg.protocol) } : {}),
           gives: c.id !== mailId ? `ничего: почтовые инструменты работают с «${mailName}»` : cfg ? mailGives({ protocol: cfg.protocol, smtp: !!cfg.smtpHost }, parseToolsOff(c.toolsOff)) : "ничего: настроен не до конца",
         };
       }

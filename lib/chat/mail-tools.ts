@@ -11,6 +11,7 @@ import {
 } from "@/lib/mailbox";
 import { maskDeep } from "@/lib/agents/guardrails";
 import { letters } from "@/lib/mail-catalog";
+import { DEFAULT_LIMITS, parseLimits } from "@/lib/mail-limits";
 
 // The «Почта» connector's tools — shared by the chat assistant and custom agents. Which of them the model gets
 // is decided by the connector's «Инструменты» tab and its connection (lib/mail-catalog.ts); every one stays defined here
@@ -18,7 +19,7 @@ import { letters } from "@/lib/mail-catalog";
 // without the letters' text.
 
 type Err = { error: string };
-export type MailSearchResult = { mailbox: string; folder?: string; total: number; letters: MailSummary[] } | Err;
+export type MailSearchResult = { mailbox: string; folder?: string; total: number; letters: MailSummary[]; next?: number | null; note?: string } | Err;
 export type MailReadResult = { mailbox: string; letter: MailLetter } | Err;
 export type MailCountResult = { mailbox: string; folder?: string; total: number; unread: number | null } | Err;
 export type MailFoldersResult = { mailbox: string; folders: MailFolder[] } | Err;
@@ -43,15 +44,24 @@ export type MailToolsOptions = {
 const readable = (e: unknown) =>
   e instanceof MailUserError || (e instanceof Error && /не добавлена|не читается|не до конца/.test(e.message)) ? (e as Error).message : mailError(e);
 
+// Schemas keep the absolute maximums (lib/mail-limits.ts), so stored chats validate after a limit is lowered;
+// the connector's own limits are told in the descriptions and enforced in execute.
 const folder = z.string().max(200).optional().describe("Папка: название из mail_folders; по умолчанию «Входящие»");
-const ids = z.array(z.number().int().positive()).min(1).max(50).describe("id писем из mail_search в этой папке");
 const id = z.number().int().positive().describe("id письма из mail_search");
 const moved = (r: MoveResult) => `${letters(r.count)} из «${r.from}» в «${r.to}»`;
+const LIMIT_TAB = "лимит коннектора, его меняют на вкладке «Лимиты»";
 
 export function mailTools({ conn, who, actor, channel, mask = false, missing = "Почта не добавлена", approved }: MailToolsOptions) {
   const mail = () => {
     if (!conn) throw new Error(missing);
     return mailAccess(conn);
+  };
+  const L = conn ? parseLimits(conn.limits) : DEFAULT_LIMITS;
+  const ids = z.array(z.number().int().positive()).min(1).max(1000).describe(`id писем из mail_search в этой папке, не больше ${L.actionLimit} за раз`);
+  /** Too many letters for one action: say how many at most, and where that is changed. */
+  const batch = (list: number[]) => {
+    if (list.length > L.actionLimit) throw new MailUserError(`Писем за одно действие — не больше ${L.actionLimit} (${LIMIT_TAB}). Разбейте на части.`);
+    return list;
   };
   const out = <T,>(v: T): T => (mask ? maskDeep(v) : v);
   const box = () => conn!.name;
@@ -75,19 +85,29 @@ export function mailTools({ conn, who, actor, channel, mask = false, missing = "
   return {
     // ---- reading ----
     mail_search: tool({
-      description: "Искать письма в папке (по умолчанию «Входящие»). Без запроса — последние письма за период. Возвращает id, дату, отправителя, тему и начало текста.",
+      description: `Искать письма в папке (по умолчанию «Входящие»). Без запроса — последние письма за период. Возвращает id, дату, отправителя, тему и начало текста, ` +
+        `не больше ${L.searchLimit} писем за раз; total — сколько найдено всего, next — откуда продолжить (передай его в offset), null — это всё.`,
       inputSchema: z.object({
         folder,
         query: z.string().max(200).optional().describe("Слова для поиска в теме, тексте или отправителе"),
         from: z.string().max(200).optional().describe("Часть адреса или имени отправителя"),
-        days: z.number().int().min(1).max(90).describe("За сколько последних дней, обычно 1–7"),
+        days: z.number().int().min(1).max(36500).optional().describe(L.searchDays
+          ? `За сколько последних дней, не больше ${L.searchDays}; без него — за ${L.searchDays} дн.` : "За сколько последних дней; без него — за всё время"),
         unreadOnly: z.boolean().optional().describe("Только непрочитанные"),
-        limit: z.number().int().min(1).max(20).optional().describe("Сколько писем вернуть, по умолчанию 10"),
+        limit: z.number().int().min(1).max(1000).optional().describe(`Сколько писем вернуть, не больше ${L.searchLimit}; по умолчанию ${L.searchLimit}`),
+        offset: z.number().int().min(0).max(10_000_000).optional().describe("Сколько найденных писем пропустить: для продолжения — next из прошлого ответа"),
       }),
       execute: async (q): Promise<MailSearchResult> => reading(async () => {
-        const r = await searchEmails(mail(), { ...q, limit: q.limit ?? 10 });
-        await audit("tool", `${who} искал письма в «${box()}», «${r.folder}», за ${q.days} дн.: найдено ${r.total}`, actor, channel);
-        return out({ mailbox: box(), ...r });
+        // more than the connector allows → the allowed amount, and the model is told why
+        const limit = Math.min(q.limit ?? L.searchLimit, L.searchLimit);
+        const days = q.days && L.searchDays ? Math.min(q.days, L.searchDays) : q.days ?? L.searchDays ?? undefined;
+        const capped = [
+          ...(q.limit && q.limit > L.searchLimit ? [`за раз — не больше ${L.searchLimit} писем`] : []),
+          ...(q.days && L.searchDays && q.days > L.searchDays ? [`период — не больше ${L.searchDays} дн.`] : []),
+        ];
+        const r = await searchEmails(mail(), { ...q, limit, days });
+        await audit("tool", `${who} искал письма в «${box()}», «${r.folder}», ${days ? `за ${days} дн.` : "за всё время"}${q.offset ? `, с ${q.offset + 1}-го` : ""}: найдено ${r.total}`, actor, channel);
+        return out({ mailbox: box(), ...r, ...(capped.length ? { note: `Ограничено: ${capped.join(", ")} (${LIMIT_TAB})` } : {}) });
       })(),
     }),
     mail_read: tool({
@@ -132,7 +152,7 @@ export function mailTools({ conn, who, actor, channel, mask = false, missing = "
     mail_move: tool({
       description: "Переместить письма в другую папку, например в «Архив» или обратно из «Корзины» во «Входящие».",
       inputSchema: z.object({ ids, folder, to: z.string().max(200).describe("Куда: название папки из mail_folders") }),
-      execute: async (q) => acting("mail_move", async () => `перемещено ${moved(await moveEmails(mail(), q.ids, q.to, q.folder))}`)(),
+      execute: async (q) => acting("mail_move", async () => `перемещено ${moved(await moveEmails(mail(), batch(q.ids), q.to, q.folder))}`)(),
     }),
     mail_mark: tool({
       description: "Отметить письма прочитанными или непрочитанными и/или поставить или снять флажок.",
@@ -142,7 +162,7 @@ export function mailTools({ conn, who, actor, channel, mask = false, missing = "
         flagged: z.boolean().optional().describe("true — поставить флажок, false — снять"),
       }),
       execute: async (q) => acting("mail_mark", async () => {
-        const r = await markEmails(mail(), q.ids, { read: q.read, flagged: q.flagged }, q.folder);
+        const r = await markEmails(mail(), batch(q.ids), { read: q.read, flagged: q.flagged }, q.folder);
         const what = [q.read === true && "прочитано", q.read === false && "не прочитано", q.flagged === true && "флажок", q.flagged === false && "без флажка"].filter(Boolean).join(", ");
         return `${letters(r.count)} в «${r.folder}» отмечено: ${what}`;
       })(),
@@ -150,7 +170,7 @@ export function mailTools({ conn, who, actor, channel, mask = false, missing = "
     mail_spam: tool({
       description: "Пометить письма спамом (переносит в «Спам») или вернуть из «Спама» во «Входящие».",
       inputSchema: z.object({ ids, folder, spam: z.boolean().describe("true — в спам, false — не спам, во «Входящие»") }),
-      execute: async (q) => acting("mail_spam", async () => `${q.spam ? "в спам" : "не спам"}: ${moved(await spamEmails(mail(), q.ids, q.spam, q.folder))}`)(),
+      execute: async (q) => acting("mail_spam", async () => `${q.spam ? "в спам" : "не спам"}: ${moved(await spamEmails(mail(), batch(q.ids), q.spam, q.folder))}`)(),
     }),
     mail_draft: tool({
       description: "Положить письмо в «Черновики», ничего не отправляя: новое или ответ на письмо (replyTo). Пользователь проверит и отправит сам.",
@@ -180,7 +200,7 @@ export function mailTools({ conn, who, actor, channel, mask = false, missing = "
     mail_trash: tool({
       description: "Удалить письма в «Корзину». Насовсем не удаляет: из корзины их можно вернуть инструментом mail_move.",
       inputSchema: z.object({ ids, folder }),
-      execute: async (q) => acting("mail_trash", async () => `в корзину: ${moved(await trashEmails(mail(), q.ids, q.folder))}`)(),
+      execute: async (q) => acting("mail_trash", async () => `в корзину: ${moved(await trashEmails(mail(), batch(q.ids), q.folder))}`)(),
     }),
 
     // ---- sending: goes out and can't be undone ----

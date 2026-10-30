@@ -55,7 +55,10 @@ export function parseApiConfig(raw: string | null | undefined): ApiConfig | null
 }
 
 /** Which window field a problem belongs to. */
-export type ConnectorField = "kind" | "name" | "host" | "port" | "smtpHost" | "smtpPort" | "user" | "password" | "url" | "token";
+import type { MailLimitKey } from "./mail-limits";
+
+/** A field of the window; `limit:…` — one on the «Лимиты» tab. */
+export type ConnectorField = `limit:${MailLimitKey}` | "kind" | "name" | "host" | "port" | "smtpHost" | "smtpPort" | "user" | "password" | "url" | "token";
 export type FieldError = { field: ConnectorField; error: string };
 
 /** «Отправка» in the window: none (a read-only app password is enough) or SMTP with its server and port. */

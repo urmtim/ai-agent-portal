@@ -6,19 +6,19 @@ import MailComposer from "nodemailer/lib/mail-composer";
 import type { MailConfig } from "@/lib/connectors";
 import { withPop3 } from "@/lib/pop3";
 import { findSpecial, folderLabel, resolveFolder, specialOf, type FolderInfo, type SpecialUse } from "@/lib/mail-catalog";
-import { extractDocText, MAX_DOC_TEXT, tidyText } from "@/lib/guardrail-docs";
+import { extractDocText, tidyText } from "@/lib/guardrail-docs";
+import { DEFAULT_LIMITS, type MailLimits } from "@/lib/mail-limits";
 
 // Mail access for the «Почта» connector, over IMAP or POP3, and sending over its SMTP. Settings come from the user's connector, not from .env.
 // IMAP fetches use BODY.PEEK (imapflow), so reading never marks a letter as read; POP3 has no «read» mark at all
 // and never deletes anything (lib/pop3.ts). A letter's id is its IMAP uid in its folder, or its POP3 number.
 // Nothing here deletes for good: «удалить» moves to the trash, and folders are never removed.
 
-export type MailAccess = MailConfig & { pass: string };
+/** `limits` — the connector's «Лимиты» tab; the defaults when not given (a check from the window). */
+export type MailAccess = MailConfig & { pass: string; limits?: MailLimits };
 
-/** How far back POP3 looks: it has no server-side search, so only the newest letters are scanned. */
-const POP3_SCAN = 200;
-/** Attachments bigger than this are not read. */
-const MAX_ATTACHMENT = 10 * 1024 * 1024;
+const lim = (acc: MailAccess) => acc.limits ?? DEFAULT_LIMITS;
+const daysAgo = (d: number) => new Date(Date.now() - d * 86400000);
 
 export type FetchedEmail = {
   uid: number;
@@ -178,13 +178,16 @@ export async function checkMailbox(acc: MailAccess): Promise<{ ok: boolean; mess
 const textOf = (p: ParsedMail) => p.text?.trim() || (p.html ? htmlToText(p.html) : "");
 const addrs = (a: ParsedMail["to"]) => (Array.isArray(a) ? a.map((x) => x.text).join(", ") : a?.text ?? "");
 
-/** POP3: the newest letters' headers, newest first, until `since`; letters are numbered 1…count in arrival order. */
-async function pop3Scan(acc: MailAccess, since: Date, fn: (n: number, head: ParsedMail, more: (lines: number) => Promise<ParsedMail>) => Promise<boolean | void>) {
+/**
+ * POP3: the newest letters' headers, newest first, until `since` (null: no date bound); letters are numbered 1…count
+ * in arrival order. It has no server-side search, so only the newest «POP3: сколько последних писем смотреть» are scanned.
+ */
+async function pop3Scan(acc: MailAccess, since: Date | null, fn: (n: number, head: ParsedMail, more: (lines: number) => Promise<ParsedMail>) => Promise<boolean | void>) {
   await withPop3(acc, async (c) => {
     const count = await c.count();
-    for (let n = count; n >= 1 && n > count - POP3_SCAN; n--) {
+    for (let n = count; n >= 1 && n > count - lim(acc).pop3Scan; n--) {
       const head = await simpleParser(await c.top(n, 0));
-      if (head.date && head.date < since) break;
+      if (since && head.date && head.date < since) break;
       if ((await fn(n, head, async (lines) => simpleParser(await c.top(n, lines)))) === false) break;
     }
   });
@@ -196,7 +199,7 @@ export async function fetchRecentEmails(acc: MailAccess, opts: { sinceDays?: num
   const max = opts.max ?? 40;
   if (acc.protocol === "pop3") {
     const out: FetchedEmail[] = [];
-    await pop3Scan(acc, new Date(Date.now() - sinceDays * 86400000), async (n, head, more) => {
+    await pop3Scan(acc, daysAgo(sinceDays), async (n, head, more) => {
       const from = head.from?.text ?? "";
       if (opts.fromFilter && !from.toLowerCase().includes(opts.fromFilter.toLowerCase())) return;
       const p = await more(400);
@@ -220,33 +223,43 @@ export async function fetchRecentEmails(acc: MailAccess, opts: { sinceDays?: num
   });
 }
 
-/** «Искать письма»: newest first, in a folder (the inbox by default); query matches subject, body or sender. */
-export async function searchEmails(acc: MailAccess, q: { folder?: string; query?: string; from?: string; days: number; unreadOnly?: boolean; limit: number }) {
+export type MailSearchQuery = { folder?: string; query?: string; from?: string; days?: number; unreadOnly?: boolean; limit: number; offset?: number };
+
+/**
+ * «Искать письма»: newest first, in a folder (the inbox by default); query matches subject, body or sender.
+ * `days` missing — the connector's search period, or all time when it has none. `offset` skips that many found letters;
+ * `next` is the offset of the following ones, null when these are the last.
+ */
+export async function searchEmails(acc: MailAccess, q: MailSearchQuery) {
+  const days = q.days ?? lim(acc).searchDays;
+  const since = days ? daysAgo(days) : null, skip = q.offset ?? 0;
+  const next = (total: number) => (skip + q.limit < total ? skip + q.limit : null);
   if (acc.protocol === "pop3") {
     pop3Folder(q.folder);
     // no server-side search and no «unread» mark: headers of the newest letters, matched here
     const has = (s: string, part?: string) => !part || s.toLowerCase().includes(part.toLowerCase());
     const letters: MailSummary[] = [];
     let total = 0;
-    await pop3Scan(acc, new Date(Date.now() - q.days * 86400000), async (n, head, more) => {
+    await pop3Scan(acc, since, async (n, head, more) => {
       const from = head.from?.text ?? "", subject = head.subject ?? "";
       if (!has(from, q.from) || !(has(subject, q.query) || has(from, q.query))) return;
       total++;
-      if (letters.length >= q.limit) return;
+      if (total <= skip || letters.length >= q.limit) return;
       const text = textOf(await more(40));
       letters.push({ id: n, date: head.date?.toISOString() ?? null, from, subject, snippet: text.replace(/\s+/g, " ").slice(0, 200), unread: false });
     });
-    return { folder: "Входящие", total, letters };
+    return { folder: "Входящие", total, letters, next: next(total) };
   }
   return withImap(acc, async (client) => {
     const f = pick(await folders(client), q.folder);
     return locked(client, f.path, async () => {
-      const criteria: SearchObject = { since: new Date(Date.now() - q.days * 86400000) };
+      const criteria: SearchObject = since ? { since } : { all: true };
       if (q.unreadOnly) criteria.seen = false;
       if (q.from) criteria.from = q.from;
       if (q.query) criteria.or = [{ subject: q.query }, { body: q.query }, { from: q.query }];
       const uids = (await client.search(criteria, { uid: true })) || [];
-      const ids = uids.slice(-q.limit).reverse();
+      const end = Math.max(0, uids.length - skip);
+      const ids = uids.slice(Math.max(0, end - q.limit), end).reverse();
       const letters: MailSummary[] = [];
       if (ids.length) {
         for await (const msg of client.fetch(ids, { source: true, flags: true }, { uid: true })) {
@@ -258,7 +271,7 @@ export async function searchEmails(acc: MailAccess, q: { folder?: string; query?
         }
         letters.sort((a, b) => b.id - a.id);
       }
-      return { folder: folderLabel(f), total: uids.length, letters };
+      return { folder: folderLabel(f), total: uids.length, letters, next: next(uids.length) };
     });
   });
 }
@@ -289,7 +302,7 @@ export async function readEmail(acc: MailAccess, id: number, folder?: string): P
   const text = textOf(p);
   return {
     id, folder: s.folder, date: p.date?.toISOString() ?? null, from: p.from?.text ?? "", to: addrs(p.to), cc: addrs(p.cc), subject: p.subject ?? "",
-    text: text.length > 6000 ? text.slice(0, 6000) + "\n…(письмо обрезано)" : text,
+    text: text.length > lim(acc).letterChars ? text.slice(0, lim(acc).letterChars) + "\n…(письмо обрезано по лимиту коннектора)" : text,
     attachments: (p.attachments ?? []).map((a, i) => ({ n: i + 1, name: a.filename ?? `вложение ${i + 1}`, size: a.size })),
   };
 }
@@ -302,16 +315,17 @@ export async function attachmentText(acc: MailAccess, id: number, n: number, fol
   const a = p.attachments?.[n - 1];
   if (!a) fail(`У письма нет вложения №${n}${p.attachments?.length ? `: их ${p.attachments.length}` : ", вложений нет"}`);
   const name = a!.filename ?? `вложение ${n}`, ext = name.toLowerCase().split(".").pop() ?? "", type = a!.contentType.toLowerCase();
-  if (a!.size > MAX_ATTACHMENT) fail(`Вложение «${name}» больше 10 МБ — его не читаю`);
+  const { attachMb, attachChars } = lim(acc);
+  if (a!.size > attachMb * 1024 * 1024) fail(`Вложение «${name}» больше ${attachMb} МБ — это лимит коннектора, его меняют на вкладке «Лимиты»`);
   let text: string;
   if (ext === "pdf" || ext === "docx" || type === "application/pdf") {
     // extractDocText goes by the extension; its errors are already in words
-    try { text = await extractDocText(ext === "docx" ? "file.docx" : "file.pdf", a!.content); } catch (e) { return fail((e as Error).message); }
-  } else if (ext === "html" || ext === "htm" || type === "text/html") text = tidyText(htmlToText(a!.content.toString("utf8")));
-  else if (["txt", "md", "csv", "tsv", "json", "xml", "log"].includes(ext) || type.startsWith("text/")) text = tidyText(a!.content.toString("utf8"));
+    try { text = await extractDocText(ext === "docx" ? "file.docx" : "file.pdf", a!.content, attachChars); } catch (e) { return fail((e as Error).message); }
+  } else if (ext === "html" || ext === "htm" || type === "text/html") text = tidyText(htmlToText(a!.content.toString("utf8")), attachChars);
+  else if (["txt", "md", "csv", "tsv", "json", "xml", "log"].includes(ext) || type.startsWith("text/")) text = tidyText(a!.content.toString("utf8"), attachChars);
   else return fail(`Этот вид вложения пока не читается: «${name}»`);
   if (!text) fail(`Во вложении «${name}» нет текста`);
-  return { folder: s!.folder, name, text: text.length > MAX_DOC_TEXT ? text.slice(0, MAX_DOC_TEXT) + "\n…" : text };
+  return { folder: s!.folder, name, text };
 }
 
 // ---- changes (IMAP): all of them can be undone inside the mailbox ----

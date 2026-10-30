@@ -3,6 +3,7 @@
 import { parse, stringify } from "yaml";
 import { MAIL_PORTS, type ConnectorKind, type MailSending } from "./connectors";
 import { MAIL_TOOLS, parseToolsOff } from "./mail-catalog";
+import { DEFAULT_LIMITS, MAIL_LIMITS, limitsFromFields, limitsToFields, parseLimits, type MailLimitKey } from "./mail-limits";
 
 /** The window's fields, as typed (ports too): what the YAML fills and is made from. A new connector has no type yet (""). */
 export type ConnectorFields = {
@@ -11,11 +12,13 @@ export type ConnectorFields = {
   url: string;
   /** Mail tools switched off on the «Инструменты» tab (lib/mail-catalog.ts). */
   toolsOff: string[];
+  /** The «Лимиты» tab, as typed; "" in the search period — all time. */
+  limits: Record<MailLimitKey, string>;
 };
 
 export const EMPTY_FIELDS: ConnectorFields = {
   kind: "", name: "", description: "", enabled: true,
-  protocol: "imap", host: "", port: String(MAIL_PORTS.imap), sending: "none", smtpHost: "", smtpPort: String(MAIL_PORTS.smtp), user: "", url: "", toolsOff: [],
+  protocol: "imap", host: "", port: String(MAIL_PORTS.imap), sending: "none", smtpHost: "", smtpPort: String(MAIL_PORTS.smtp), user: "", url: "", toolsOff: [], limits: limitsToFields(DEFAULT_LIMITS),
 };
 
 const num = (s: string) => (/^\d+$/.test(s.trim()) ? Number(s) : s.trim());
@@ -25,9 +28,22 @@ export function fieldsToYaml(f: ConnectorFields): string {
   // the mail tools that are on: a file without «tools:» leaves the checkboxes as they are
   const tools = MAIL_TOOLS.filter((t) => !f.toolsOff.includes(t.key)).map((t) => t.key);
   const doc = f.kind === "mail"
-    ? { ...head, incoming: { protocol: f.protocol, host: f.host, port: num(f.port) }, outgoing: f.sending === "smtp" ? { host: f.smtpHost, port: num(f.smtpPort) } : "none", user: f.user, tools }
+    ? { ...head, incoming: { protocol: f.protocol, host: f.host, port: num(f.port) }, outgoing: f.sending === "smtp" ? { host: f.smtpHost, port: num(f.smtpPort) } : "none", user: f.user, tools, limits: yamlLimits(f.limits) }
     : f.kind === "api" ? { ...head, url: f.url } : head;
   return "# AI Portal — коннектор. Пароли и токены сюда не попадают.\n" + stringify(doc, { lineWidth: 0 });
+}
+
+/** Limits for YAML: numbers as typed, «none» for an unlimited search period. */
+function yamlLimits(f: Record<MailLimitKey, string>): Record<string, number | string> {
+  return Object.fromEntries(MAIL_LIMITS.map((l) => [l.key, f[l.key].trim() === "" && l.optional ? "none" : num(f[l.key])]));
+}
+
+/** A file's limits over the current ones: known keys only, in range (out-of-range numbers are clamped). */
+function fieldsLimits(o: Record<string, unknown>, current: Record<MailLimitKey, string>): Record<MailLimitKey, string> {
+  const now = limitsFromFields(current);
+  const base = "error" in now ? DEFAULT_LIMITS : now;
+  const asked = Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === "string" && /^\d+$/.test(v.trim()) ? Number(v) : v]));
+  return limitsToFields(parseLimits({ ...base, ...asked }));
 }
 
 const SECRET_KEYS = ["password", "pass", "token", "secret"];
@@ -68,6 +84,7 @@ export function yamlToFields(text: string, current: ConnectorFields, typeLocked:
       smtpHost: str(out.host, current.smtpHost), smtpPort: str(out.port, current.smtpPort),
       user: str(o.user, current.user),
       url: str(o.url, current.url),
+      limits: o.limits && typeof o.limits === "object" && !Array.isArray(o.limits) ? fieldsLimits(o.limits as Record<string, unknown>, current.limits) : current.limits,
       toolsOff: Array.isArray(o.tools) ? MAIL_TOOLS.map((t) => t.key).filter((k) => !(o.tools as unknown[]).includes(k)) : parseToolsOff(current.toolsOff),
     },
     warnings,

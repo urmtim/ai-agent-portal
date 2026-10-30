@@ -54,6 +54,15 @@ test("mail tools: «tools:» lists the ones on; a file without it keeps the chec
   assert.ok("fields" in none && none.fields.toolsOff.length === 14);
 });
 
+test("mail limits: all in YAML, «none» for an unlimited period; a file changes only what it names", () => {
+  const y = fieldsToYaml({ ...mail, limits: { ...mail.limits, searchLimit: "100", searchDays: "" } });
+  assert.ok(y.includes("limits:\n  searchLimit: 100\n  searchDays: none\n  actionLimit: 50"), y);
+  const back = yamlToFields(y, mail, true);
+  assert.ok("fields" in back && back.fields.limits.searchLimit === "100" && back.fields.limits.searchDays === "");
+  const one = yamlToFields("limits:\n  actionLimit: 5000\n", mail, true);
+  assert.ok("fields" in one && one.fields.limits.actionLimit === "1000" && one.fields.limits.searchLimit === "20"); // clamped, the rest kept
+});
+
 test("a new connector has no type: only the general part in YAML", () => {
   const y = fieldsToYaml({ ...EMPTY_FIELDS, name: "Новый" });
   assert.ok(y.includes('type: ""') && !y.includes("incoming") && !y.includes("url") && !y.includes("tools"), y);

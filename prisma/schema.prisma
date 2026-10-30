@@ -282,6 +282,7 @@ model Connector {
   config    String    @default("{}") // JSON settings without secrets (lib/connectors.ts)
   secretEnc String? // password / token, AES-GCM (lib/secret.ts); never sent to the browser
   toolsOff  String    @default("[]") // JSON: mail tools switched off on the «Инструменты» tab (lib/mail-catalog.ts); new tools are on
+  limits    String    @default("{}") // JSON: «Лимиты» tab, only what differs from the defaults (lib/mail-limits.ts)
   checkedAt DateTime?
   checkOk   Boolean?
   checkMsg  String    @default("")

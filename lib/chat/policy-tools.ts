@@ -16,7 +16,7 @@ export type AccessInfo = {
   /** The LLM: its name in the portal, the model id and the server it runs on; null when none is chosen (the .env one). */
   model: { name: string; model: string; server: string } | null;
   /** Its switched-on connectors: name, type, server and what it gives here. */
-  connectors: { name: string; type: string; server: string; gives: string }[];
+  connectors: { name: string; type: string; server: string; gives: string; limits?: string }[];
 };
 
 /** What get_policies returns: what it works with (when given), HITL and guardrails as plain facts (documents only the enabled ones). */

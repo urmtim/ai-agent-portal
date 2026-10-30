@@ -35,5 +35,7 @@ export function toolErrorText(tool: string, errorText: string | undefined): stri
     if (i.code === "invalid_type") return got === undefined ? `${p.label}: не указан` : `${p.label}: неверное значение ${JSON.stringify(got)}`;
     return `${p.label}: ${i.message ?? "неверное значение"}`;
   });
-  return ["Модель передала инструменту неверные параметры, и он не запустился:", ...lines.map((l) => `- ${l}`)].join("\n");
+  // a mail tool's maximum is its connector's limit: say where it is changed
+  const limit = tool.startsWith("mail_") && issues.some((i) => i.code === "too_big") ? ["Это лимит коннектора: его меняют на вкладке «Лимиты»."] : [];
+  return ["Модель передала инструменту неверные параметры, и он не запустился:", ...lines.map((l) => `- ${l}`), ...limit].join("\n");
 }

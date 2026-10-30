@@ -62,11 +62,12 @@ function MailSearchStep({ part }: { part: ToolPart }) {
   if (part.state !== "output-available") return <Step running summary="Ищу письма…" />;
   const o = part.output as MailSearchResult;
   if ("error" in o) return <Step summary="Почта" fail="Ошибка" details={o.error} />;
-  const q = part.input as { query?: string; from?: string; days?: number } | undefined;
+  const q = part.input as { query?: string; from?: string; days?: number; offset?: number } | undefined;
   const what = [q?.query && `«${q.query}»`, q?.from && `от ${q.from}`].filter(Boolean).join(" ");
   const details = o.letters.map((l) => `${l.unread ? "● " : ""}${day(l.date)} — ${l.from} — ${l.subject || "(без темы)"}`).join("\n");
   const where = o.folder && o.folder !== "Входящие" ? <> в «{o.folder}»</> : null;
-  return <Step summary={<>Почта · найдено <b>{o.total}</b>{where}{what ? <> по запросу {what}</> : null}{q?.days ? ` за ${q.days} дн.` : ""}</>} details={details || "Писем не найдено"} />;
+  return <Step summary={<>Почта · найдено <b>{o.total}</b>{where}{what ? <> по запросу {what}</> : null}{q?.days ? ` за ${q.days} дн.` : ""}{q?.offset ? `, с ${q.offset + 1}-го` : ""}</>}
+    details={[details || "Писем не найдено", ...("note" in o && o.note ? ["", o.note] : [])].join("\n")} />;
 }
 
 function MailCountStep({ part }: { part: ToolPart }) {

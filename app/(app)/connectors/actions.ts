@@ -13,6 +13,7 @@ import {
 import { apiAccess, checkApi, mailAccess } from "@/lib/connections";
 import { checkMailbox } from "@/lib/mailbox";
 import { MAIL_TOOLS, parseToolsOff } from "@/lib/mail-catalog";
+import { limitsFromFields, limitsToFields, limitsToStore, parseLimits } from "@/lib/mail-limits";
 
 // The user's connectors. Someone else's connector behaves as missing; passwords and tokens never leave the server.
 
@@ -90,6 +91,15 @@ export async function saveConnector(_prev: FormState, fd: FormData): Promise<For
   if (!isConnectorKind(kind)) return { error: "Выберите тип", field: "kind" };
   const p = parseFields(kind, fd);
   if (!("kind" in p)) return { error: p.message.replace(/^✕ /, ""), field: p.field };
+  // «Лимиты» (mail only): the window sends them as typed; a missing field keeps the saved value
+  let limits = "{}";
+  if (kind === "mail") {
+    let typedLimits: Record<string, string> = {};
+    try { typedLimits = JSON.parse(String(fd.get("limits") ?? "{}")); } catch { /* the saved ones then */ }
+    const l = limitsFromFields({ ...limitsToFields(parseLimits(existing?.limits)), ...typedLimits });
+    if ("error" in l) return { error: l.error, field: `limit:${l.key}` };
+    limits = limitsToStore(l);
+  }
   const typed = String(fd.get("secret") ?? "");
   const secret = secretFor(fd, existing);
   if (kind === "mail" && !secret) return { error: "Укажите пароль", field: "password" };
@@ -107,7 +117,7 @@ export async function saveConnector(_prev: FormState, fd: FormData): Promise<For
   const toolsOff = kind === "mail" ? parseToolsOff(fd.getAll("toolOff")) : [];
   const toolsChanged = !!existing && JSON.stringify(parseToolsOff(existing.toolsOff)) !== JSON.stringify(toolsOff);
   const data = {
-    name, enabled, config, toolsOff: JSON.stringify(toolsOff),
+    name, enabled, config, toolsOff: JSON.stringify(toolsOff), limits,
     description: String(fd.get("description") ?? "").replace(/\r\n?/g, "\n").trim().slice(0, 300),
     ...(typed ? { secretEnc: encryptSecret(typed) } : {}),
     ...(check ? { checkedAt: new Date(), checkOk: true, checkMsg: check.message } : {}),
@@ -119,7 +129,8 @@ export async function saveConnector(_prev: FormState, fd: FormData): Promise<For
   const where = p.kind === "mail" ? `${p.config.protocol.toUpperCase()} ${p.config.user}, ${p.config.host}:${p.config.port}` : p.config.url;
   await audit("mcp", `${existing ? "Изменён" : "Добавлен"} коннектор «${saved.name}» (${CONNECTORS[kind].label}: ${where})` +
     (existing && typed ? `, ${secretLabel(kind)} заменён` : "") + (existing && existing.enabled !== enabled ? (enabled ? ", включён" : ", выключен") : !enabled ? ", выключен" : "") +
-    (kind === "mail" && (toolsChanged || (!existing && toolsOff.length)) ? `, инструментов включено ${MAIL_TOOLS.length - toolsOff.length} из ${MAIL_TOOLS.length}` : ""), user);
+    (kind === "mail" && (toolsChanged || (!existing && toolsOff.length)) ? `, инструментов включено ${MAIL_TOOLS.length - toolsOff.length} из ${MAIL_TOOLS.length}` : "") +
+    (kind === "mail" && existing && (existing.limits || "{}") !== limits ? ", лимиты изменены" : ""), user);
   revalidatePath("/connectors");
   revalidatePath("/agents");
   return { ok: existing ? "Сохранено" : "Коннектор добавлен" };

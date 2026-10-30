@@ -37,14 +37,14 @@ export function fileProblem(fileName: string, size: number): string | null {
   return null;
 }
 
-/** Whitespace tidied, length capped. */
-export function tidyText(text: string): string {
+/** Whitespace tidied, length capped (a mail attachment's cap comes from its connector's «Лимиты»). */
+export function tidyText(text: string, max = MAX_DOC_TEXT): string {
   const t = text.replace(/\r\n?/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  return t.length > MAX_DOC_TEXT ? t.slice(0, MAX_DOC_TEXT) + "\n…" : t;
+  return t.length > max ? t.slice(0, max) + "\n…" : t;
 }
 
 /** The text of an uploaded file; throws a readable error when there is none. */
-export async function extractDocText(fileName: string, data: Uint8Array): Promise<string> {
+export async function extractDocText(fileName: string, data: Uint8Array, max = MAX_DOC_TEXT): Promise<string> {
   const kind = docKind(fileName);
   let text = "";
   try {
@@ -61,7 +61,7 @@ export async function extractDocText(fileName: string, data: Uint8Array): Promis
   } catch {
     throw new Error("Не получилось прочитать файл — он повреждён или защищён паролем");
   }
-  const t = tidyText(text);
+  const t = tidyText(text, max);
   if (!t) throw new Error("В файле нет текста — если это скан, сохраните его как текстовый PDF или docx");
   return t;
 }
