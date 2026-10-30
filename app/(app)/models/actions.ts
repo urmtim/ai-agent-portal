@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/secret";
 import { listModels, pingModel } from "@/lib/llm";
-import { listMessage } from "@/lib/model-list";
+import { listMessage, pingProblem } from "@/lib/model-list";
 import { CONTEXT_MAX, CONTEXT_MIN } from "@/lib/model-spec";
 import { audit } from "@/lib/audit";
 import { modelUsers } from "@/lib/model-users";
@@ -38,14 +38,16 @@ export async function listModelsFor(formData: FormData): Promise<ListState> {
   const user = await requireUser();
   const baseUrl = str(formData, "baseUrl");
   if (!URL_RE.test(baseUrl)) return { kind: "down", message: "✕ Адрес должен начинаться с http:// или https://", models: [] };
-  const r = await listModels({ baseUrl, token: await tokenFor(user.id, str(formData, "id"), str(formData, "token")) });
+  const token = await tokenFor(user.id, str(formData, "id"), str(formData, "token"));
+  if (!token) return { kind: "token", message: "✕ Укажите токен", models: [] };
+  const r = await listModels({ baseUrl, token });
   return { kind: r.kind, message: listMessage(r), models: r.kind === "ok" ? r.models : [] };
 }
 
 /**
  * Add or edit a model. Fields are checked top to bottom and only the first problem is returned.
- * An empty token on edit keeps the saved one. A model typed by hand (not picked from the server's list)
- * gets a test request first, so «бубубу» is never saved.
+ * An empty token on edit keeps the saved one. A new model, or another address, token or model, gets a test
+ * request first: «бубубу» and a wrong token are never saved (a server's list may be open without any token).
  */
 export async function saveModel(_prev: FormState, formData: FormData): Promise<FormState> {
   const user = await requireUser();
@@ -53,7 +55,6 @@ export async function saveModel(_prev: FormState, formData: FormData): Promise<F
   const name = str(formData, "name").slice(0, 80), description = str(formData, "description").slice(0, 300);
   const baseUrl = str(formData, "baseUrl").replace(/\/$/, ""), token = str(formData, "token").slice(0, 4000);
   const model = str(formData, "model").slice(0, 120), ctx = Number(str(formData, "contextTokens"));
-  const listed = formData.get("listed") === "1";
 
   // models are personal: only the owner edits
   const saved = id ? await prisma.llmModel.findFirst({ where: { id, ownerId: user.id } }) : null;
@@ -67,13 +68,10 @@ export async function saveModel(_prev: FormState, formData: FormData): Promise<F
   if (!str(formData, "contextTokens")) return { field: "contextTokens", error: "Укажите размер контекста" };
   if (!Number.isInteger(ctx) || ctx < CONTEXT_MIN || ctx > CONTEXT_MAX) return { field: "contextTokens", error: "Контекст — от 2 000 до 2 000 000 токенов" };
 
-  const changedModel = !saved || saved.model !== model || saved.baseUrl !== baseUrl;
-  if (!listed && changedModel) {
-    const r = await pingModel({ baseUrl, model, token: await tokenFor(user.id, id, token) });
-    if (!r.ok) {
-      const unknown = /\b404\b|not.?found|does not exist|unknown model|no such model/i.test(r.message);
-      return { field: "model", error: unknown ? `Сервер не знает модель «${model}»` : r.message.replace(/^✕\s*/, "") };
-    }
+  // a new model, or another address, token or model: it must really answer with this token
+  if (!saved || saved.model !== model || saved.baseUrl !== baseUrl || token) {
+    const problem = pingProblem(await pingModel({ baseUrl, model, token: await tokenFor(user.id, id, token) }), model);
+    if (problem) return problem;
   }
 
   const tokenEnc = token ? encryptSecret(token) : undefined; // undefined → unchanged

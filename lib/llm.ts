@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/secret";
 import { DEFAULT_CONTEXT_TOKENS, noModelMessage, pickModel, type ModelChoice, type NoModel } from "@/lib/llm-pick";
-import { listResult, type ListResult } from "@/lib/model-list";
+import { listResult, type ListResult, type Ping } from "@/lib/model-list";
 
 // Minimal OpenAI-compatible chat client. Works with any endpoint that speaks
 // the OpenAI /chat/completions format (Ollama, GLM/Zhipu, OpenRouter, ...).
@@ -124,7 +124,7 @@ export async function listModels(ep: { baseUrl: string; token?: string }): Promi
 }
 
 /** One tiny request to see if the model answers. Never puts the token into the message. */
-export async function pingModel(ep: Endpoint): Promise<{ ok: boolean; ms: number; message: string }> {
+export async function pingModel(ep: Endpoint): Promise<Ping> {
   const t0 = Date.now();
   try {
     const res = await chatCompletions(ep, { messages: [{ role: "user", content: "ping" }], max_tokens: 1, temperature: 0 },
@@ -133,7 +133,7 @@ export async function pingModel(ep: Endpoint): Promise<{ ok: boolean; ms: number
     if (res.ok) return { ok: true, ms, message: `✓ Модель ответила — ${ms} мс` };
     let text = (await res.text().catch(() => "")).slice(0, 200);
     if (ep.token) text = text.split(ep.token).join("•••");
-    return { ok: false, ms, message: `✕ Сервер ответил ${res.status}${text ? `: ${text}` : ""}` };
+    return { ok: false, ms, status: res.status, message: `✕ Сервер ответил ${res.status}${text ? `: ${text}` : ""}` };
   } catch (e) {
     const err = e as Error;
     const why = err.name === "TimeoutError" ? "нет ответа за 20 секунд" : "проверьте адрес и что сервер запущен";

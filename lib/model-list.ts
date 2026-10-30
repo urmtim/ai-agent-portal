@@ -28,9 +28,25 @@ export function listResult(status: number, body: unknown): ListResult {
   return models.length ? { kind: "ok", models } : { kind: "nolist" };
 }
 
+/** The test request «Сохранить» sends to the model; no status — no answer at all. */
+export type Ping = { ok: boolean; ms: number; status?: number; message: string };
+
+/**
+ * Why a model can't be saved after its test request, and under which field to say it; null — it answered.
+ * The list check can't tell this: some servers (Ollama Cloud) give their list without any token.
+ */
+export function pingProblem(p: Ping, model: string): { field: "baseUrl" | "token" | "model"; error: string } | null {
+  if (p.ok) return null;
+  if (p.status === undefined) return { field: "baseUrl", error: "Сервер не отвечает" };
+  if (p.status === 401 || p.status === 403) return { field: "token", error: "Неверный токен" };
+  if (p.status === 404 || /not.?found|does not exist|unknown model|no such model/i.test(p.message)) return { field: "model", error: `Сервер не знает модель «${model}»` };
+  return { field: "model", error: p.message.replace(/^✕\s*/, "") };
+}
+
 export function listMessage(r: ListResult): string {
   switch (r.kind) {
-    case "ok": return `✓ Подключено. Моделей: ${r.models.length}`;
+    // a list proves the address, not the token: that one is checked by the test request on «Сохранить»
+    case "ok": return `✓ Список получен. Моделей: ${r.models.length}`;
     case "nolist": return "⚠ Список моделей недоступен — впишите вручную";
     case "token": return "✕ Неверный токен";
     case "down": return "✕ Сервер не отвечает";

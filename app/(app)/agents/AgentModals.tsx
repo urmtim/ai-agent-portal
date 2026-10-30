@@ -55,7 +55,7 @@ function initial(a: AgentEditData | undefined, newModelId: string): Fields {
 }
 
 /**
- * The agent window, the same size as the model window: «Общее · Параметры · Политики · Субагенты · MCP · API · YAML»
+ * The agent window, the same size as the model window: «Общее · Модель · Политики · Субагенты · MCP · API · YAML»
  * and «Сохранить»; the on/off slider sits in the header. The same window creates (no `a`), edits, and — with `builtin` —
  * shows the built-in assistant with its name, description, slider and instruction locked and its YAML read-only.
  */
@@ -139,7 +139,7 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
       {a && !builtin && <input type="hidden" name="agentId" value={a.id} />}
       <FormTabs active={tab} onChange={openTab} tabs={[
         { key: "general", label: "Общее" },
-        { key: "params", label: "Параметры" },
+        { key: "params", label: "Модель" },
         { key: "policies", label: "Политики", count: f.guardrails.length },
         { key: "subagents", label: "Субагенты", count: f.agents.length },
         { key: "mcp", label: "MCP", count: f.mcp.length },
@@ -208,19 +208,17 @@ export function AgentForm({ a, models, newModelId, agents, connections, docs, on
       </div>
 
       <div className="apanel yamlpanel" hidden={tab !== "yaml"}>
-        {/* the built-in assistant is only shown: its YAML can't change it, nor be loaded or downloaded */}
+        {/* the built-in assistant is only shown: its YAML can't change it; the buttons stay, locked, like its other fields */}
         <YamlEditor label="YAML агента" value={yaml} onChange={applyYaml} readOnly={builtin} />
         {yamlNote.error && <div className="formerr">{yamlNote.error}</div>}
         {yamlNote.warnings.length > 0 && (
           <div className="callout warn yaml-warn"><div>{yamlNote.warnings.map((w) => <div key={w}>{w}</div>)}</div></div>
         )}
-        {!builtin && (
-          <div className="wrap-gap" style={{ marginTop: 12 }}>
-            <button type="button" className="btn ghost" onClick={download}>Скачать</button>
-            <button type="button" className="btn ghost" onClick={() => setAskUpload(true)}>Загрузить</button>
-            <input ref={fileInput} type="file" accept=".yaml,.yml,text/yaml" hidden onChange={upload} />
-          </div>
-        )}
+        <div className="wrap-gap" style={{ marginTop: 12 }}>
+          <button type="button" className="btn ghost" onClick={download} disabled={builtin}>Скачать</button>
+          <button type="button" className="btn ghost" onClick={() => setAskUpload(true)} disabled={builtin}>Загрузить</button>
+          {!builtin && <input ref={fileInput} type="file" accept=".yaml,.yml,text/yaml" hidden onChange={upload} />}
+        </div>
       </div>
 
       {/* «Включён» sits in the window's header, outside the form: it is submitted from here */}

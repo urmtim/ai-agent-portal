@@ -51,6 +51,9 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   const checked = list !== undefined && list !== "checking" && (list.kind === "ok" || list.kind === "nolist");
   const modelOpen = !!m || checked; // a new model is typed or picked only after a successful check
   function check() {
+    // top to bottom as on «Сохранить»: no address or no token — nothing to check yet
+    const p = connectionProblem();
+    if (p) { setList(undefined); show(p[0], p[1]); return; }
     setList("checking");
     startCheck(async () => {
       const r = await listModelsFor(new FormData(form.current!));
@@ -61,7 +64,7 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   const upd = (patch: Partial<Fields>, field?: ModelField) => {
     setF((p) => ({ ...p, ...patch }));
     if (field && err?.field === field) setErr(undefined);
-    // another address or token: the old list says nothing about it
+    // another address: the old list says nothing about it (the token is checked on «Сохранить», not by the list)
     if ("baseUrl" in patch) { setList(undefined); setModels([]); }
   };
 
@@ -77,11 +80,16 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   }
 
   // top to bottom, the first problem only
-  function problem(): [ModelField, string] | null {
-    if (!f.name.trim()) return ["name", "Укажите название"];
+  function connectionProblem(): [ModelField, string] | null {
     if (!f.baseUrl.trim()) return ["baseUrl", "Укажите адрес API"];
     if (!URL_RE.test(f.baseUrl.trim())) return ["baseUrl", "Адрес должен начинаться с http:// или https://"];
     if (!token.trim() && !m?.hasToken) return ["token", "Укажите токен"];
+    return null;
+  }
+  function problem(): [ModelField, string] | null {
+    if (!f.name.trim()) return ["name", "Укажите название"];
+    const c = connectionProblem();
+    if (c) return c;
     if (!modelOpen) return ["model", "Сначала проверьте подключение"];
     if (!f.model.trim()) return ["model", models.length ? "Выберите модель" : "Укажите модель"];
     if (!f.contextTokens.trim()) return ["contextTokens", "Укажите размер контекста"];
@@ -135,7 +143,6 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
   return (
     <form ref={form} onSubmit={onSubmit} noValidate autoComplete="off">
       {m && <input type="hidden" name="id" value={m.id} />}
-      <input type="hidden" name="listed" value={models.includes(f.model.trim()) ? "1" : ""} />
       <input type="hidden" name="model" value={f.model} />
       <FormTabs active={tab} onChange={openTab} tabs={[{ key: "general", label: "Общее" }, { key: "params", label: "Параметры" }, { key: "yaml", label: "YAML" }]} />
 
@@ -160,7 +167,7 @@ function ModelForm({ m, onDone }: { m?: ModelRowData; onDone: () => void }) {
         <div className="field">
           <label htmlFor="md-token">Токен <span className="req">*</span></label>
           <SecretInput id="md-token" name="token" className={bad("token")} value={token}
-            onChange={(e) => { setToken(e.target.value); setList(undefined); setModels([]); if (err?.field === "token") setErr(undefined); }}
+            onChange={(e) => { setToken(e.target.value); if (err?.field === "token") setErr(undefined); }}
             placeholder={m?.hasToken ? "Токен сохранён" : undefined} />
           {fieldErr("token")}
         </div>
