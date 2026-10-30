@@ -9,7 +9,7 @@ import { accessInfo, connectorMailTools, firstMailConnector } from "@/lib/connec
 import { maskPii } from "./guardrails";
 import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules, parseHitl } from "./policy";
 import { agentInstructions } from "@/lib/chat/instructions";
-import { policySnapshot, policyTools, withPolicies } from "@/lib/chat/policy-tools";
+import { abilitiesOf, policySnapshot, policyTools, withPolicies } from "@/lib/chat/policy-tools";
 import { agentDesc } from "./types";
 import type { RunBy } from "./runner";
 
@@ -35,19 +35,24 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   // documents: only the owner's, only switched on in the catalog
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: agent.ownerId, enabled: true, id: { in: guardDocIds(rules) } }, select: { name: true, text: true } });
 
-  const conn = await firstMailConnector(agent.ownerId, ids(agent.connectorIds));
-  const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs, await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null));
-  const tools: ToolSet = {
-    ...policyTools(snapshot),
-    // only what the connector's «Инструменты» tab and connection give; its launch was confirmed by the agent's HITL
-    ...(conn ? pickTools(mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii }), connectorMailTools(conn)) : {}),
-  };
-
   // agents it may call: enabled, without confirmation, not itself; nested agents don't call further
   const subs = ctx.depth > 0 ? [] : (await prisma.agent.findMany({
     where: { ownerId: agent.ownerId, enabled: true, id: { in: ids(agent.agentIds).filter((x) => x !== agent.id) } },
     orderBy: { createdAt: "asc" },
   })).filter((a) => !hitlAsks(a.hitl));
+
+  const conn = await firstMailConnector(agent.ownerId, ids(agent.connectorIds));
+  const access = await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null);
+  access.abilities = abilitiesOf({
+    agents: subs.map((a) => a.name),
+    mail: conn ? { name: conn.name, gives: access.connectors.find((c) => c.name === conn.name)?.gives ?? "" } : null,
+  });
+  const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs, access);
+  const tools: ToolSet = {
+    ...policyTools(snapshot),
+    // only what the connector's «Инструменты» tab and connection give; its launch was confirmed by the agent's HITL
+    ...(conn ? pickTools(mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii }), connectorMailTools(conn)) : {}),
+  };
   if (subs.length) {
     tools.run_agent = tool({
       description: "Запустить другого агента и получить его итог. Агенты:\n" + subs.map((a) => `- ${a.id}: «${a.name}» — ${agentDesc(a)}`).join("\n"),

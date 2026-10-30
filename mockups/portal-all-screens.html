@@ -237,7 +237,8 @@
   .mtabs .n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 2px; border-radius: 9px; background: var(--soft); color: var(--muted); font-size: 11.5px; text-align: center; }
   .tpart { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; } .tpart table { width: 100%; }
   .tpart th { padding: 8px 12px; font-size: 11px; } .tpart td { padding: 8px 12px; vertical-align: middle; } .tpart td.tempty { text-align: center; padding: 16px 12px; }
-  .tpart.mtools td { padding-top: 6px; padding-bottom: 6px; } .tpart.mtools tr.mgrp td { background: var(--soft, #f6f6fb); }
+  .tpart.mtools td { padding-top: 6px; padding-bottom: 6px; }
+  .tpart .limcell { margin: 0; } .tpart .limin { display: flex; align-items: center; gap: 8px; } .tpart .limin input { width: 110px; padding: 6px 10px; } .tpart .limcell .ferr { margin-top: 4px; } .tpart.mtools tr.mgrp td { background: var(--soft, #f6f6fb); }
   .apanel .tbar { margin-bottom: 10px; }
   .field textarea.desc { height: 200px; resize: vertical; }
   input.tchk { width: 17px; height: 17px; padding: 0; margin: 0; display: block; accent-color: var(--primary); cursor: pointer; }
@@ -1198,6 +1199,16 @@ contextTokens: 32000</textarea></div>
   // what a «Почта» connector can give agents: key, name, description, class, what it needs.
   // Classes by consequence (like Gmail and Outlook scopes): reads / changes the mailbox, all undoable / goes out, can't be undone
   const MAIL_CLASSES = [['r', 'Чтение', 'Ничего не меняет'], ['w', 'Изменение', 'Меняет ящик, всё можно вернуть'], ['x', 'Отправка', 'Уходит наружу, не вернуть']];
+  // «Ограничения» of a «Почта» connector: group, key, name, default, min, max, unit; empty period — no limit; the POP3 one only over POP3
+  const MAIL_LIMITS = [
+    ['Поиск', 'searchLimit', 'Писем за один поиск', 20, 1, 200, 'писем'],
+    ['Поиск', 'searchDays', 'Период поиска', 90, 1, 36500, 'дней', 'optional'],
+    ['Действия', 'actionLimit', 'Писем за одно действие', 50, 1, 1000, 'писем'],
+    ['Письма и вложения', 'letterChars', 'Длина письма для модели', 6000, 500, 200000, 'знаков'],
+    ['Письма и вложения', 'attachMb', 'Размер вложения', 10, 1, 50, 'МБ'],
+    ['Письма и вложения', 'attachChars', 'Текст вложения', 20000, 1000, 200000, 'знаков'],
+    ['POP3', 'pop3Scan', 'Сколько последних писем смотреть', 200, 10, 10000, 'писем', 'pop3'],
+  ];
   const MAIL_TOOLS = [
     ['search', 'Искать письма', 'По теме, отправителю, тексту и периоду', 'r'],
     ['read', 'Читать письма', 'Текст письма и всю переписку', 'r'],
@@ -1217,7 +1228,7 @@ contextTokens: 32000</textarea></div>
   function wireConn(kind) {
     const DATA = kind === 'mcp' ? MCP_DATA : CONN_DATA;
     const bg = document.getElementById('connWin'), m = bg.querySelector('.modal'), $ = (id) => document.getElementById(id);
-    let D = null, type = 'mail', tools = [], mt = {};
+    let D = null, type = 'mail', tools = [], mt = {}, lv = {};
     const esc = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const field = (label, req, inner, hint) => `<div class="field"><label>${label}${req ? ' <span class="req">*</span>' : ''}</label>${inner}<div class="ferr" hidden></div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
     const pwd = (id, ph) => `<div class="pwd"><input type="password" id="${id}" placeholder="${ph || ''}" autocomplete="off"><button type="button" data-tg="${id}" aria-label="Показать" title="Показать">${EYE}</button></div>`;
@@ -1277,6 +1288,21 @@ contextTokens: 32000</textarea></div>
       return `<div class="tpart"><table><thead><tr><th></th><th>Инструмент</th><th>Описание</th><th>Вид</th></tr></thead><tbody>${rows}</tbody></table></div>
         <div class="hint">Выключенный инструмент не получит ни один агент. Изменения агент делает по правилам подтверждения из своих «Политик».</div>`;
     }
+    // «Ограничения»: a table like «Инструменты» — groups, then each limit with its value and what it may be
+    const isPop = () => ($('cwProto')?.value || D?.proto || 'imap') === 'pop3';
+    function panelLimits() {
+      const groups = [...new Set(MAIL_LIMITS.map((l) => l[0]))];
+      const rows = groups.map((g) => {
+        const list = MAIL_LIMITS.filter((l) => l[0] === g), pop = list[0][7] === 'pop3', off = pop && !isPop();
+        return `<tr class="mgrp"${off ? ' style="opacity:.55"' : ''}><td colspan="3"><b>${g}</b>${off ? '<span class="muted">. Нужно получение по POP3</span>' : ''}</td></tr>`
+          + list.map(([, k, n, d, min, max, unit, opt]) => `<tr${off ? ' style="opacity:.55"' : ''}><td style="padding-left:24px">${n}</td>`
+            + `<td style="width:190px"><div class="field limcell"><div class="limin"><input type="number" id="cwLim-${k}" data-lim="${k}" min="${min}" max="${max}" value="${lv[k] ?? ''}" ${opt ? 'placeholder="без ограничения"' : ''} ${off ? 'disabled' : ''}><span class="muted">${unit}</span></div><div class="ferr" hidden></div></div></td>`
+            + `<td class="muted" style="width:150px">${min}–${max}${opt ? ', пусто — без ограничения' : ''}</td></tr>`).join('');
+      }).join('');
+      return `<div class="tpart mtools"><table><thead><tr><th>Ограничение</th><th>Значение</th><th>Можно</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+    const limitsBad = () => { for (const [, k, , , min, max, , opt] of MAIL_LIMITS) { const i = $(`cwLim-${k}`); if (!i || i.disabled) continue;
+      const v = i.value.trim(), n = Number(v); if (!(v === '' && opt) && (!v || !Number.isInteger(n) || n < min || n > max)) return fErr(i.id, `Число от ${min} до ${max}`); } return true; };
     const panelYaml = () => `<div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" id="cwYaml" spellcheck="false" aria-label="YAML"></textarea></div>
       <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn ghost">Скачать</button><button type="button" class="btn ghost" data-yup>Загрузить</button></div>`;
     function yamlText() {
@@ -1284,13 +1310,15 @@ contextTokens: 32000</textarea></div>
       const off = tools.filter((t) => t[3] === false).map((t) => `\n  - ${t[0]}`).join('') || ' []';
       const head = `version: 1\n${kind === 'conn' ? `type: ${type || '""'}\n` : ''}name: ${val('cwName', D?.name)}\ndescription: ${val('cwDesc', D?.desc)}\n${kind === 'conn' ? `enabled: ${$('cwOn') ? $('cwOn').checked : !D?.off}\n` : ''}`;
       const conn = kind === 'mcp' ? `url: ${val('cwUrl', D?.url)}\nauth: ${val('cwAuth', D?.auth)}\n` : type === 'api' ? `url: ${val('cwUrl', D?.url)}\n` : !type ? ''
-        : `incoming:\n  protocol: ${val('cwProto')}\n  host: ${val('cwHost')}\n  port: ${val('cwPort')}\noutgoing:${$('cwOut')?.value === 'smtp' ? `\n  host: ${val('cwSmtp')}\n  port: ${val('cwSmtpPort')}` : ' none'}\nuser: ${val('cwUser', D?.user)}\ntools:${mailOn().map((k) => `\n  - ${k}`).join('') || ' []'}\n`;
+        : `incoming:\n  protocol: ${val('cwProto')}\n  host: ${val('cwHost')}\n  port: ${val('cwPort')}\noutgoing:${$('cwOut')?.value === 'smtp' ? `\n  host: ${val('cwSmtp')}\n  port: ${val('cwSmtpPort')}` : ' none'}\nuser: ${val('cwUser', D?.user)}\ntools:${mailOn().map((k) => `\n  - ${k}`).join('') || ' []'}\nlimits:${MAIL_LIMITS.map(([, k]) => `\n  ${k}: ${lv[k] === '' ? 'none' : lv[k]}`).join('')}\n`;
       return `# AI Portal — ${kind === 'mcp' ? 'MCP-сервер' : 'коннектор'}. Пароли и токены сюда не попадают.\n${head}${conn}${kind === 'mcp' ? `toolsOff:${off}` : ''}`.trimEnd();
     }
-    const P = { gen: panelGen, con: panelCon, tls: panelTools, yaml: panelYaml };
-    const tabsFor = () => D?.builtin ? [['gen', 'Общее'], ['tls', 'Инструменты']] : [['gen', 'Общее'], ['con', 'Подключение'], ['tls', 'Инструменты'], ['yaml', 'YAML']];
+    const P = { gen: panelGen, con: panelCon, tls: panelTools, lim: panelLimits, yaml: panelYaml };
+    const tabsFor = () => D?.builtin ? [['gen', 'Общее'], ['tls', 'Инструменты']] : kind === 'conn' ? [['gen', 'Общее'], ['con', 'Подключение'], ['tls', 'Инструменты'], ['lim', 'Ограничения'], ['yaml', 'YAML']]
+      : [['gen', 'Общее'], ['con', 'Подключение'], ['tls', 'Инструменты'], ['yaml', 'YAML']];
     const countTools = () => { const b = m.querySelector('[data-ctab=tls]'); if (!b) return;
-      if (kind === 'conn') { b.hidden = type !== 'mail'; // an API has no tools yet
+      if (kind === 'conn') { b.hidden = type !== 'mail'; // an API has no tools and no limits yet
+        const lb = m.querySelector('[data-ctab=lim]'); if (lb) lb.hidden = type !== 'mail';
         m.querySelectorAll('[data-mgroup]').forEach((g) => { const on = MAIL_TOOLS.filter((t) => t[3] === g.dataset.mgroup && mailNeed(t[4])).map((t) => mt[t[0]]);
           g.checked = on.length > 0 && on.every(Boolean); g.indeterminate = on.some(Boolean) && !g.checked; }); }
       b.querySelector('.n').textContent = kind === 'conn' ? mailOn().length : tools.filter((t) => t[3] !== false).length; };
@@ -1311,6 +1339,7 @@ contextTokens: 32000</textarea></div>
       D = id ? DATA[id] : null; type = D?.type || ''; // a new connector: no type yet, so no fields and no tools
       tools = (D ? toolsOf(kind, D) : []).map((t) => [...t]);
       mt = Object.fromEntries(MAIL_TOOLS.map(([k]) => [k, !D?.mailOff?.includes(k)])); // full rights unless switched off
+      lv = Object.fromEntries(MAIL_LIMITS.map(([, k, , d]) => [k, String(D?.limits?.[k] ?? d)]));
       $('cwTitle').textContent = D ? D.name : kind === 'mcp' ? 'Новый MCP-сервер' : 'Новый коннектор';
       const on = !D?.off, swt = (v) => v ? 'Коннектор включён' : 'Коннектор выключен';
       $('cwSw').innerHTML = kind === 'conn' ? `<label class="switch" title="${swt(on)}"><input type="checkbox" role="switch" id="cwOn" ${on ? 'checked' : ''} aria-label="${swt(on)}"><span class="track"></span></label>` : '';
@@ -1360,6 +1389,7 @@ contextTokens: 32000</textarea></div>
     m.addEventListener('input', (e) => {
       if (e.target.classList.contains('bad')) { e.target.classList.remove('bad'); e.target.closest('.field').querySelector('.ferr').hidden = true; }
       if (e.target.id === 'cwYaml') e.target.previousElementSibling.innerHTML = hlYaml(e.target.value);
+      if (e.target.dataset.lim) { lv[e.target.dataset.lim] = e.target.value.trim(); m._upd?.(); }
     });
     m.addEventListener('scroll', (e) => { if (e.target.id === 'cwYaml') { e.target.previousElementSibling.scrollTop = e.target.scrollTop; e.target.previousElementSibling.scrollLeft = e.target.scrollLeft; } }, true);
     m.addEventListener('change', (e) => {
@@ -1371,7 +1401,7 @@ contextTokens: 32000</textarea></div>
       if (id === 'cwOut') { const on = e.target.value === 'smtp'; ['cwSmtp', 'cwSmtpPort'].forEach((x) => { $(x).disabled = !on; $(x).classList.remove('bad'); $(x).closest('.field').querySelector('.ferr').hidden = true; });
         $('cwSmtp').placeholder = on ? 'например, smtp.mail.ru' : ''; fill('tls'); }
       if (id === 'cwProto') { const pop = e.target.value === 'pop3', h = $('cwHost');
-        $('cwPort').value = PORTS[e.target.value]; h.value = h.value.replace(pop ? /^imap\./ : /^pop3?\./, pop ? 'pop.' : 'imap.'); fill('tls'); }
+        $('cwPort').value = PORTS[e.target.value]; h.value = h.value.replace(pop ? /^imap\./ : /^pop3?\./, pop ? 'pop.' : 'imap.'); fill('tls'); fill('lim'); }
       if (e.target.dataset.tool !== undefined) { tools[e.target.dataset.tool][3] = e.target.checked; countTools(); }
       if (e.target.dataset.mtool) { mt[e.target.dataset.mtool] = e.target.checked; countTools(); }
       if (e.target.dataset.mgroup) { MAIL_TOOLS.filter((t) => t[3] === e.target.dataset.mgroup && mailNeed(t[4])).forEach((t) => { mt[t[0]] = e.target.checked; }); fill('tls'); }
@@ -1381,6 +1411,7 @@ contextTokens: 32000</textarea></div>
       if (!$('cwName').value.trim()) return fErr('cwName', 'Укажите название');
       if (!D?.builtin) {
         if (!needFields()) return;
+        if (kind === 'conn' && type === 'mail' && !limitsBad()) return;
         // like the model window: «Сохранить» connects once more; the answer goes under its field
         const r = outcome();
         if (r !== 'ok') return fErr(r === 'down' ? ($('cwUrl') ? 'cwUrl' : 'cwHost') : ($('cwTok') ? 'cwTok' : 'cwPass'), badText(r));

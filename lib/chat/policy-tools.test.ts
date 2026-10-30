@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { policySnapshot, timeNow, withPolicies } from "./policy-tools";
+import { abilitiesOf, policySnapshot, timeNow, withPolicies } from "./policy-tools";
 
 test("policy snapshot: HITL modes and guardrails", () => {
   const s = policySnapshot("changes_and_send", [{ kind: "maskPii" }, { kind: "maxSteps", value: 3 }, { kind: "forbiddenTopic", value: "политика" }], [{ name: "Регламент", text: "Не называй суммы." }]);
@@ -35,4 +35,13 @@ test("the snapshot says the model and connectors only when given", () => {
   assert.equal("access" in policySnapshot("off", [], []), false);
   const access = { model: { name: "Облако", model: "gpt-oss:120b", server: "ollama.com" }, connectors: [{ name: "Моя почта", type: "Почта", server: "IMAP imap.mail.ru", gives: "искать и читать письма" }] };
   assert.deepEqual(policySnapshot("off", [], [], access).access, access);
+});
+
+test("«что умеешь» in words, and plainly what is missing", () => {
+  assert.deepEqual(abilitiesOf({ agents: [], mail: null }), [
+    "узнавать текущие дату и время", "агентов запускать не могу: ни один не разрешён", "почты нет: почтовый коннектор не добавлен или выключен",
+  ]);
+  assert.deepEqual(abilitiesOf({ agents: ["Чеки"], mail: { name: "Моя почта", gives: "чтение: искать письма" } }).slice(1), [
+    "запускать агентов: «Чеки»", "почта «Моя почта» — чтение: искать письма",
+  ]);
 });

@@ -17,7 +17,18 @@ export type AccessInfo = {
   model: { name: string; model: string; server: string } | null;
   /** Its switched-on connectors: name, type, server and what it gives here. */
   connectors: { name: string; type: string; server: string; gives: string; limits?: string }[];
+  /** Everything it can do in this answer, in words — the whole answer to «что умеешь». */
+  abilities?: string[];
 };
+
+/** «Что умеешь» in words: the date, the agents it may run, its mailbox — and plainly what it lacks. */
+export function abilitiesOf(a: { agents: string[]; mail: { name: string; gives: string } | null }): string[] {
+  return [
+    "узнавать текущие дату и время",
+    a.agents.length ? `запускать агентов: ${a.agents.map((n) => `«${n}»`).join(", ")}` : "агентов запускать не могу: ни один не разрешён",
+    a.mail ? `почта «${a.mail.name}» — ${a.mail.gives}` : "почты нет: почтовый коннектор не добавлен или выключен",
+  ];
+}
 
 /** What get_policies returns: what it works with (when given), HITL and guardrails as plain facts (documents only the enabled ones). */
 export function policySnapshot(hitl: HitlChoice, rules: GuardRule[], docs: { name: string; text: string }[], access?: AccessInfo) {
