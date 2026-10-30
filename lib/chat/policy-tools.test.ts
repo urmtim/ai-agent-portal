@@ -33,6 +33,6 @@ test("policies go right before the current question", () => {
 
 test("the snapshot says the model and connectors only when given", () => {
   assert.equal("access" in policySnapshot("off", [], []), false);
-  const access = { model: "Облако (gpt-oss:120b)", connectors: [{ name: "Моя почта", type: "Почта", server: "IMAP imap.mail.ru", gives: "искать и читать письма" }] };
+  const access = { model: { name: "Облако", model: "gpt-oss:120b", server: "ollama.com" }, connectors: [{ name: "Моя почта", type: "Почта", server: "IMAP imap.mail.ru", gives: "искать и читать письма" }] };
   assert.deepEqual(policySnapshot("off", [], [], access).access, access);
 });

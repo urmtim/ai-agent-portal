@@ -48,12 +48,12 @@ export async function checkApi(a: { url: string; token: string | null }): Promis
  */
 export async function accessInfo(userId: string, modelId: string | null, ids: string[], mailId: string | null): Promise<AccessInfo> {
   const [m, rows] = await Promise.all([
-    modelId ? prisma.llmModel.findFirst({ where: { id: modelId, ownerId: userId }, select: { name: true, model: true } }) : null,
+    modelId ? prisma.llmModel.findFirst({ where: { id: modelId, ownerId: userId }, select: { name: true, model: true, baseUrl: true } }) : null,
     ids.length ? prisma.connector.findMany({ where: { ownerId: userId, enabled: true, id: { in: ids } }, orderBy: { createdAt: "asc" } }) : [],
   ]);
   const mailName = rows.find((c) => c.id === mailId)?.name;
   return {
-    model: m ? `${m.name} (${m.model})` : null,
+    model: m ? { name: m.name, model: m.model, server: m.baseUrl.replace(/^https?:\/\//, "").split("/")[0] } : null,
     connectors: rows.map((c) => {
       if (c.kind === "mail") {
         const cfg = parseMailConfig(c.config);

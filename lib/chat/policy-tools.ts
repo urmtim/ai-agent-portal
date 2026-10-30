@@ -7,10 +7,14 @@ import { effectiveGuardrails, HITL_LABELS, type GuardRule, type HitlChoice } fro
 
 export type PolicySnapshot = ReturnType<typeof policySnapshot>;
 
-/** What the assistant or agent works with right now, so it can say «на какой модели», «какую почту читаешь». */
+/**
+ * What the assistant or agent works with right now, so it can say «на какой модели», «какую почту читаешь».
+ * Two different things: the model (the LLM itself and the server it runs on) and the connectors (the portal's
+ * mailboxes and APIs, which the tools use).
+ */
 export type AccessInfo = {
-  /** «ollama cloud gpt-oss 120b (gpt-oss:120b)», or null when no model is chosen (the .env one is used). */
-  model: string | null;
+  /** The LLM: its name in the portal, the model id and the server it runs on; null when none is chosen (the .env one). */
+  model: { name: string; model: string; server: string } | null;
   /** Its switched-on connectors: name, type, server and what it gives here. */
   connectors: { name: string; type: string; server: string; gives: string }[];
 };
