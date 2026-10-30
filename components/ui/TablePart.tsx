@@ -31,8 +31,8 @@ export function TablePart({ items, picked, onChange, nothingHint, filter, column
   items: PartItem[];
   picked: string[];
   onChange: (ids: string[]) => void;
-  /** Shown when there is nothing that could ever be added. */
-  nothingHint: React.ReactNode;
+  /** Shown when there is nothing that could ever be added (optional: the empty table and the disabled «Добавить» say it too). */
+  nothingHint?: React.ReactNode;
   /** Facet to filter the added rows by (e.g. включён / выключен). */
   filter?: { label: string; options: string[] };
   column?: PartColumn;
@@ -118,7 +118,7 @@ export function TablePart({ items, picked, onChange, nothingHint, filter, column
           </tbody>
         </table>
       </div>
-      {items.length === 0 && <div className="hint">{nothingHint}</div>}
+      {items.length === 0 && nothingHint && <div className="hint">{nothingHint}</div>}
     </div>
   );
 }

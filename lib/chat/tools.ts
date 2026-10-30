@@ -4,7 +4,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { runAgent } from "@/lib/agents/runner";
 import { agentDesc } from "@/lib/agents/types";
-import { effectiveGuardrails, hitlAsks } from "@/lib/agents/policy";
+import { effectiveGuardrails, guardDocIds, hitlAsks } from "@/lib/agents/policy";
+import { policySnapshot, policyTools } from "@/lib/chat/policy-tools";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
 import { firstMailConnection } from "@/lib/connections";
@@ -36,7 +37,12 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
 
   // the assistant's mailbox: the first «Почта» connection on its MCP tab
   const mailConn = await firstMailConnection(userId, cfg.mcpIds);
+  // the assistant's policies (enabled documents only) — returned by get_policies and put before every answer
+  const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: userId, enabled: true, id: { in: guardDocIds(cfg.guardrails) } }, select: { name: true, text: true } });
+  const snapshot = policySnapshot(cfg.hitl, cfg.guardrails, docs);
+
   const tools = {
+    ...policyTools(snapshot),
     ...mailTools({ conn: mailConn, who: "Ассистент", actor: user, channel: "чат", missing: "Почта не добавлена ассистенту", mask: effectiveGuardrails(cfg.guardrails).maskPii }),
     // removed «Траты» tool: kept only so chats that called it still validate; never in activeTools
     get_spending: tool({
@@ -71,13 +77,13 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   };
 
   // every tool stays defined so stored history validates; the model is offered only the allowed ones
-  const activeTools = allowedTools(cfg, agents.map((a) => a.id), mailConn ? [mailConn.id] : []) as (keyof typeof tools)[];
+  const activeTools = ["current_time", "get_policies", ...allowedTools(cfg, agents.map((a) => a.id), mailConn ? [mailConn.id] : [])] as (keyof typeof tools)[];
   // HITL per agent: switched off → runs at once; on (and unknown ids) → waits for the user.
   // Until approvals move to the agent's own actions, «on» means: confirm the launch.
   const approval = {
     run_agent: ({ agentId }: { agentId: string }) => { const a = agents.find((x) => x.id === agentId); return a && !hitlAsks(a.hitl) ? undefined : ("user-approval" as const); },
   };
-  return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null };
+  return { tools, activeTools, approval, agents, mailbox: mailConn?.name ?? null, snapshot };
 }
 
 export type ChatTools = Awaited<ReturnType<typeof chatTools>>["tools"];

@@ -12,8 +12,7 @@ import { agentEditData } from "@/lib/agents/edit-data";
 import { loadAssistant } from "@/lib/assistant";
 import { ASSISTANT_APIS } from "@/lib/assistant-config";
 import { AssistantActions } from "./assistant/AssistantForm";
-import { chatInstructions } from "@/lib/chat/instructions";
-import { firstMailConnection } from "@/lib/connections";
+import { CHAT_INSTRUCTIONS } from "@/lib/chat/instructions";
 
 const RUN_ST: Record<string, { label: string; cls: string }> = {
   RUNNING: { label: "идёт", cls: "info" },
@@ -52,9 +51,6 @@ export default async function AgentsPage() {
 
   // the chat's own agent: model and what it may use come from its modal (assistant/AssistantForm.tsx)
   const cfg = await loadAssistant(user.id);
-  // exactly what the chat sends the model (app/api/chat/route.ts): its agents and mailbox as now
-  const mailConn = await firstMailConnection(user.id, cfg.mcpIds);
-  const builtinInstruction = chatInstructions(user.name ?? "", agents.filter((a) => a.enabled && cfg.agentIds.includes(a.id)), mailConn?.name ?? null);
   const allowed = [
     cfg.agentIds.length && `агенты: ${agents.filter((a) => cfg.agentIds.includes(a.id)).map((a) => a.name).join(", ")}`,
     cfg.mcpIds.length && `MCP: ${conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ")}`,
@@ -73,7 +69,7 @@ export default async function AgentsPage() {
       <span key="m">{conns.filter((c) => cfg.mcpIds.includes(c.id)).map((c) => c.name).join(", ") || <span className="muted">—</span>}</span>,
       <span key="st" className="st info">встроенный</span>,
       <span key="r" className="muted">—</span>,
-      <AssistantActions key="a" cfg={cfg} instruction={builtinInstruction} {...choices} />,
+      <AssistantActions key="a" cfg={cfg} instruction={CHAT_INSTRUCTIONS} {...choices} />,
     ],
   };
 

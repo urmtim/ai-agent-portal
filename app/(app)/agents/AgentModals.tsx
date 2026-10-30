@@ -167,7 +167,7 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
           <textarea id="ag-instr" name="instruction" rows={5} maxLength={8000} value={f.instruction} disabled={builtin} onChange={(e) => upd({ instruction: e.target.value })}
             placeholder="Кто агент и что делает. Например: ты составляешь короткую сводку новых писем — от кого, о чём, что требует ответа." />
           <div className="hint">{builtin
-            ? "Встроенная инструкция чата — модель получает ровно её (дата, имя, почта и агенты — как сейчас). К ней добавляются гардрейлы с вкладки «Политики»."
+            ? "Встроенная инструкция чата — модель получает ровно её. Дату и политики с вкладки «Политики» модель узнаёт инструментами current_time и get_policies."
             : "Первая строка — описание агента в списке."}</div>
         </div>
       </div>
@@ -190,16 +190,10 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
       </div>
 
       <div className="apanel" hidden={tab !== "subagents"}>
-        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>
-          Субагенты — агенты, которых этот агент может запускать. Из чата: с HITL «Не спрашивать» — сразу, остальные — после вашего подтверждения.
-          Из прогона другого агента пока запускаются только субагенты с «Не спрашивать».
-        </div>
-        <TablePart items={agentItems} picked={f.agents} onChange={(ids) => upd({ agents: ids })} filter={{ label: "Состояние", options: [ON, OFF] }}
-          nothingHint="Других агентов пока нет — создайте их кнопкой «Новый агент»." />
+        <TablePart items={agentItems} picked={f.agents} onChange={(ids) => upd({ agents: ids })} filter={{ label: "Состояние", options: [ON, OFF] }} />
       </div>
       <div className="apanel" hidden={tab !== "mcp"}>
-        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>Подключения из раздела MCP. В «Доступе» — что агенту можно с этим подключением: только читать или ещё и отправлять.</div>
-        <TablePart items={connItems} picked={f.mcp} onChange={(ids) => upd({ mcp: ids })} nothingHint="Подключений пока нет — добавьте их в разделе MCP."
+        <TablePart items={connItems} picked={f.mcp} onChange={(ids) => upd({ mcp: ids })}
           column={{
             label: "Доступ",
             options: (Object.keys(MCP_ACCESS_LABELS) as McpAccess[]).map((k) => ({ value: k, label: MCP_ACCESS_LABELS[k] })),
@@ -208,13 +202,10 @@ export function AgentForm({ a, models, defaultModelId, agents, connections, docs
           }} />
       </div>
       <div className="apanel" hidden={tab !== "apis"}>
-        <TablePart items={apiItems} picked={f.apis} onChange={(ids) => upd({ apis: ids })} nothingHint="API портала пока нет." />
+        <TablePart items={apiItems} picked={f.apis} onChange={(ids) => upd({ apis: ids })} />
       </div>
 
       <div className="apanel yamlpanel" hidden={tab !== "yaml"}>
-        <div className="hint" style={{ marginTop: 0, marginBottom: 10 }}>
-          Весь агент текстом: правка здесь сразу меняет форму. Модель, подключения, агенты и документы — по названию; пароли и токены сюда не попадают.
-        </div>
         <YamlEditor label="YAML агента" value={yaml} onChange={applyYaml} />
         {yamlNote.error && <div className="formerr">{yamlNote.error}</div>}
         {yamlNote.warnings.length > 0 && (

@@ -64,6 +64,20 @@ function MailSearchStep({ part }: { part: ToolPart }) {
   return <Step summary={<>Почта · найдено <b>{o.total}</b>{what ? <> по запросу {what}</> : null}{q?.days ? ` за ${q.days} дн.` : ""}</>} details={details || "Писем не найдено"} />;
 }
 
+function TimeStep({ part }: { part: ToolPart }) {
+  if (part.state !== "output-available") return <Step running summary="Смотрю дату и время…" />;
+  const o = part.output as { date?: string; weekday?: string; time?: string };
+  return <Step summary={<>Дата и время · <b>{o.date}, {o.time}</b></>} details={`${o.weekday ?? ""}, ${o.date ?? ""}, ${o.time ?? ""} (Москва)`} />;
+}
+
+function PoliciesStep({ part }: { part: ToolPart }) {
+  if (part.state !== "output-available") return <Step running summary="Смотрю политики…" />;
+  const o = part.output as { hitl?: { mode?: string }; guardrails?: { forbiddenTopics?: string[]; documents?: { name: string }[] } };
+  const docs = o.guardrails?.documents?.map((d) => `«${d.name}»`).join(", ");
+  return <Step summary={<>Политики · {o.hitl?.mode}</>}
+    details={[`HITL: ${o.hitl?.mode ?? "—"}`, `Запрещённые темы: ${o.guardrails?.forbiddenTopics?.join(", ") || "нет"}`, `Документы: ${docs || "нет"}`].join("\n")} />;
+}
+
 function MailReadStep({ part }: { part: ToolPart }) {
   if (part.state === "output-error") return <Step summary="Письмо" fail="Ошибка" details={part.errorText} />;
   if (part.state !== "output-available") return <Step running summary="Открываю письмо…" />;
@@ -130,6 +144,8 @@ export function AssistantParts({ message, agents, canApprove, onApprove }: {
     if (p.type === "tool-get_spending") return <SpendingStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-mail_search") return <MailSearchStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-mail_read") return <MailReadStep key={i} part={p as ToolPart} />;
+    if (p.type === "tool-current_time") return <TimeStep key={i} part={p as ToolPart} />;
+    if (p.type === "tool-get_policies") return <PoliciesStep key={i} part={p as ToolPart} />;
     if (p.type === "tool-run_agent") {
       return <AgentStep key={i} part={p as ToolPart} agents={agents} canApprove={canApprove} onApprove={onApprove} />;
     }

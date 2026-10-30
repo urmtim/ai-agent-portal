@@ -148,6 +148,9 @@
   .switch .track { flex: 0 0 auto; width: 44px; height: 26px; border-radius: 13px; background: color-mix(in srgb, var(--muted) 55%, var(--line)); position: relative; transition: background .2s; }
   .switch .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(20,16,40,.25), 0 2px 6px rgba(20,16,40,.18); transition: transform .2s; }
   .switch input:checked + .track { background: var(--primary); }
+  .switch input:disabled + .track, .switch input:disabled:checked + .track { background: color-mix(in srgb, var(--muted) 35%, var(--line)); }
+  .switch:has(input:disabled) { cursor: default; color: var(--muted); }
+  input:disabled, select:disabled, textarea:disabled { cursor: default; background-color: var(--soft); color: var(--muted); }
   .switch input:checked + .track::after { transform: translateX(18px); }
   .switch input:focus-visible + .track { outline: 2px solid var(--primary); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) { .switch .track, .switch .track::after { transition: none; } }
@@ -592,16 +595,32 @@
       </tbody></table></div>
 
       <div class="mbg" id="addModel" hidden>
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addModelTitle">
+        <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="addModelTitle">
           <button type="button" class="mclose" id="addModelCancel" aria-label="Закрыть">×</button>
-          <h2 class="mtitle" id="addModelTitle" style="margin-bottom:18px">Новая модель</h2>
-          <div class="field"><label>Название</label><input placeholder="например, GLM-4"></div>
-          <div class="field"><label>Адрес API <span class="req">*</span></label><input id="mUrl" placeholder="http://localhost:11434/v1"><div class="hint">Адрес до <code>/v1</code> — Ollama, GLM или другой OpenAI-совместимый.</div></div>
-          <div class="grid c2">
-            <div><label>Модель <span class="req">*</span></label><input placeholder="glm-4"></div>
-            <div><label>Токен</label><div class="pwd"><input type="password" id="p2" placeholder="sk-…"><button type="button" data-tg="p2">👁</button></div></div>
+          <h2 class="mtitle" id="addModelTitle" style="margin-bottom:14px">Новая модель</h2>
+          <div class="mtabs" role="tablist"><button class="on" data-atab="mgen">Общее</button><button data-atab="myaml">YAML</button></div>
+          <div class="apanel" data-apanel="mgen">
+            <div class="psec">
+              <label class="switch"><input type="checkbox" role="switch" checked disabled><span class="track"></span><span>Сделать моделью по умолчанию</span></label>
+              <div class="hint" style="margin:6px 0 0">Это первая модель — она всегда становится моделью по умолчанию.</div>
+            </div>
+            <div class="field"><label>Название</label><input placeholder="например, GLM-4"></div>
+            <div class="field"><label>Адрес API <span class="req">*</span></label><input id="mUrl" placeholder="http://localhost:11434/v1"></div>
+            <div class="field"><label>Модель <span class="req">*</span></label><input placeholder="glm-4"></div>
+            <div class="field"><label>Токен</label><div class="pwd"><input type="password" id="p2" placeholder="sk-…"><button type="button" data-tg="p2">👁</button></div></div>
+            <div class="field"><label>Контекст, токенов</label><input type="number" value="32000"><div class="hint">Сколько модель держит в памяти. Длинный чат пересказывается, когда история подходит к 70 %.</div></div>
           </div>
-          <label class="toggle" style="margin-top:16px"><input type="checkbox"> <span>Сделать моделью по умолчанию</span></label>
+          <div class="apanel" data-apanel="myaml" hidden>
+            <div class="hint" style="margin:0 0 10px">Модель текстом: правка здесь сразу меняет «Общее». Токен сюда не попадает — его вводят на «Общем».</div>
+            <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" spellcheck="false" aria-label="YAML модели"># AI Portal — модель. Токен сюда не попадает.
+version: 1
+name: Ollama Cloud
+baseUrl: https://ollama.com/v1
+model: gpt-oss:120b
+contextTokens: 32000
+default: true</textarea></div>
+            <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn primary">Скачать .yaml</button><button type="button" class="btn primary">Загрузить .yaml</button></div>
+          </div>
           <div class="status" id="st-llm" hidden style="margin-top:14px"></div>
           <div class="mfoot"><button class="btn ghost" data-test="llm">Проверить</button><span class="spacer"></span><button class="btn primary" id="saveBtn">Сохранить</button></div>
         </div>
@@ -798,17 +817,14 @@
           </div>
 
           <div class="apanel" data-apanel="agt" hidden>
-            <div class="hint" style="margin:0 0 10px">Субагенты — агенты, которых этот агент может запускать сам. Их действия подтверждаются по их собственным политикам.</div>
             ${tpart(agents)}
           </div>
           <div class="apanel" data-apanel="mcp" hidden>
-            <div class="hint" style="margin:0 0 10px">Подключения из раздела MCP. В «Доступе» — что агенту можно с этим подключением: только читать, изменять, отправлять.</div>
             ${tpart(mcp, '', true)}
           </div>
-          <div class="apanel" data-apanel="api" hidden>${tpart([], 'API портала пока нет.')}</div>
+          <div class="apanel" data-apanel="api" hidden>${tpart([])}</div>
 
           <div class="apanel" data-apanel="yaml" hidden>
-            <div class="hint" style="margin:0 0 10px">Весь агент текстом: правка здесь сразу меняет форму. Модель, подключения и агенты — по названию; пароли и токены сюда не попадают.</div>
             <div class="yamlwrap"><pre class="yamlhl" aria-hidden="true"></pre><textarea class="yamlin" spellcheck="false" aria-label="YAML агента"># AI Portal — агент.\n${yaml}</textarea></div>
             <div class="wrapgap" style="margin-top:12px"><button type="button" class="btn primary">Скачать .yaml</button><button type="button" class="btn primary">Загрузить .yaml</button></div>
           </div>

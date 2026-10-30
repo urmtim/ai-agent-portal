@@ -6,13 +6,15 @@ import { prisma } from "@/lib/db";
 import { chatModel, errorText, NO_MODEL_MESSAGE } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
 import { firstMailConnection } from "@/lib/connections";
-import { guardrailInstructions, maskPii } from "./guardrails";
-import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules } from "./policy";
-import { docsInstructions } from "@/lib/guardrail-docs";
+import { maskPii } from "./guardrails";
+import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules, parseHitl } from "./policy";
+import { agentInstructions } from "@/lib/chat/instructions";
+import { policySnapshot, policyTools, withPolicies } from "@/lib/chat/policy-tools";
 import { agentDesc } from "./types";
 import type { RunBy } from "./runner";
 
-// «Свой агент»: its instruction + guardrails, its own tools (mail from its MCP tab, the agents on its «Агенты» tab).
+// «Свой агент»: its instruction + the shared rules, its own tools (mail from its MCP tab, the agents on its «Субагенты» tab),
+// current_time and get_policies (its HITL and guardrails; put before the task so the model can't skip them).
 // Runs to the end without a human — only subagents with HITL switched off can be called from inside, and only one level deep.
 
 const ids = (raw: string): string[] => { try { const v = JSON.parse(raw || "[]"); return Array.isArray(v) ? v : []; } catch { return []; } };
@@ -32,9 +34,11 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: agent.ownerId, enabled: true, id: { in: guardDocIds(rules) } }, select: { name: true, text: true } });
 
   const conn = await firstMailConnection(agent.ownerId, ids(agent.mcpIds));
-  const tools: ToolSet = conn
-    ? mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii })
-    : {};
+  const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs);
+  const tools: ToolSet = {
+    ...policyTools(snapshot),
+    ...(conn ? mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii }) : {}),
+  };
 
   // agents it may call: enabled, without confirmation, not itself; nested agents don't call further
   const subs = ctx.depth > 0 ? [] : (await prisma.agent.findMany({
@@ -54,18 +58,12 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
     });
   }
 
-  const instructions = [
-    agent.instruction.trim() || "Ты — агент портала AI Portal. Выполни задачу коротко и по делу.",
-    "Отвечай по-русски. Данные не выдумывай: опирайся только на результаты инструментов.",
-    conn ? `Почта пользователя (ящик «${conn.name}»): mail_search ищет письма, mail_read открывает письмо.` : "Доступа к почте у тебя нет.",
-    guardrailInstructions(g),
-    docsInstructions(docs),
-  ].filter(Boolean).join("\n");
+  const instructions = agentInstructions(agent.instruction);
   const prompt = task.trim() ? (g.maskPii ? maskPii(task.trim()) : task.trim()) : "Выполни свою задачу по инструкции.";
 
   let res;
   try {
-    res = await generateText({ model: llm.model, instructions, prompt, tools, stopWhen: isStepCount(g.maxSteps) });
+    res = await generateText({ model: llm.model, instructions, messages: withPolicies([{ role: "user", content: prompt }], snapshot), tools, stopWhen: isStepCount(g.maxSteps) });
   } catch (e) {
     throw new Error(errorText(e, llm.token));
   }

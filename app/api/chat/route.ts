@@ -18,10 +18,9 @@ import { loadAssistant } from "@/lib/assistant";
 import { audit } from "@/lib/audit";
 import { estimateTokens, lastUserIndex, planSummary, summaryInput, trimToolResults } from "@/lib/chat/context";
 import { summarizeChat } from "@/lib/chat/summarize";
-import { effectiveGuardrails, guardDocIds } from "@/lib/agents/policy";
-import { guardrailInstructions } from "@/lib/agents/guardrails";
-import { docsInstructions } from "@/lib/guardrail-docs";
-import { chatInstructions } from "@/lib/chat/instructions";
+import { effectiveGuardrails } from "@/lib/agents/policy";
+import { CHAT_INSTRUCTIONS } from "@/lib/chat/instructions";
+import { withPolicies } from "@/lib/chat/policy-tools";
 
 // One chat turn: the browser sends the whole history (useChat), we check it,
 // save it, stream the model's answer with tools and save again with the answer.
@@ -61,7 +60,7 @@ export async function POST(req: Request) {
   }
   if (!llm) return plain(NO_MODEL_MESSAGE, 400);
 
-  const { tools, activeTools, approval, agents, mailbox } = await chatTools(user, assistant);
+  const { tools, activeTools, approval, agents, snapshot } = await chatTools(user, assistant);
 
   let messages: UIMessage[];
   try {
@@ -86,21 +85,15 @@ export async function POST(req: Request) {
     }
   }
 
-  // the built-in instruction (shown read-only in the «Ассистент» window) + the assistant's guardrails
-  // (masking happens in the mail tools, lib/chat/tools.ts)
+  // the constant instruction (shown read-only in the «Ассистент» window); policies come as get_policies
+  const base = CHAT_INSTRUCTIONS;
   const g = effectiveGuardrails(assistant.guardrails);
-  const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: user.id, enabled: true, id: { in: guardDocIds(assistant.guardrails) } }, select: { name: true, text: true } });
-  const base = [
-    chatInstructions(user.name ?? "", agents, activeTools.includes("mail_search") ? mailbox : null),
-    guardrailInstructions(g),
-    docsInstructions(docs),
-  ].filter(Boolean).join("\n\n");
 
   // ---- long chats: old tool results in short form; the start retold once the history nears the context ----
   let summary = chat?.summary ?? "", upto = chat?.summaryUpto ?? 0;
   if (upto > 0 && (upto > messages.length || messages[upto - 1]?.id !== chat?.summaryLastId)) { summary = ""; upto = 0; } // history edited
   const trimmed = trimToolResults(messages, lastUserIndex(messages));
-  const fixedTokens = estimateTokens(base + summary) + activeTools.reduce((n, k) => n + estimateTokens(tools[k].description ?? "") + 150, 0);
+  const fixedTokens = estimateTokens(base + summary) + estimateTokens(snapshot) + activeTools.reduce((n, k) => n + estimateTokens(tools[k].description ?? "") + 150, 0);
   const cut = planSummary({ messages: trimmed, summaryUpto: upto, budget: llm.contextTokens, fixedTokens });
   if (cut > upto) {
     try {
@@ -118,7 +111,8 @@ export async function POST(req: Request) {
   const result = streamText({
     model: llm.model,
     instructions: summary ? `${base}\n\nКраткое содержание начала разговора (старые сообщения скрыты):\n${summary}` : base,
-    messages: await convertToModelMessages(trimmed.slice(upto), { tools }),
+    // get_policies with its result goes right before the current question — the model can't skip it
+    messages: withPolicies(await convertToModelMessages(trimmed.slice(upto), { tools }), snapshot),
     tools,
     activeTools,
     toolApproval: approval,
