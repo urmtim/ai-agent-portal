@@ -238,7 +238,8 @@
   .tpart { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; } .tpart table { width: 100%; }
   .tpart th { padding: 8px 12px; font-size: 11px; } .tpart td { padding: 8px 12px; vertical-align: middle; } .tpart td.tempty { text-align: center; padding: 16px 12px; }
   .tpart.mtools td { padding-top: 6px; padding-bottom: 6px; }
-  .tpart .limcell { margin: 0; } .tpart .limin { display: flex; align-items: center; gap: 8px; } .tpart .limin input { width: 110px; padding: 6px 10px; } .tpart .limcell .ferr { margin-top: 4px; } .tpart.mtools tr.mgrp td { background: var(--soft, #f6f6fb); }
+  .tpart td.limcell { margin: 0; white-space: nowrap; font-size: 13px; color: var(--muted); } .tpart .limnum { width: 84px; padding: 4px 8px; margin: 0 2px; display: inline-block; }
+  .tpart td.limcell .ferr { margin-top: 4px; white-space: normal; } .tpart.mtools tr.mgrp td { background: var(--soft, #f6f6fb); }
   .apanel .tbar { margin-bottom: 10px; }
   .field textarea.desc { height: 200px; resize: vertical; }
   input.tchk { width: 17px; height: 17px; padding: 0; margin: 0; display: block; accent-color: var(--primary); cursor: pointer; }
@@ -1212,7 +1213,7 @@ contextTokens: 32000</textarea></div>
   const MAIL_TOOLS = [
     ['search', 'Искать письма', 'По теме, отправителю, тексту и периоду', 'r'],
     ['read', 'Читать письма', 'Текст письма и всю переписку', 'r'],
-    ['attach', 'Вложения', 'Прочитать текст или взять файл, например чтобы сохранить', 'r'],
+    ['attach', 'Вложения', 'Текст из PDF, Word и текстовых файлов', 'r'],
     ['count', 'Считать письма', 'Сколько всего и непрочитанных', 'r'],
     ['folders', 'Смотреть папки', 'Корзина, Отправленные, Спам и другие', 'r', 'imap'],
     ['move', 'Перемещать письма', 'Между папками, в архив, обратно из корзины', 'w', 'imap'],
@@ -1259,6 +1260,8 @@ contextTokens: 32000</textarea></div>
         return typeSel
           + `<div class="mailrow" style="${row}">${field('Получение', false, `<select class="f" id="cwProto"><option value="imap" ${proto === 'imap' ? 'selected' : ''}>IMAP</option><option value="pop3" ${proto === 'pop3' ? 'selected' : ''}>POP3</option></select>`)}`
           + `${field('Сервер входящей почты', true, `<input id="cwHost" value="${esc(D?.host)}" placeholder="например, imap.mail.ru">`)}${field('Порт', true, `<input id="cwPort" type="number" value="${PORTS[proto]}">`)}</div>`
+          // POP3 has no server-side search: how many of the newest letters to look through
+          + `<div id="cwPopRow" style="width:260px" ${proto === 'pop3' ? '' : 'hidden'}>${field('Сколько последних писем смотреть', false, `<input type="number" id="cwLim-pop3Scan" data-lim="pop3Scan" min="10" max="10000" value="${lv.pop3Scan ?? 200}">`)}</div>`
           // «Отправка — Нет» is enough for a read-only app password: the SMTP fields stay grey
           + `<div class="mailrow" style="${row}">${field('Отправка', false, `<select class="f" id="cwOut"><option value="none" ${D?.smtp ? '' : 'selected'}>Нет</option><option value="smtp" ${D?.smtp ? 'selected' : ''}>SMTP</option></select>`)}`
           + `${field('Сервер исходящей почты', false, `<input id="cwSmtp" value="${esc(D?.smtp)}" placeholder="${D?.smtp ? 'например, smtp.mail.ru' : ''}" ${D?.smtp ? '' : 'disabled'}>`)}${field('Порт', false, `<input id="cwSmtpPort" type="number" value="${PORTS.smtp}" ${D?.smtp ? '' : 'disabled'}>`)}</div>`
@@ -1270,36 +1273,33 @@ contextTokens: 32000</textarea></div>
     // a «Почта» connector: each tool its own checkbox; folders need IMAP, sending needs SMTP
     const mailNeed = (need) => need === 'imap' ? ($('cwProto')?.value || D?.proto || 'imap') === 'imap' : need === 'smtp' ? ($('cwOut') ? $('cwOut').value === 'smtp' : !!D?.smtp) : true;
     const mailOn = () => MAIL_TOOLS.filter(([k, , , , need]) => mailNeed(need) && mt[k]).map(([k]) => k);
+    /** A limit's number inside a sentence: «до [20] писем». */
+    const limIn = (k, off) => { const [, , , , min, max, , opt] = MAIL_LIMITS.find((l) => l[1] === k);
+      return `<input type="number" class="limnum" id="cwLim-${k}" data-lim="${k}" min="${min}" max="${max}" value="${lv[k] ?? ''}" ${opt ? 'placeholder="∞"' : ''} ${off ? 'disabled' : ''} title="От ${min} до ${max}${opt ? ', пусто — без ограничения' : ''}" aria-label="${k}">`; };
+    const LIM_OF = {
+      search: (o) => `до ${limIn('searchLimit', o)} писем за ${limIn('searchDays', o)} дней`,
+      read: (o) => `до ${limIn('letterChars', o)} знаков`,
+      attach: (o) => `до ${limIn('attachMb', o)} МБ и ${limIn('attachChars', o)} знаков`,
+      w: (o) => `до ${limIn('actionLimit', o)} писем за раз`,
+    };
+    const limCell = (key, off) => `<td class="field limcell">${LIM_OF[key] ? LIM_OF[key](off) : ''}<div class="ferr" hidden></div></td>`;
     function panelTools() {
       if (kind === 'conn') {
         // all on by default; a group's checkbox sets its whole group, «частично» when only some are on
         const rows = MAIL_CLASSES.map(([c, cn, cd]) => {
           const list = MAIL_TOOLS.filter((t) => t[3] === c), can = list.some((t) => mailNeed(t[4])), need = list[list.length - 1][4];
           return `<tr class="mgrp"${can ? '' : ' style="opacity:.55"'}><td style="width:44px"><input type="checkbox" class="tchk" data-mgroup="${c}" ${can ? '' : 'disabled'} aria-label="Включить всё: ${cn}"></td>`
-            + `<td><b>${cn}</b></td><td class="muted">${cd}${can ? '' : `. ${need === 'imap' ? 'Нужно получение по IMAP' : 'Нужна отправка по SMTP'}`}</td></tr>`
+            + `<td><b>${cn}</b></td><td class="muted">${cd}${can ? '' : `. ${need === 'imap' ? 'Нужно получение по IMAP' : 'Нужна отправка по SMTP'}`}</td>${limCell(c, !can || !list.some((t) => mailNeed(t[4]) && mt[t[0]]))}</tr>`
             + list.map(([k, n, d, , nd]) => { const ok = mailNeed(nd);
               return `<tr${ok ? '' : ' style="opacity:.55"'}><td style="padding-left:30px"><input type="checkbox" class="tchk" data-mtool="${k}" ${ok && mt[k] ? 'checked' : ''} ${ok ? '' : 'disabled'} aria-label="Включить «${n}»"></td><td style="padding-left:20px">${n}</td>`
-                + `<td class="muted">${d}${ok || !can ? '' : '. Нужно получение по IMAP'}</td></tr>`; }).join('');
+                + `<td class="muted">${d}${ok || !can ? '' : '. Нужно получение по IMAP'}</td>${limCell(k, !ok || !mt[k])}</tr>`; }).join('');
         }).join('');
-        return `<div class="tpart mtools"><table><thead><tr><th></th><th>Инструмент</th><th>Описание</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+        return `<div class="tpart mtools"><table><thead><tr><th></th><th>Инструмент</th><th>Описание</th><th>Ограничение</th></tr></thead><tbody>${rows}</tbody></table></div>`;
       }
       const rows = !tools.length ? '<tr><td colspan="4" class="muted tempty">Список появится после проверки подключения</td></tr>'
         : tools.map((t, i) => `<tr><td style="width:44px"><input type="checkbox" class="tchk" data-tool="${i}" ${t[3] === false ? '' : 'checked'} aria-label="Включить «${t[0]}»"></td><td><b>${t[0]}</b></td><td class="muted">${t[1]}</td><td><span class="st ${t[2] === 'w' ? 'wait' : 'mut'}">${t[2] === 'w' ? 'изменение' : 'чтение'}</span></td></tr>`).join('');
       return `<div class="tpart"><table><thead><tr><th></th><th>Инструмент</th><th>Описание</th><th>Вид</th></tr></thead><tbody>${rows}</tbody></table></div>
         <div class="hint">Выключенный инструмент не получит ни один агент. Изменения агент делает по правилам подтверждения из своих «Политик».</div>`;
-    }
-    // «Ограничения»: a table like «Инструменты» — groups, then each limit with its value and what it may be
-    const isPop = () => ($('cwProto')?.value || D?.proto || 'imap') === 'pop3';
-    function panelLimits() {
-      const groups = [...new Set(MAIL_LIMITS.map((l) => l[0]))];
-      const rows = groups.map((g) => {
-        const list = MAIL_LIMITS.filter((l) => l[0] === g), pop = list[0][7] === 'pop3', off = pop && !isPop();
-        return `<tr class="mgrp"${off ? ' style="opacity:.55"' : ''}><td colspan="3"><b>${g}</b>${off ? '<span class="muted">. Нужно получение по POP3</span>' : ''}</td></tr>`
-          + list.map(([, k, n, d, min, max, unit, opt]) => `<tr${off ? ' style="opacity:.55"' : ''}><td style="padding-left:24px">${n}</td>`
-            + `<td style="width:190px"><div class="field limcell"><div class="limin"><input type="number" id="cwLim-${k}" data-lim="${k}" min="${min}" max="${max}" value="${lv[k] ?? ''}" ${opt ? 'placeholder="без ограничения"' : ''} ${off ? 'disabled' : ''}><span class="muted">${unit}</span></div><div class="ferr" hidden></div></div></td>`
-            + `<td class="muted" style="width:150px">${min}–${max}${opt ? ', пусто — без ограничения' : ''}</td></tr>`).join('');
-      }).join('');
-      return `<div class="tpart mtools"><table><thead><tr><th>Ограничение</th><th>Значение</th><th>Можно</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }
     const limitsBad = () => { for (const [, k, , , min, max, , opt] of MAIL_LIMITS) { const i = $(`cwLim-${k}`); if (!i || i.disabled) continue;
       const v = i.value.trim(), n = Number(v); if (!(v === '' && opt) && (!v || !Number.isInteger(n) || n < min || n > max)) return fErr(i.id, `Число от ${min} до ${max}`); } return true; };
@@ -1313,12 +1313,11 @@ contextTokens: 32000</textarea></div>
         : `incoming:\n  protocol: ${val('cwProto')}\n  host: ${val('cwHost')}\n  port: ${val('cwPort')}\noutgoing:${$('cwOut')?.value === 'smtp' ? `\n  host: ${val('cwSmtp')}\n  port: ${val('cwSmtpPort')}` : ' none'}\nuser: ${val('cwUser', D?.user)}\ntools:${mailOn().map((k) => `\n  - ${k}`).join('') || ' []'}\nlimits:${MAIL_LIMITS.map(([, k]) => `\n  ${k}: ${lv[k] === '' ? 'none' : lv[k]}`).join('')}\n`;
       return `# AI Portal — ${kind === 'mcp' ? 'MCP-сервер' : 'коннектор'}. Пароли и токены сюда не попадают.\n${head}${conn}${kind === 'mcp' ? `toolsOff:${off}` : ''}`.trimEnd();
     }
-    const P = { gen: panelGen, con: panelCon, tls: panelTools, lim: panelLimits, yaml: panelYaml };
-    const tabsFor = () => D?.builtin ? [['gen', 'Общее'], ['tls', 'Инструменты']] : kind === 'conn' ? [['gen', 'Общее'], ['con', 'Подключение'], ['tls', 'Инструменты'], ['lim', 'Ограничения'], ['yaml', 'YAML']]
+    const P = { gen: panelGen, con: panelCon, tls: panelTools, yaml: panelYaml };
+    const tabsFor = () => D?.builtin ? [['gen', 'Общее'], ['tls', 'Инструменты']] : kind === 'conn' ? [['gen', 'Общее'], ['con', 'Подключение'], ['tls', 'Инструменты'], ['yaml', 'YAML']]
       : [['gen', 'Общее'], ['con', 'Подключение'], ['tls', 'Инструменты'], ['yaml', 'YAML']];
     const countTools = () => { const b = m.querySelector('[data-ctab=tls]'); if (!b) return;
       if (kind === 'conn') { b.hidden = type !== 'mail'; // an API has no tools and no limits yet
-        const lb = m.querySelector('[data-ctab=lim]'); if (lb) lb.hidden = type !== 'mail';
         m.querySelectorAll('[data-mgroup]').forEach((g) => { const on = MAIL_TOOLS.filter((t) => t[3] === g.dataset.mgroup && mailNeed(t[4])).map((t) => mt[t[0]]);
           g.checked = on.length > 0 && on.every(Boolean); g.indeterminate = on.some(Boolean) && !g.checked; }); }
       b.querySelector('.n').textContent = kind === 'conn' ? mailOn().length : tools.filter((t) => t[3] !== false).length; };
@@ -1401,9 +1400,9 @@ contextTokens: 32000</textarea></div>
       if (id === 'cwOut') { const on = e.target.value === 'smtp'; ['cwSmtp', 'cwSmtpPort'].forEach((x) => { $(x).disabled = !on; $(x).classList.remove('bad'); $(x).closest('.field').querySelector('.ferr').hidden = true; });
         $('cwSmtp').placeholder = on ? 'например, smtp.mail.ru' : ''; fill('tls'); }
       if (id === 'cwProto') { const pop = e.target.value === 'pop3', h = $('cwHost');
-        $('cwPort').value = PORTS[e.target.value]; h.value = h.value.replace(pop ? /^imap\./ : /^pop3?\./, pop ? 'pop.' : 'imap.'); fill('tls'); fill('lim'); }
+        $('cwPort').value = PORTS[e.target.value]; h.value = h.value.replace(pop ? /^imap\./ : /^pop3?\./, pop ? 'pop.' : 'imap.'); fill('tls'); $('cwPopRow').hidden = !pop; }
       if (e.target.dataset.tool !== undefined) { tools[e.target.dataset.tool][3] = e.target.checked; countTools(); }
-      if (e.target.dataset.mtool) { mt[e.target.dataset.mtool] = e.target.checked; countTools(); }
+      if (e.target.dataset.mtool) { mt[e.target.dataset.mtool] = e.target.checked; fill('tls'); }
       if (e.target.dataset.mgroup) { MAIL_TOOLS.filter((t) => t[3] === e.target.dataset.mgroup && mailNeed(t[4])).forEach((t) => { mt[t[0]] = e.target.checked; }); fill('tls'); }
       m._upd?.();
     });
