@@ -1227,8 +1227,9 @@ contextTokens: 32000</textarea></div>
         return typeSel
           + `<div class="mailrow" style="${row}">${field('Получение', false, `<select class="f" id="cwProto"><option value="imap" ${proto === 'imap' ? 'selected' : ''}>IMAP</option><option value="pop3" ${proto === 'pop3' ? 'selected' : ''}>POP3</option></select>`)}`
           + `${field('Сервер входящей почты', true, `<input id="cwHost" value="${esc(D?.host)}" placeholder="например, imap.mail.ru">`)}${field('Порт', true, `<input id="cwPort" type="number" value="${PORTS[proto]}">`)}</div>`
-          + `<div class="mailrow" style="${row}">${field('Отправка', false, '<input value="SMTP" disabled>')}`
-          + `${field('Сервер исходящей почты', false, `<input id="cwSmtp" value="${esc(D?.smtp)}" placeholder="например, smtp.mail.ru">`)}${field('Порт', false, `<input id="cwSmtpPort" type="number" value="${PORTS.smtp}">`)}</div>`
+          // «Отправка — Нет» is enough for a read-only app password: the SMTP fields stay grey
+          + `<div class="mailrow" style="${row}">${field('Отправка', false, `<select class="f" id="cwOut"><option value="none" ${D?.smtp ? '' : 'selected'}>Нет</option><option value="smtp" ${D?.smtp ? 'selected' : ''}>SMTP</option></select>`)}`
+          + `${field('Сервер исходящей почты', false, `<input id="cwSmtp" value="${esc(D?.smtp)}" placeholder="${D?.smtp ? 'например, smtp.mail.ru' : ''}" ${D?.smtp ? '' : 'disabled'}>`)}${field('Порт', false, `<input id="cwSmtpPort" type="number" value="${PORTS.smtp}" ${D?.smtp ? '' : 'disabled'}>`)}</div>`
           + `<div class="grid c2" style="gap:14px">${field('Логин', true, `<input id="cwUser" value="${esc(D?.user)}" placeholder="you@mail.ru" autocomplete="off">`)}`
           + `${field('Пароль приложения', true, pwd('cwPass', D ? 'Пароль сохранён' : ''))}</div>` + check; }
       return typeSel + field('Адрес API', true, `<input id="cwUrl" value="${esc(D?.url)}" placeholder="например, https://api.example.ru/v1">`)
@@ -1247,7 +1248,7 @@ contextTokens: 32000</textarea></div>
       const off = tools.filter((t) => t[3] === false).map((t) => `\n  - ${t[0]}`).join('') || ' []';
       const head = `version: 1\n${kind === 'conn' ? `type: ${type}\n` : ''}name: ${val('cwName', D?.name)}\ndescription: ${val('cwDesc', D?.desc)}\n${kind === 'conn' ? `enabled: ${$('cwOn') ? $('cwOn').checked : !D?.off}\n` : ''}`;
       const conn = kind === 'mcp' ? `url: ${val('cwUrl', D?.url)}\nauth: ${val('cwAuth', D?.auth)}\n` : type === 'api' ? `url: ${val('cwUrl', D?.url)}\n`
-        : `incoming:\n  protocol: ${val('cwProto')}\n  host: ${val('cwHost')}\n  port: ${val('cwPort')}\noutgoing:\n  host: ${val('cwSmtp')}\n  port: ${val('cwSmtpPort')}\nuser: ${val('cwUser', D?.user)}\n`;
+        : `incoming:\n  protocol: ${val('cwProto')}\n  host: ${val('cwHost')}\n  port: ${val('cwPort')}\noutgoing:${$('cwOut')?.value === 'smtp' ? `\n  host: ${val('cwSmtp')}\n  port: ${val('cwSmtpPort')}` : ' none'}\nuser: ${val('cwUser', D?.user)}\n`;
       return `# AI Portal — ${kind === 'mcp' ? 'MCP-сервер' : 'коннектор'}. Пароли и токены сюда не попадают.\n${head}${conn}${kind === 'mcp' ? `toolsOff:${off}` : ''}`.trimEnd();
     }
     const P = { gen: panelGen, con: panelCon, tls: panelTools, yaml: panelYaml };
@@ -1283,6 +1284,7 @@ contextTokens: 32000</textarea></div>
       if (usesUrl() && !$('cwUrl').value.trim()) return fErr('cwUrl', kind === 'mcp' ? 'Укажите адрес сервера' : 'Укажите адрес API');
       if ($('cwHost') && !$('cwHost').value.trim()) return fErr('cwHost', 'Укажите сервер входящей почты');
       if ($('cwPort') && !(Number($('cwPort').value) > 0)) return fErr('cwPort', 'Укажите порт');
+      if ($('cwOut')?.value === 'smtp' && !$('cwSmtp').value.trim()) return fErr('cwSmtp', 'Укажите сервер исходящей почты');
       if ($('cwHdr') && !$('cwHdr').value.trim()) return fErr('cwHdr', 'Укажите заголовок');
       if ($('cwUser') && !$('cwUser').value.trim()) return fErr('cwUser', 'Укажите логин');
       for (const id of kind === 'conn' && type === 'api' ? [] : ['cwTok', 'cwPass']) { const i = $(id);
@@ -1324,6 +1326,8 @@ contextTokens: 32000</textarea></div>
       if (id === 'cwOn') { const t = e.target.checked ? 'Коннектор включён' : 'Коннектор выключен'; e.target.closest('.switch').title = t; e.target.setAttribute('aria-label', t); }
       if (id === 'cwAuth') $('cwAuthBox').innerHTML = authFields(e.target.value);
       // IMAP ↔ POP3: the usual port, and imap.… ↔ pop.… when the server follows that pattern
+      if (id === 'cwOut') { const on = e.target.value === 'smtp'; ['cwSmtp', 'cwSmtpPort'].forEach((x) => { $(x).disabled = !on; $(x).classList.remove('bad'); $(x).closest('.field').querySelector('.ferr').hidden = true; });
+        $('cwSmtp').placeholder = on ? 'например, smtp.mail.ru' : ''; }
       if (id === 'cwProto') { const pop = e.target.value === 'pop3', h = $('cwHost');
         $('cwPort').value = PORTS[e.target.value]; h.value = h.value.replace(pop ? /^imap\./ : /^pop3?\./, pop ? 'pop.' : 'imap.'); }
       if (e.target.dataset.tool !== undefined) { tools[e.target.dataset.tool][3] = e.target.checked; countTools(); }

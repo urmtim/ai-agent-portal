@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_FIELDS, fieldsToYaml, yamlToFields, type ConnectorFields } from "./connector-spec";
 
-const mail: ConnectorFields = { ...EMPTY_FIELDS, name: "Моя почта", description: "Чеки", protocol: "pop3", host: "pop.mail.ru", port: "995", smtpHost: "smtp.mail.ru", smtpPort: "465", user: "me@mail.ru" };
+const mail: ConnectorFields = { ...EMPTY_FIELDS, name: "Моя почта", description: "Чеки", protocol: "pop3", host: "pop.mail.ru", port: "995", sending: "smtp", smtpHost: "smtp.mail.ru", smtpPort: "465", user: "me@mail.ru" };
 
 test("mail connector round-trips; no secrets in the text", () => {
   const y = fieldsToYaml(mail);
@@ -12,6 +12,16 @@ test("mail connector round-trips; no secrets in the text", () => {
   assert.ok("fields" in back);
   assert.deepEqual(back.fields, mail);
   assert.deepEqual(back.warnings, []);
+});
+
+test("no sending: «outgoing: none», read back as none", () => {
+  const off: ConnectorFields = { ...mail, sending: "none", smtpHost: "", smtpPort: "465" };
+  const y = fieldsToYaml(off);
+  assert.ok(y.includes("outgoing: none"), y);
+  const back = yamlToFields(y, mail, true);
+  assert.ok("fields" in back && back.fields.sending === "none");
+  const keep = yamlToFields("name: X\n", mail, true);
+  assert.ok("fields" in keep && keep.fields.sending === "smtp"); // not in the file → as it was
 });
 
 test("API connector round-trips; a new one may change type from the file", () => {

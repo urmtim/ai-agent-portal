@@ -1,18 +1,18 @@
 // Connector ↔ YAML for the window's «YAML» tab (pure, unit-tested in connector-spec.test.ts).
 // Passwords and tokens never appear here, and are not taken from a loaded file.
 import { parse, stringify } from "yaml";
-import { MAIL_PORTS, type ConnectorKind } from "./connectors";
+import { MAIL_PORTS, type ConnectorKind, type MailSending } from "./connectors";
 
 /** The window's fields, as typed (ports too): what the YAML fills and is made from. */
 export type ConnectorFields = {
   kind: ConnectorKind; name: string; description: string; enabled: boolean;
-  protocol: "imap" | "pop3"; host: string; port: string; smtpHost: string; smtpPort: string; user: string;
+  protocol: "imap" | "pop3"; host: string; port: string; sending: MailSending; smtpHost: string; smtpPort: string; user: string;
   url: string;
 };
 
 export const EMPTY_FIELDS: ConnectorFields = {
   kind: "mail", name: "", description: "", enabled: true,
-  protocol: "imap", host: "", port: String(MAIL_PORTS.imap), smtpHost: "", smtpPort: String(MAIL_PORTS.smtp), user: "", url: "",
+  protocol: "imap", host: "", port: String(MAIL_PORTS.imap), sending: "none", smtpHost: "", smtpPort: String(MAIL_PORTS.smtp), user: "", url: "",
 };
 
 const num = (s: string) => (/^\d+$/.test(s.trim()) ? Number(s) : s.trim());
@@ -20,7 +20,7 @@ const num = (s: string) => (/^\d+$/.test(s.trim()) ? Number(s) : s.trim());
 export function fieldsToYaml(f: ConnectorFields): string {
   const head = { version: 1, type: f.kind, name: f.name, description: f.description, enabled: f.enabled };
   const doc = f.kind === "mail"
-    ? { ...head, incoming: { protocol: f.protocol, host: f.host, port: num(f.port) }, outgoing: { host: f.smtpHost, port: num(f.smtpPort) }, user: f.user }
+    ? { ...head, incoming: { protocol: f.protocol, host: f.host, port: num(f.port) }, outgoing: f.sending === "smtp" ? { host: f.smtpHost, port: num(f.smtpPort) } : "none", user: f.user }
     : { ...head, url: f.url };
   return "# AI Portal — коннектор. Пароли и токены сюда не попадают.\n" + stringify(doc, { lineWidth: 0 });
 }
@@ -58,6 +58,8 @@ export function yamlToFields(text: string, current: ConnectorFields, typeLocked:
       enabled: typeof o.enabled === "boolean" ? o.enabled : current.enabled,
       protocol: inc.protocol === "pop3" ? "pop3" : inc.protocol === "imap" ? "imap" : current.protocol,
       host: str(inc.host, current.host), port: str(inc.port, current.port),
+      // «outgoing: none» — no sending; an object — SMTP; nothing — as it was
+      sending: o.outgoing === "none" ? "none" : o.outgoing && typeof o.outgoing === "object" ? "smtp" : current.sending,
       smtpHost: str(out.host, current.smtpHost), smtpPort: str(out.port, current.smtpPort),
       user: str(o.user, current.user),
       url: str(o.url, current.url),

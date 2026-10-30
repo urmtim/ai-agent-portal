@@ -58,15 +58,21 @@ export function parseApiConfig(raw: string | null | undefined): ApiConfig | null
 export type ConnectorField = "name" | "host" | "port" | "smtpHost" | "smtpPort" | "user" | "password" | "url" | "token";
 export type FieldError = { field: ConnectorField; error: string };
 
-/** Window fields → mail settings; the first problem from top to bottom otherwise. */
-export function mailConfigFromForm(f: { protocol: string; host: string; port: string; smtpHost: string; smtpPort: string; user: string }): MailConfig | FieldError {
-  const host = f.host.trim().toLowerCase(), smtpHost = f.smtpHost.trim().toLowerCase(), user = f.user.trim();
-  const port = Number(f.port), smtpPort = f.smtpPort.trim() ? Number(f.smtpPort) : MAIL_PORTS.smtp;
+/** «Отправка» in the window: none (a read-only app password is enough) or SMTP with its server and port. */
+export type MailSending = "none" | "smtp";
+
+/** Window fields → mail settings; the first problem from top to bottom otherwise. Without sending the SMTP fields are ignored. */
+export function mailConfigFromForm(f: { protocol: string; host: string; port: string; sending: string; smtpHost: string; smtpPort: string; user: string }): MailConfig | FieldError {
+  const smtp = f.sending === "smtp";
+  const host = f.host.trim().toLowerCase(), smtpHost = smtp ? f.smtpHost.trim().toLowerCase() : "", user = f.user.trim();
+  const port = Number(f.port), smtpPort = smtp && f.smtpPort.trim() ? Number(f.smtpPort) : MAIL_PORTS.smtp;
   if (!host) return { field: "host", error: "Укажите сервер входящей почты" };
   if (!isHost(host)) return { field: "host", error: "Укажите адрес сервера, например imap.mail.ru" };
   if (!f.port.trim()) return { field: "port", error: "Укажите порт" };
   if (!isPort(port)) return { field: "port", error: "Порт — число от 1 до 65535" };
-  if (smtpHost && !isHost(smtpHost)) return { field: "smtpHost", error: "Укажите адрес сервера, например smtp.mail.ru" };
+  if (smtp && !smtpHost) return { field: "smtpHost", error: "Укажите сервер исходящей почты" };
+  if (smtp && !isHost(smtpHost)) return { field: "smtpHost", error: "Укажите адрес сервера, например smtp.mail.ru" };
+  if (smtp && !f.smtpPort.trim()) return { field: "smtpPort", error: "Укажите порт" };
   if (!isPort(smtpPort)) return { field: "smtpPort", error: "Порт — число от 1 до 65535" };
   if (!user) return { field: "user", error: "Укажите логин" };
   return {

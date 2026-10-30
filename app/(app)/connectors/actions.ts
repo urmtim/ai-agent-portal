@@ -32,7 +32,7 @@ type Parsed = { kind: "mail"; config: MailConfig } | { kind: "api"; config: ApiC
 function parseFields(kind: ConnectorKind, fd: FormData): Parsed | TestState {
   const s = (k: string) => String(fd.get(k) ?? "");
   if (kind === "mail") {
-    const m = mailConfigFromForm({ protocol: s("protocol"), host: s("host"), port: s("port"), smtpHost: s("smtpHost"), smtpPort: s("smtpPort"), user: s("user") });
+    const m = mailConfigFromForm({ protocol: s("protocol"), host: s("host"), port: s("port"), sending: s("sending"), smtpHost: s("smtpHost"), smtpPort: s("smtpPort"), user: s("user") });
     return "field" in m ? { ok: false, message: `✕ ${m.error}`, field: m.field } : { kind, config: m };
   }
   const a = apiConfigFromForm({ url: s("url") });

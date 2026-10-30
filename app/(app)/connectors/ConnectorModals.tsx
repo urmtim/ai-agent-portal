@@ -10,7 +10,7 @@ import { FormTabs } from "@/components/ui/TablePart";
 import { Switch } from "@/components/ui/Switch";
 import { YamlEditor } from "@/components/ui/YamlEditor";
 import { SecretInput } from "@/components/ui/SecretInput";
-import { CONNECTORS, switchProtocol, type ConnectorField, type ConnectorKind } from "@/lib/connectors";
+import { CONNECTORS, switchProtocol, type ConnectorField, type ConnectorKind, type MailSending } from "@/lib/connectors";
 import { EMPTY_FIELDS, fieldsToYaml, yamlToFields, type ConnectorFields } from "@/lib/connector-spec";
 import { checkConnector, deleteConnector, saveConnector, testConnector, type TestState } from "./actions";
 
@@ -42,7 +42,7 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
   const [test, setTest] = useState<TestState | "checking">();
   const [, startTest] = useTransition();
   const head = useModalHead();
-  const mail = f.kind === "mail";
+  const mail = f.kind === "mail", smtp = f.sending === "smtp";
 
   const upd = (patch: Partial<ConnectorFields>, field?: ConnectorField) => {
     setF((p) => ({ ...p, ...patch }));
@@ -67,6 +67,8 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
     }
     if (!f.host.trim()) return ["host", "Укажите сервер входящей почты"];
     if (!f.port.trim()) return ["port", "Укажите порт"];
+    if (smtp && !f.smtpHost.trim()) return ["smtpHost", "Укажите сервер исходящей почты"];
+    if (smtp && !f.smtpPort.trim()) return ["smtpPort", "Укажите порт"];
     if (!f.user.trim()) return ["user", "Укажите логин"];
     if (!secret && !c?.hasSecret) return ["password", "Укажите пароль"];
     return null;
@@ -179,18 +181,25 @@ function ConnectorForm({ c, onDone }: { c?: ConnectorRowData; onDone: () => void
               </div>
             </div>
             <div style={row}>
+              {/* «Нет» — enough for a read-only app password; the SMTP fields then stay grey and are not sent */}
               <div className="field">
                 <label htmlFor="cn-out">Отправка</label>
-                <input id="cn-out" value="SMTP" disabled />
+                <select id="cn-out" name="sending" value={f.sending}
+                  onChange={(e) => { upd({ sending: e.target.value as MailSending }); if (err?.field === "smtpHost" || err?.field === "smtpPort") setErr(undefined); }}>
+                  <option value="none">Нет</option>
+                  <option value="smtp">SMTP</option>
+                </select>
               </div>
               <div className="field">
-                <label htmlFor="cn-smtp">Сервер исходящей почты</label>
-                <input id="cn-smtp" name="smtpHost" autoComplete="off" className={bad("smtpHost")} value={f.smtpHost} onChange={(e) => upd({ smtpHost: e.target.value }, "smtpHost")} placeholder="например, smtp.mail.ru" />
+                <label htmlFor="cn-smtp">Сервер исходящей почты{smtp && <> <span className="req">*</span></>}</label>
+                <input id="cn-smtp" name="smtpHost" autoComplete="off" className={bad("smtpHost")} value={f.smtpHost} disabled={!smtp}
+                  onChange={(e) => upd({ smtpHost: e.target.value }, "smtpHost")} placeholder={smtp ? "например, smtp.mail.ru" : undefined} />
                 {fieldErr("smtpHost")}
               </div>
               <div className="field">
-                <label htmlFor="cn-smtpport">Порт</label>
-                <input id="cn-smtpport" name="smtpPort" type="number" min={1} max={65535} autoComplete="off" className={bad("smtpPort")} value={f.smtpPort} onChange={(e) => upd({ smtpPort: e.target.value }, "smtpPort")} />
+                <label htmlFor="cn-smtpport">Порт{smtp && <> <span className="req">*</span></>}</label>
+                <input id="cn-smtpport" name="smtpPort" type="number" min={1} max={65535} autoComplete="off" className={bad("smtpPort")} value={f.smtpPort} disabled={!smtp}
+                  onChange={(e) => upd({ smtpPort: e.target.value }, "smtpPort")} />
                 {fieldErr("smtpPort")}
               </div>
             </div>

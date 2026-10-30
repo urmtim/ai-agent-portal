@@ -22,7 +22,7 @@ const ST_CLS: Record<string, string> = { "выключен": "mut", "не про
 function fieldsOf(c: Row): ConnectorFields {
   const base = { ...EMPTY_FIELDS, kind: isConnectorKind(c.kind) ? c.kind : "mail", name: c.name, description: c.description, enabled: c.enabled } as ConnectorFields;
   const m = c.kind === "mail" ? parseMailConfig(c.config) : null;
-  if (m) return { ...base, protocol: m.protocol, host: m.host, port: String(m.port), smtpHost: m.smtpHost, smtpPort: String(m.smtpHost ? m.smtpPort : MAIL_PORTS.smtp), user: m.user };
+  if (m) return { ...base, protocol: m.protocol, host: m.host, port: String(m.port), sending: m.smtpHost ? "smtp" : "none", smtpHost: m.smtpHost, smtpPort: String(m.smtpHost ? m.smtpPort : MAIL_PORTS.smtp), user: m.user };
   return { ...base, url: parseApiConfig(c.config)?.url ?? "" };
 }
 

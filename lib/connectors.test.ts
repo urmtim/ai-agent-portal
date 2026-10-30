@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { apiCheckMessage, apiConfigFromForm, isConnectorKind, mailConfigFromForm, parseApiConfig, parseMailConfig, switchProtocol } from "./connectors";
 
-const form = (o: Partial<Record<"protocol" | "host" | "port" | "smtpHost" | "smtpPort" | "user", string>> = {}) =>
-  ({ protocol: "imap", host: "imap.mail.ru", port: "993", smtpHost: "smtp.mail.ru", smtpPort: "465", user: "me@mail.ru", ...o });
+const form = (o: Partial<Record<"protocol" | "host" | "port" | "sending" | "smtpHost" | "smtpPort" | "user", string>> = {}) =>
+  ({ protocol: "imap", host: "imap.mail.ru", port: "993", sending: "smtp", smtpHost: "smtp.mail.ru", smtpPort: "465", user: "me@mail.ru", ...o });
 
 test("only mail and API", () => {
   assert.equal(isConnectorKind("mail"), true);
@@ -15,8 +15,15 @@ test("only mail and API", () => {
 test("mail form: SSL follows the port", () => {
   assert.deepEqual(mailConfigFromForm(form({ host: " IMAP.Mail.ru ", user: " me@mail.ru " })),
     { protocol: "imap", host: "imap.mail.ru", port: 993, secure: true, user: "me@mail.ru", smtpHost: "smtp.mail.ru", smtpPort: 465, smtpSecure: true });
-  assert.deepEqual(mailConfigFromForm(form({ protocol: "pop3", host: "127.0.0.1", port: "3110", smtpHost: "", smtpPort: "" })),
-    { protocol: "pop3", host: "127.0.0.1", port: 3110, secure: false, user: "me@mail.ru", smtpHost: "", smtpPort: 465, smtpSecure: true });
+  assert.deepEqual(mailConfigFromForm(form({ protocol: "pop3", host: "127.0.0.1", port: "3110", smtpHost: "127.0.0.1", smtpPort: "3025" })),
+    { protocol: "pop3", host: "127.0.0.1", port: 3110, secure: false, user: "me@mail.ru", smtpHost: "127.0.0.1", smtpPort: 3025, smtpSecure: false });
+});
+
+test("mail form: «Отправка — нет» ignores the SMTP fields; «SMTP» needs a server", () => {
+  const off = mailConfigFromForm(form({ sending: "none", smtpHost: "not a host", smtpPort: "" }));
+  assert.ok(!("field" in off) && off.smtpHost === "" && off.smtpPort === 465, JSON.stringify(off));
+  assert.deepEqual(mailConfigFromForm(form({ smtpHost: " " })), { field: "smtpHost", error: "Укажите сервер исходящей почты" });
+  assert.deepEqual(mailConfigFromForm(form({ smtpPort: "" })), { field: "smtpPort", error: "Укажите порт" });
 });
 
 test("mail form: the first problem from the top, with its field", () => {
