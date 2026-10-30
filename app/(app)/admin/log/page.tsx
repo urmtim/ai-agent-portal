@@ -53,7 +53,7 @@ export default async function AuditLogPage({ searchParams }: { searchParams: Pro
       <LogControls q={q} events={events} channels={channels} />
 
       <div className="card tcard">
-        <table style={{ minWidth: 820 }}>
+        <table className="logtable" style={{ minWidth: 820 }}>
           <thead>
             <tr><th>Дата</th><th>Пользователь</th><th>Событие</th><th>Канал</th><th>Детали</th></tr>
           </thead>

@@ -8,7 +8,7 @@ import { effectiveGuardrails, guardDocIds, hitlAsks } from "@/lib/agents/policy"
 import { policySnapshot, policyTools } from "@/lib/chat/policy-tools";
 import { audit } from "@/lib/audit";
 import { allowedTools, type AssistantConfig } from "@/lib/assistant-config";
-import { firstMailConnector } from "@/lib/connections";
+import { accessInfo, firstMailConnector } from "@/lib/connections";
 import { mailTools } from "@/lib/chat/mail-tools";
 
 export type { MailSearchResult, MailReadResult } from "@/lib/chat/mail-tools";
@@ -39,7 +39,7 @@ export async function chatTools(user: { id: string; name?: string | null }, cfg:
   const mailConn = await firstMailConnector(userId, cfg.connectorIds);
   // the assistant's policies (enabled documents only) — returned by get_policies and put before every answer
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: userId, enabled: true, id: { in: guardDocIds(cfg.guardrails) } }, select: { name: true, text: true } });
-  const snapshot = policySnapshot(cfg.hitl, cfg.guardrails, docs);
+  const snapshot = policySnapshot(cfg.hitl, cfg.guardrails, docs, await accessInfo(userId, cfg.modelId, cfg.connectorIds, mailConn?.id ?? null));
 
   const tools = {
     ...policyTools(snapshot),

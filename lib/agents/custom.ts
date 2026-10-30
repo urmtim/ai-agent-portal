@@ -5,7 +5,7 @@ import type { Agent } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { chatModel, errorText } from "@/lib/chat/model";
 import { mailTools } from "@/lib/chat/mail-tools";
-import { firstMailConnector } from "@/lib/connections";
+import { accessInfo, firstMailConnector } from "@/lib/connections";
 import { maskPii } from "./guardrails";
 import { effectiveGuardrails, guardDocIds, hitlAsks, parseGuardRules, parseHitl } from "./policy";
 import { agentInstructions } from "@/lib/chat/instructions";
@@ -34,7 +34,7 @@ export async function runCustomAgent(agent: Agent, task: string, ctx: { by: RunB
   const docs = await prisma.guardrailDoc.findMany({ where: { ownerId: agent.ownerId, enabled: true, id: { in: guardDocIds(rules) } }, select: { name: true, text: true } });
 
   const conn = await firstMailConnector(agent.ownerId, ids(agent.connectorIds));
-  const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs);
+  const snapshot = policySnapshot(parseHitl(agent.hitl), rules, docs, await accessInfo(agent.ownerId, agent.modelId, ids(agent.connectorIds), conn?.id ?? null));
   const tools: ToolSet = {
     ...policyTools(snapshot),
     ...(conn ? mailTools({ conn, who: `Агент «${agent.name}»`, actor: ctx.by.actor, channel: ctx.by.channel, mask: g.maskPii }) : {}),

@@ -69,17 +69,21 @@ export async function saveModel(_prev: FormState, formData: FormData): Promise<F
   if (!Number.isInteger(ctx) || ctx < CONTEXT_MIN || ctx > CONTEXT_MAX) return { field: "contextTokens", error: "Контекст — от 2 000 до 2 000 000 токенов" };
 
   // a new model, or another address, token or model: it must really answer with this token
+  // the answer becomes its status; a save that changes nothing of that keeps the status it had
+  let checked: { checkedAt: Date; checkOk: boolean; checkMsg: string } | undefined;
   if (!saved || saved.model !== model || saved.baseUrl !== baseUrl || token) {
-    const problem = pingProblem(await pingModel({ baseUrl, model, token: await tokenFor(user.id, id, token) }), model);
+    const ping = await pingModel({ baseUrl, model, token: await tokenFor(user.id, id, token) });
+    const problem = pingProblem(ping, model);
     if (problem) return problem;
+    checked = { checkedAt: new Date(), checkOk: true, checkMsg: ping.message };
   }
 
   const tokenEnc = token ? encryptSecret(token) : undefined; // undefined → unchanged
-  const data = { name, description, baseUrl, model, contextTokens: ctx, ...(tokenEnc !== undefined ? { tokenEnc } : {}) };
+  const data = { name, description, baseUrl, model, contextTokens: ctx, ...(tokenEnc !== undefined ? { tokenEnc } : {}), ...checked };
   let firstFor = "";
   await prisma.$transaction(async (tx) => {
     if (saved) {
-      await tx.llmModel.update({ where: { id: saved.id }, data: { ...data, checkedAt: null, checkOk: null, checkMsg: "" } });
+      await tx.llmModel.update({ where: { id: saved.id }, data });
       return;
     }
     const created = await tx.llmModel.create({ data: { ...data, ownerId: user.id, tokenEnc: tokenEnc ?? null } });

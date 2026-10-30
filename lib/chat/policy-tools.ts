@@ -7,12 +7,21 @@ import { effectiveGuardrails, HITL_LABELS, type GuardRule, type HitlChoice } fro
 
 export type PolicySnapshot = ReturnType<typeof policySnapshot>;
 
-/** What get_policies returns: HITL and guardrails as plain facts (documents only the enabled ones, passed in). */
-export function policySnapshot(hitl: HitlChoice, rules: GuardRule[], docs: { name: string; text: string }[]) {
+/** What the assistant or agent works with right now, so it can say «на какой модели», «какую почту читаешь». */
+export type AccessInfo = {
+  /** «ollama cloud gpt-oss 120b (gpt-oss:120b)», or null when no model is chosen (the .env one is used). */
+  model: string | null;
+  /** Its switched-on connectors: name, type, server and what it gives here. */
+  connectors: { name: string; type: string; server: string; gives: string }[];
+};
+
+/** What get_policies returns: what it works with (when given), HITL and guardrails as plain facts (documents only the enabled ones). */
+export function policySnapshot(hitl: HitlChoice, rules: GuardRule[], docs: { name: string; text: string }[], access?: AccessInfo) {
   const g = effectiveGuardrails(rules);
   const ask = hitl === "off" ? [] : hitl === "send_only" ? ["отправка наружу (письмо, сообщение, публикация)"]
     : ["изменение данных (запись, правка, удаление)", "отправка наружу (письмо, сообщение, публикация)"];
   return {
+    ...(access ? { access } : {}),
     hitl: {
       mode: HITL_LABELS[hitl],
       confirmBefore: ask,
@@ -45,7 +54,7 @@ export function policyTools(snapshot: PolicySnapshot) {
       execute: async () => timeNow(),
     }),
     get_policies: tool({
-      description: "Твои политики: подтверждение действий (HITL) и гардрейлы — запрещённые темы, маскирование персональных данных, лимит шагов, правила из документов.",
+      description: "Твои политики и доступ: на какой модели ты работаешь и какие коннекторы (почта, API) тебе подключены; подтверждение действий (HITL) и гардрейлы — запрещённые темы, маскирование персональных данных, лимит шагов, правила из документов.",
       inputSchema: z.object({}),
       execute: async () => snapshot,
     }),

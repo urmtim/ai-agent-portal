@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/secret";
 import { parseApiConfig, parseMailConfig, apiCheckMessage, type ApiConfig } from "@/lib/connectors";
 import type { MailAccess } from "@/lib/mailbox";
+import type { AccessInfo } from "@/lib/chat/policy-tools";
 
 type Row = { kind: string; name: string; config: string; secretEnc: string | null };
 
@@ -39,6 +40,32 @@ export async function checkApi(a: { url: string; token: string | null }): Promis
   } catch {
     return apiCheckMessage(null);
   }
+}
+
+/**
+ * What get_policies tells the model about its own setup: the model and the switched-on connectors among `ids`.
+ * `mailId` — the mailbox the mail tools work on (the first switched-on one). No logins: they would be masked anyway.
+ */
+export async function accessInfo(userId: string, modelId: string | null, ids: string[], mailId: string | null): Promise<AccessInfo> {
+  const [m, rows] = await Promise.all([
+    modelId ? prisma.llmModel.findFirst({ where: { id: modelId, ownerId: userId }, select: { name: true, model: true } }) : null,
+    ids.length ? prisma.connector.findMany({ where: { ownerId: userId, enabled: true, id: { in: ids } }, orderBy: { createdAt: "asc" } }) : [],
+  ]);
+  const mailName = rows.find((c) => c.id === mailId)?.name;
+  return {
+    model: m ? `${m.name} (${m.model})` : null,
+    connectors: rows.map((c) => {
+      if (c.kind === "mail") {
+        const cfg = parseMailConfig(c.config);
+        return {
+          name: c.name, type: "Почта", server: cfg ? `${cfg.protocol.toUpperCase()} ${cfg.host}` : "",
+          gives: c.id === mailId ? "искать и читать письма, только чтение (mail_search, mail_read)" : `ничего: почтовые инструменты работают с «${mailName}»`,
+        };
+      }
+      const api = parseApiConfig(c.config);
+      return { name: c.name, type: "API", server: api ? api.url.replace(/^https?:\/\//, "").split("/")[0] : "", gives: "инструментов пока нет" };
+    }),
+  };
 }
 
 /** First switched-on «Почта» connector among the given ids that the user owns, or null. */

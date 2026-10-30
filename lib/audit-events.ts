@@ -15,7 +15,7 @@ export const AUDIT_EVENTS = {
   approval: { label: "подтверждение", tone: "wait" },
   tool: { label: "инструмент", tone: "mut" },
   learning: { label: "обучение", tone: "ok" },
-  mcp: { label: "Коннекторы", tone: "info" },
+  mcp: { label: "коннектор", tone: "info" },
   guardrail: { label: "гардрейл", tone: "info" },
 } as const;
 
